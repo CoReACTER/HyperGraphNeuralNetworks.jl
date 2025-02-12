@@ -1,0 +1,7 @@
+name = "HyperGraphNeuralNetworks"
+uuid = "1aebdcae-dc77-44ee-b348-f058d326ae63"
+authors = ["Evan Walter Clark Spotte-Smith"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.6.7"
