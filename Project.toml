@@ -1,7 +1,19 @@
 name = "HyperGraphNeuralNetworks"
 uuid = "1aebdcae-dc77-44ee-b348-f058d326ae63"
 authors = ["Evan Walter Clark Spotte-Smith"]
-version = "1.0.0-DEV"
+version = "0.0.1-DEV"
+
+[deps]
+GNNGraphs = "aed8fd31-079b-4b5a-b342-a13352159b8c"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+MLUtils = "f1d291b0-491e-4a28-83b9-f70985020b54"
+SimpleDirectedHypergraphs = "a42c6b43-640c-4761-b4a8-4f98c31d02e9"
+SimpleHypergraphs = "aa4a32ff-dd5d-5357-90e3-e7a9512f0501"
 
 [compat]
+GNNGraphs = "1.4.2"
+Graphs = "1.12.1"
+MLUtils = "0.4.8"
+SimpleDirectedHypergraphs = "0.1.0"
+SimpleHypergraphs = "0.3.0"
 julia = "1.6.7"
