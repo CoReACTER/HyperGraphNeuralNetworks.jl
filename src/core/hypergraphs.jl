@@ -1,5 +1,8 @@
 """
 TODO: docstrings for datatypes
+
+TODO: what functions from SimpleHypergraphs/SimpleDirectedHypergraphs need to be implemented to finish interface?
+
 """
 struct HGNNHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNHypergraph{T}
     v2he::Vector{D}
