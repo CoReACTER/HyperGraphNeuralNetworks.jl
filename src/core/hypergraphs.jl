@@ -90,6 +90,127 @@ function HGNNHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
     return HGNNHypergraph(num_nodes; vdata, kws...)
 end
 
+# TODO: setters and getters
+hasvertexmeta(::Type{HGNNHypergraph}) = true
+hasvertexmeta(X::HGNNHypergraph) = true
+hashyperedgemeta(::Type{HGNNHypergraph}) = true
+hashyperedgemeta(X::HGNNHypergraph) = true
+
+
+"""
+    add_vertex!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+
+    This function is not implemented for HGNNHypergraph.
+        
+    The basic hypergraph structure of HGNNHypergraph (i.e., the number of vertices, the hyperedges, and the hypergraph
+    IDs) are not mutable. Users can change the features in the `vdata`, `hedata`, and `hgdata` DataStore
+    objects, but the number of vertices, number of hyperedges, and number of hypergraphs cannot change.
+
+    To create a new HGNNHypergraph object with an additional vertex, use `add_vertex`.
+
+"""
+function add_vertex!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+    throw("Not implemented! Number of vertices in HGNNHypergraph is fixed.")
+end
+
+function add_vertex(hg::HGNNHypergraph{T, D}, features::DataStore; hyperedges::D = D(), hypergraph_id::Int = 1) where {T <: Real, D <: AbstractDict{Int,T}}
+    @boundscheck (checkbounds(hg,1,k) for k in keys(hyperedges))
+
+    # Verify that all all expected properties are present
+    # Additional properties in `features` that are not in `hg` will be ignored
+
+    data = Dict{Symbol, Any}()
+    for key in keys(hg.vdata)
+        @assert key in keys(features) && numobs(features.key) == 1
+        @assert typeof(features.key) === typeof(hg.vdata.key)
+        data[key] = cat_features(hg.vdata.key, features.key)
+    end
+
+    v2he = deepcopy(hg.v2he)
+    he2v = deepcopy(hg.he2v)
+
+    push!(v2he, hyperedges)
+
+    ix = length(v2he)
+    for k in keys(hyperedges)
+        he2v[k][ix] = hyperedges[k]
+    end
+
+    if isnothing(hg.hypergraph_ids)
+        hypergraph_ids = nothing
+    else
+        hypergraph_ids = cat(
+            hg.hypergraph_ids,
+            convert(typeof(hg.hypergraph_ids), [hypergraph_id]);
+            dims=1
+        )
+    end
+
+    return HGNNHypergraph(
+        v2he,
+        he2v,
+        ix,
+        hg.num_hyperedges,
+        hg.num_hypergraphs,
+        hypergraph_ids,
+        data,
+        hg.hedata,
+        hg.hgdata
+    )
+end
+
+# TODO: you are here
+
+
+"""
+    remove_vertex!(::HGNNHypergraph, ::Int)
+
+    This function is not implemented for HGNNHypergraph.
+        
+    The basic hypergraph structure of HGNNHypergraph (i.e., the number of vertices, the hyperedges, and the hypergraph
+    IDs) are not mutable. Users can change the features in the `vdata`, `hedata`, and `hgdata` DataStore
+    objects, but the number of vertices, number of hyperedges, and number of hypergraphs cannot change.
+
+    To create a new HGNNHypergraph object with a vertex removed, use `remove_vertex`.
+
+"""
+function remove_vertex!(::HGNNHypergraph, ::Int)
+    throw("Not implemented! Number of vertices in HGNNHypergraph is fixed.")
+end
+
+
+"""
+    add_hyperedge!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+
+    This function is not implemented for HGNNHypergraph.
+        
+    The basic hypergraph structure of HGNNHypergraph (i.e., the number of vertices, the hyperedges, and the hypergraph
+    IDs) are not mutable. Users can change the features in the `vdata`, `hedata`, and `hgdata` DataStore
+    objects, but the number of vertices, number of hyperedges, and number of hypergraphs cannot change.
+
+    To create a new HGNNHypergraph object with an additional hyperedge, use `add_hyperedge`.
+
+"""
+function add_hyperedge!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+    throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
+end
+
+
+"""
+    remove_hyperedge!(::HGNNHypergraph, ::Int)
+    
+    This function is not implemented for HGNNHypergraph.
+        
+    The basic hypergraph structure of HGNNHypergraph (i.e., the number of vertices, the hyperedges, and the hypergraph
+    IDs) are not mutable. Users can change the features in the `vdata`, `hedata`, and `hgdata` DataStore
+    objects, but the number of vertices, number of hyperedges, and number of hypergraphs cannot change.
+
+    To create a new HGNNHypergraph object with a hyperedge removed, use `remove_hyperedge`.
+"""
+function remove_hyperedge!(::HGNNHypergraph, ::Int)
+    throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
+end
+
 
 Base.zero(::Type{H}) where {H <: HGNNHypergraph} = H(0)
 
@@ -280,6 +401,12 @@ function HGNNDiHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
     end
     HGNNDiHypergraph(num_nodes; vdata, kws...)
 end
+
+# TODO: setters and getters
+hasvertexmeta(::Type{HGNNDiHypergraph}) = true
+hasvertexmeta(X::HGNNDiHypergraph) = true
+hashyperedgemeta(::Type{HGNNDiHypergraph}) = true
+hashyperedgemeta(X::HGNNDiHypergraph) = true
 
 
 Base.zero(::Type{H}) where {H <: HGNNDiHypergraph} = H(0)

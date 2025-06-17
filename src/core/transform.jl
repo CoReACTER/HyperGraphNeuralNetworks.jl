@@ -2,9 +2,14 @@
 TODO: add docstrings
 """
 
-function add_self_loops(hg::H) where {H <: AbstractHGNNHypergraph}
+function add_self_loops(hg::H; add_repeated_hyperedge::Bool = false) where {H <: AbstractHGNNHypergraph}
     
+    vertices = [1:hg.num_vertices]
+    if add_repeated_hyperedge
+        
+    else
 
+    end
 
 end
 
