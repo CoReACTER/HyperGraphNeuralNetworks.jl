@@ -118,7 +118,6 @@ function add_vertex(hg::HGNNHypergraph{T, D}, features::DataStore; hyperedges::D
 
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
-
     data = Dict{Symbol, Any}()
     for key in keys(hg.vdata)
         @assert key in keys(features) && numobs(features.key) == 1
@@ -153,7 +152,7 @@ function add_vertex(hg::HGNNHypergraph{T, D}, features::DataStore; hyperedges::D
         hg.num_hyperedges,
         hg.num_hypergraphs,
         hypergraph_ids,
-        data,
+        DataStore(data),
         hg.hedata,
         hg.hgdata
     )
@@ -178,6 +177,50 @@ function remove_vertex!(::HGNNHypergraph, ::Int)
     throw("Not implemented! Number of vertices in HGNNHypergraph is fixed.")
 end
 
+function remove_vertex(hg::HGNNHypergraph, v::Int)
+    n = nhv(hg)
+
+    # Extract all data NOT for the given vertex
+    data = Dict{Symbol, Any}()
+    for key in keys(hg.vdata)
+        data[key] = getobs(hg.vdata.key, Not(v))
+    end
+
+    v2he = deepcopy(hg.v2he)[Not(v)]
+
+    # Decrement vertex indices where needed
+    he2v = deepcopy(hg.he2v)
+    for he in he2v
+        if v < n && haskey(he, n)
+            for i in v:n-1
+                he[i] = he[i+1]
+            end
+            delete!(he, n)
+        else
+            delete!(he, v)
+        end
+    end
+
+    if isnothing(hg.hypergraph_ids)
+        hypergraph_ids = nothing
+    else
+        hypergraph_ids = hg.hypergraph_ids[Not(v)]
+    end
+
+    return HGNNHypergraph(
+        v2he,
+        he2v,
+        n - 1,
+        hg.num_hyperedges,
+        hg.num_hypergraphs,
+        hypergraph_ids,
+        DataStore(data),
+        hg.hedata,
+        hg.hgdata
+    )
+
+end
+
 
 """
     add_hyperedge!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
@@ -195,6 +238,57 @@ function add_hyperedge!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
+function add_hyperedge(
+    hg::HGNNHypergraph{T, D},
+    features::DataStore;
+    vertices::D = D(),
+    hypergraph_id::Int = 1
+) where {T <: Real, D <: AbstractDict{Int,T}}
+
+    @boundscheck (checkbounds(hg,k,1) for k in keys(vertices))
+
+    # Verify that all all expected properties are present
+    # Additional properties in `features` that are not in `hg` will be ignored
+    data = Dict{Symbol, Any}()
+    for key in keys(hg.hedata)
+        @assert key in keys(features) && numobs(features.key) == 1
+        @assert typeof(features.key) === typeof(hg.hedata.key)
+        data[key] = cat_features(hg.hedata.key, features.key)
+    end
+
+    v2he = deepcopy(hg.v2he)
+    he2v = deepcopy(hg.he2v)
+
+    push!(he2v, vertices)
+
+    ix = length(he2v)
+    for k in keys(vertices)
+        v2he[k][ix] = vertices[k]
+    end
+
+    if isnothing(hg.hypergraph_ids)
+        hypergraph_ids = nothing
+    else
+        hypergraph_ids = cat(
+            hg.hypergraph_ids,
+            convert(typeof(hg.hypergraph_ids), [hypergraph_id]);
+            dims=1
+        )
+    end
+
+    return HGNNHypergraph(
+        v2he,
+        he2v,
+        he.num_vertices,
+        ix,
+        hg.num_hypergraphs,
+        hypergraph_ids,
+        hg.vdata,
+        DataStore(data),
+        hg.hgdata
+    )
+
+end
 
 """
     remove_hyperedge!(::HGNNHypergraph, ::Int)
@@ -209,6 +303,51 @@ end
 """
 function remove_hyperedge!(::HGNNHypergraph, ::Int)
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
+end
+
+function remove_hyperedge(hg::HGNNHypergraph, e::Int)
+    ne = nhe(hg)
+	@assert(e <= ne)
+
+    # Extract all data NOT for the given hyperedge
+    data = Dict{Symbol, Any}()
+    for key in keys(hg.hedata)
+        data[key] = getobs(hg.hedata.key, Not(e))
+    end
+
+    he2v = deepcopy(hg.he2v)[Not(e)]
+
+    # Decrement vertex indices where needed
+    v2he = deepcopy(hg.v2he)
+    for v in v2he
+        if e < ne && haskey(v, ne)
+            for i in e:ne-1
+                he[i] = he[i+1]
+            end
+            delete!(v, ne)
+        else
+            delete!(v, e)
+        end
+    end
+
+    if isnothing(hg.hypergraph_ids)
+        hypergraph_ids = nothing
+    else
+        hypergraph_ids = hg.hypergraph_ids[Not(e)]
+    end
+    
+    return HGNNHypergraph(
+        v2he,
+        he2v,
+        he.num_vertices,
+        ne - 1,
+        hg.num_hypergraphs,
+        hypergraph_ids,
+        hg.vdata,
+        DataStore(data),
+        hg.hgdata
+    )
+
 end
 
 

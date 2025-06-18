@@ -2,7 +2,6 @@
 TODO: docstrings
 """
 
-function add_hyperedge()
 
 
 function check_num_vertices(hg::H, x::AbstractArray) where {H <: AbstractHGNNHypergraph}

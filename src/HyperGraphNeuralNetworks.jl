@@ -3,6 +3,7 @@ module HyperGraphNeuralNetworks
 using Graphs
 using GNNGraphs
 using MLUtils
+using InvertedIndices
 using SimpleHypergraphs
 using SimpleDirectedHypergraphs
 
@@ -14,5 +15,6 @@ export AbstractHGNNHypergraph, AbstractHGNNDiHypergraph
 export HGNNHypergraph, HGNNDiHypergraph
 
 export erdos_renyi_hypergraph, random_kuniform_hypergraph, random_dregular_hypergraph, random_preferential_hypergraph
+export add_vertex, remove_vertex, add_hyperedge, remove_hyperedge, 
 
 end
