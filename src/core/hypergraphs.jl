@@ -185,16 +185,18 @@ function add_vertex(
     hypergraph_id::Int = 1
 ) where {T <: Real, D <: AbstractDict{Int,T}}
     @boundscheck (checkbounds(hg,1,k) for k in keys(hyperedges))
+    @assert isnothing(hg.hypergraph_ids) || hypergraph_id <= hg.num_hypergraphs
 
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
     if !isnothing(hg.vdata)
-        data = Dict{Symbol, Any}()
+        data_dict = Dict{Symbol, Any}()
         for key in keys(hg.vdata)
             @assert key in keys(features) && numobs(features.key) == 1
             @assert typeof(features.key) === typeof(hg.vdata.key)
-            data[key] = cat_features(hg.vdata.key, features.key)
+            data_dict[key] = cat_features(hg.vdata.key, features.key)
         end
+        data = DataStore(data_dict)
     else
         data = nothing
     end
@@ -226,7 +228,7 @@ function add_vertex(
         hg.num_hyperedges,
         hg.num_hypergraphs,
         hypergraph_ids,
-        DataStore(data),
+        data,
         hg.hedata,
         hg.hgdata
     )
@@ -259,9 +261,14 @@ function remove_vertex(hg::HGNNHypergraph, v::Int)
     n = nhv(hg)
 
     # Extract all data NOT for the given vertex
-    data = Dict{Symbol, Any}()
-    for key in keys(hg.vdata)
-        data[key] = getobs(hg.vdata.key, Not(v))
+    if !isnothing(hg.vdata)
+        data = Dict{Symbol, Any}()
+        for key in keys(hg.vdata)
+            data[key] = getobs(hg.vdata.key, Not(v))
+        end
+        data = DataStore(data)
+    else
+        data = nothing
     end
 
     v2he = deepcopy(hg.v2he)[Not(v)]
@@ -269,11 +276,14 @@ function remove_vertex(hg::HGNNHypergraph, v::Int)
     # Decrement vertex indices where needed
     he2v = deepcopy(hg.he2v)
     for he in he2v
-        if v < n && haskey(he, n)
-            for i in v:n-1
-                he[i] = he[i+1]
+        if v < n
+            delete!(he, v)
+            for key in keys(he)
+                if key > v
+                    he[key - 1] = he[key]
+                    delete!(he, key)
+                end
             end
-            delete!(he, n)
         else
             delete!(he, v)
         end
@@ -292,7 +302,7 @@ function remove_vertex(hg::HGNNHypergraph, v::Int)
         hg.num_hyperedges,
         hg.num_hypergraphs,
         hypergraph_ids,
-        DataStore(data),
+        data,
         hg.hedata,
         hg.hgdata
     )
@@ -321,7 +331,6 @@ end
         hg::HGNNHypergraph{T, D},
         features::DataStore;
         vertices::D = D(),
-        hypergraph_id::Int = 1
     ) where {T <: Real, D <: AbstractDict{Int,T}}
 
     Adds a hyperedge to a given `HGNNHypergraph`. Because `HGNNHypergraph` is immutable, this creates a new
@@ -333,7 +342,6 @@ function add_hyperedge(
     hg::HGNNHypergraph{T, D},
     features::DataStore;
     vertices::D = D(),
-    hypergraph_id::Int = 1
 ) where {T <: Real, D <: AbstractDict{Int,T}}
 
     @boundscheck (checkbounds(hg,k,1) for k in keys(vertices))
@@ -361,23 +369,13 @@ function add_hyperedge(
         v2he[k][ix] = vertices[k]
     end
 
-    if isnothing(hg.hypergraph_ids)
-        hypergraph_ids = nothing
-    else
-        hypergraph_ids = cat(
-            hg.hypergraph_ids,
-            convert(typeof(hg.hypergraph_ids), [hypergraph_id]);
-            dims=1
-        )
-    end
-
     return HGNNHypergraph(
         v2he,
         he2v,
         he.num_vertices,
         ix,
         hg.num_hypergraphs,
-        hypergraph_ids,
+        hg.hypergraph_ids,
         hg.vdata,
         DataStore(data),
         hg.hgdata
@@ -421,20 +419,17 @@ function remove_hyperedge(hg::HGNNHypergraph, e::Int)
     # Decrement vertex indices where needed
     v2he = deepcopy(hg.v2he)
     for v in v2he
-        if e < ne && haskey(v, ne)
-            for i in e:ne-1
-                he[i] = he[i+1]
+        if e < ne
+            delete!(v, e)
+            for key in keys(v)
+                if key > e
+                    v[key - 1] = v[key]
+                    delete!(v, key)
+                end
             end
-            delete!(v, ne)
         else
             delete!(v, e)
         end
-    end
-
-    if isnothing(hg.hypergraph_ids)
-        hypergraph_ids = nothing
-    else
-        hypergraph_ids = hg.hypergraph_ids[Not(e)]
     end
     
     return HGNNHypergraph(
@@ -443,7 +438,7 @@ function remove_hyperedge(hg::HGNNHypergraph, e::Int)
         he.num_vertices,
         ne - 1,
         hg.num_hypergraphs,
-        hypergraph_ids,
+        hg.hypergraph_ids,
         hg.vdata,
         DataStore(data),
         hg.hgdata
@@ -710,6 +705,366 @@ hashyperedgemeta(X::HGNNDiHypergraph) = true
 Base.zero(::Type{H}) where {H <: HGNNDiHypergraph} = H(0)
 
 # TODO: modification functions
+
+"""
+    add_vertex!(::HGNNDiHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+
+    This function is not implemented for HGNNDiHypergraph.
+        
+    The basic hypergraph structure of HGNNDiHypergraph (i.e., the number of vertices, the hyperedges, and the
+    hypergraph IDs) are not mutable. Users can change the features in the `vdata`, `hedata`, and `hgdata` DataStore
+    objects, but the number of vertices, number of hyperedges, and number of hypergraphs cannot change.
+
+    To create a new HGNNDiHypergraph object with an additional vertex, use `add_vertex`.
+
+"""
+function add_vertex!(::HGNNDiHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+    throw("Not implemented! Number of vertices in HGNNDiHypergraph is fixed.")
+end
+
+
+"""
+    add_vertex(
+        hg::HGNNDiHypergraph{T, D},
+        features::DataStore;
+        hyperedges_tail::D = D(),
+        hyperedges_head::D = D(),
+        hypergraph_id::Int = 1
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
+
+    Create a new HGNNDiHypergraph that adds a vertex to an existing directed hypergraph `hg`. Note that the `features`
+    DataStore is not optional, but if the input hypergraph has no vertex data, this can be empty. Optionally, the
+    vertex can be added to existing hyperedges. The `hyperedges_tail` and `hyperedges_head` parameters include
+    dictionaries of hyperedge identifiers and values stored at the hyperedges.
+"""
+function add_vertex(
+    hg::HGNNDiHypergraph{T, D},
+    features::DataStore;
+    hyperedges_tail::D = D(),
+    hyperedges_head::D = D(),
+    hypergraph_id::Int = 1
+) where {T <: Real, D <: AbstractDict{Int,T}}
+    @boundscheck (checkbounds(hg,1,k) for k in keys(hyperedges_tail))
+    @boundscheck (checkbounds(hg,1,k) for k in keys(hyperedges_head))
+    @assert isnothing(hg.hypergraph_ids) || hypergraph_id <= hg.num_hypergraphs
+
+    # Verify that all all expected properties are present
+    # Additional properties in `features` that are not in `hg` will be ignored
+    if !isnothing(hg.vdata)
+        data = Dict{Symbol, Any}()
+        for key in keys(hg.vdata)
+            @assert key in keys(features) && numobs(features.key) == 1
+            @assert typeof(features.key) === typeof(hg.vdata.key)
+            data[key] = cat_features(hg.vdata.key, features.key)
+        end
+    else
+        data = nothing
+    end
+
+    v2he_tail = deepcopy(hg.hg_tail.v2he)
+    v2he_head = deepcopy(hg.hg_head.v2he)
+
+    he2v_tail = deepcopy(hg.hg_tail.he2v)
+    he2v_head = deepcopy(hg.hg_head.he2v)
+
+    push!(v2he_tail, hyperedges_tail)
+    push!(v2he_head, hyperedges_head)
+
+    ix = length(v2he_tail)
+    for k in keys(hyperedges_tail)
+        he2v_tail[k][ix] = hyperedges_tail[k]
+    end
+
+    for k in keys(hyperedges_head)
+        he2v_head[k][ix] = hyperedges_head[k]
+
+    if isnothing(hg.hypergraph_ids)
+        hypergraph_ids = nothing
+    else
+        hypergraph_ids = cat(
+            hg.hypergraph_ids,
+            convert(typeof(hg.hypergraph_ids), [hypergraph_id]);
+            dims=1
+        )
+    end
+
+    return HGNNDiHypergraph(
+        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
+        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
+        ix,
+        hg.num_hyperedges,
+        hg.num_hypergraphs,
+        hypergraph_ids,
+        DataStore(data),
+        hg.hedata,
+        hg.hgdata
+    )
+end
+
+
+"""
+    remove_vertex!(::HGNNDiHypergraph, ::Int)
+
+    This function is not implemented for HGNNDiHypergraph.
+        
+    The basic hypergraph structure of HGNNDiHypergraph (i.e., the number of vertices, the hyperedges, and the hypergraph
+    IDs) are not mutable. Users can change the features in the `vdata`, `hedata`, and `hgdata` DataStore
+    objects, but the number of vertices, number of hyperedges, and number of hypergraphs cannot change.
+
+    To create a new HGNNDiHypergraph object with a vertex removed, use `remove_vertex`.
+
+"""
+function remove_vertex!(::HGNNDiHypergraph, ::Int)
+    throw("Not implemented! Number of vertices in HGNNDiHypergraph is fixed.")
+end
+
+"""
+    remove_vertex(hg::HGNNDiHypergraph, v::Int)
+
+Removes the vertex `v` from a given `HGNNDiHypergraph` `hg`. Note that this creates a new HGNNDiHypergraph, as
+HGNNDiHypergraph objects are immutable.
+"""
+function remove_vertex(hg::HGNNDiHypergraph, v::Int)
+    n = nhv(hg)
+
+    # Extract all data NOT for the given vertex
+    if !isnothing(hg.vdata)
+        data_dict = Dict{Symbol, Any}()
+        for key in keys(hg.vdata)
+            data_dict[key] = getobs(hg.vdata.key, Not(v))
+        end
+        data = DataStore(data_dict)
+    else
+        data = nothing
+    end
+
+    v2he_tail = deepcopy(hg.hg_tail.v2he)[Not(v)]
+    v2he_head = deepcopy(hg.hg_head.v2he)[Not(v)]
+
+    # Decrement vertex indices where needed
+    he2v_tail = deepcopy(hg.hg_tail.he2v)
+    for he in he2v_tail
+        if v < n
+            delete!(he, v)
+            for key in keys(he)
+                if key > v
+                    he[key - 1] = he[key]
+                    delete!(he, key)
+                end
+            end
+        else
+            delete!(he, v)
+        end
+    end
+
+    # Decrement vertex indices where needed
+    he2v_head = deepcopy(hg.hg_head.he2v)
+    for he in he2v_head
+        if v < n && haskey(he, n)
+            for i in v:n-1
+                he[i] = he[i+1]
+            end
+            delete!(he, n)
+        else
+            delete!(he, v)
+        end
+    end
+
+    if isnothing(hg.hypergraph_ids)
+        hypergraph_ids = nothing
+    else
+        hypergraph_ids = hg.hypergraph_ids[Not(v)]
+    end
+
+    return HGNNDiHypergraph(
+        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
+        Hypergraph(v2he_head, he2v_head, nothing, nothing),
+        n - 1,
+        hg.num_hyperedges,
+        hg.num_hypergraphs,
+        hypergraph_ids,
+        data,
+        hg.hedata,
+        hg.hgdata
+    )
+
+end
+
+
+"""
+    add_hyperedge!(::HGNNDiHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+
+    This function is not implemented for HGNNDiHypergraph.
+        
+    The basic hypergraph structure of HGNNDiHypergraph (i.e., the number of vertices, the hyperedges, and the hypergraph
+    IDs) are not mutable. Users can change the features in the `vdata`, `hedata`, and `hgdata` DataStore
+    objects, but the number of vertices, number of hyperedges, and number of hypergraphs cannot change.
+
+    To create a new HGNNDiHypergraph object with an additional hyperedge, use `add_hyperedge`.
+
+"""
+function add_hyperedge!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+    throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
+end
+
+"""
+    add_hyperedge(
+        hg::HGNNDiHypergraph{T, D},
+        features::DataStore;
+        vertices_tail::D = D(),
+        vertices_head::D = D(),
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
+
+    Adds a hyperedge to a given `HGNNDiHypergraph`. Because `HGNNDiHypergraph` is immutable, this creates a new
+    `HGNNDiHypergraph`. Optionally, existing vertices can be added to the tail and/or head of the hyperedge. The
+    paramaters `vertices_tail` and `vertices_head` represent dictionaries of vertex identifiers and values stored at
+    the tail and head of hyperedges, respectively. Note that the `features` DataStore is not optional; however, if `hg`
+    has no `hedata` (i.e., if `hedata` is nothing), this can be empty.
+"""
+function add_hyperedge(
+    hg::HGNNDiHypergraph{T, D},
+    features::DataStore;
+    vertices_tail::D = D(),
+    vertices_head::D = D(),
+) where {T <: Real, D <: AbstractDict{Int,T}}
+    @boundscheck (checkbounds(hg,k,1) for k in keys(vertices_tail))
+    @boundscheck (checkbounds(hg,k,1) for k in keys(vertices_head))
+
+    # Verify that all all expected properties are present
+    # Additional properties in `features` that are not in `hg` will be ignored
+    if !isnothing(hg.hedata)
+        data_dict = Dict{Symbol, Any}()
+        for key in keys(hg.hedata)
+            @assert key in keys(features) && numobs(features.key) == 1
+            @assert typeof(features.key) === typeof(hg.hedata.key)
+            data_dict[key] = cat_features(hg.hedata.key, features.key)
+        end
+        data = DataStore(data_dict)
+    else
+        data = nothing
+    end
+
+    v2he_tail = deepcopy(hg.hg_tail.v2he)
+    v2he_head = deepcopy(hg.hg_head.v2he)
+
+    he2v_tail = deepcopy(hg.hg_tail.he2v)
+    he2v_head = deepcopy(hg.hg_head.he2v)
+
+    push!(he2v_tail, vertices_tail)
+    push!(he2v_head, vertices_head)
+
+    ix = length(he2v_tail)
+    for k in keys(vertices_tail)
+        v2he_tail[k][ix] = vertices_tail[k]
+    end
+
+    for k in keys(vertices_head)
+        v2he_head[k][ix] = vertices_head[k]
+    end
+
+    return HGNNHypergraph(
+        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
+        Hypergraph(v2he_head, he2v_head, nothing, nothing),
+        he.num_vertices,
+        ix,
+        hg.num_hypergraphs,
+        hg.hypergraph_ids,
+        hg.vdata,
+        data,
+        hg.hgdata
+    )
+
+end
+
+"""
+    remove_hyperedge!(::HGNNHypergraph, ::Int)
+    
+    This function is not implemented for HGNNHypergraph.
+        
+    The basic hypergraph structure of HGNNHypergraph (i.e., the number of vertices, the hyperedges, and the hypergraph
+    IDs) are not mutable. Users can change the features in the `vdata`, `hedata`, and `hgdata` DataStore
+    objects, but the number of vertices, number of hyperedges, and number of hypergraphs cannot change.
+
+    To create a new HGNNHypergraph object with a hyperedge removed, use `remove_hyperedge`.
+"""
+function remove_hyperedge!(::HGNNHypergraph, ::Int)
+    throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
+end
+
+"""
+    remove_hyperedge(hg::HGNNDiHypergraph, e::Int)
+
+Removes the hyperedge `e` from a given undirected HGNNDiHypergraph `hg`. Note that this function creates a new
+HGNNDiHypergraph.
+"""
+function remove_hyperedge(hg::HGNNDiHypergraph, e::Int)
+    ne = nhe(hg)
+	@assert(e <= ne)
+
+    # Extract all data NOT for the given hyperedge
+    if !isnothing(hg.hedata)
+        data_dict = Dict{Symbol, Any}()
+        for key in keys(hg.hedata)
+            data_dict[key] = getobs(hg.hedata.key, Not(e))
+        end
+        data = DataStore(data_dict)
+    else
+        data = nothing
+    end
+
+    he2v_tail = deepcopy(hg.hg_tail.he2v)[Not(e)]
+    he2v_head = deepcopy(hg.hg_head.he2v)[Not(e)]
+
+    # Decrement vertex indices where needed
+    v2he_tail = deepcopy(hg.hg_tail.v2he)
+    for v in v2he_tail
+        if e < ne
+            delete!(v, e)
+            for key in keys(v)
+                if key > e
+                    v[key - 1] = v[key]
+                    delete!(v, key)
+                end
+            end
+        else
+            delete!(v, e)
+        end
+    end
+
+    v2he_head = deepcopy(hg.hg_head.v2he)
+    for v in v2he_head
+        if e < ne
+            delete!(v, e)
+            for key in keys(v)
+                if key > e
+                    v[key - 1] = v[key]
+                    delete!(v, key)
+                end
+            end
+        else
+            delete!(v, e)
+        end
+    end
+
+    if isnothing(hg.hypergraph_ids)
+        hypergraph_ids = nothing
+    else
+        hypergraph_ids = hg.hypergraph_ids[Not(e)]
+    end
+    
+    return HGNNDiHypergraph(
+        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
+        Hypergraph(v2he_head, he2v_head, nothing, nothing),
+        he.num_vertices,
+        ne - 1,
+        hg.num_hypergraphs,
+        hypergraph_ids,
+        hg.vdata,
+        data,
+        hg.hgdata
+    )
+
+end
 
 
 function Base.show(io::IO, hg::HGNNDiHypergraph)
