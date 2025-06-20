@@ -2,8 +2,6 @@
 TODO: docstrings
 """
 
-
-
 function check_num_vertices(hg::H, x::AbstractArray) where {H <: AbstractHGNNHypergraph}
     @assert hg.num_vertices == size(x, ndims(x)) "Got $(size(x, ndims(x))) as last dimension instead of num_vertices = $(hg.num_vertices)"
     return true

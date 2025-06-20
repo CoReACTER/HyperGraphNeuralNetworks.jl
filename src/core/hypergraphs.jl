@@ -1,10 +1,61 @@
-"""
-TODO: docstrings for datatypes
+# TODO: what functions from SimpleHypergraphs/SimpleDirectedHypergraphs need to be implemented to finish interface?
 
-TODO: what functions from SimpleHypergraphs/SimpleDirectedHypergraphs need to be implemented to finish interface?
 
 """
-struct HGNNHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNHypergraph{T}
+   HGNNHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNHypergraph{Union{T, Nothing}}
+
+An undirected hypergraph type for use in hypergraph neural networks
+
+**Constructors**
+
+    HGNNHypergraph(
+        h::AbstractSimpleHypergraph{T};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata::Union{DataStore, Nothing} = nothing,
+        hedata::Union{DataStore, Nothing} = nothing,
+        hgdata::Union{DataStore, Nothing} = nothing
+    ) where {T<:Real}
+
+    Construct an `HGNNHypergraph` from a previously constructed hypergraph. Optionally, the user can specify
+    what hypergraph each vertex belongs to (if multiple distinct hypergraphs are included), as well as vertex,
+    hyperedge, and hypergraph features.
+
+    function HGNNHypergraph(
+        incidence::AbstractMatrix{Union{T, Nothing}};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata::Union{DataStore, Nothing} = nothing,
+        hedata::Union{DataStore, Nothing} = nothing,
+        hgdata::Union{DataStore, Nothing} = nothing
+    ) where {T<:Real}
+
+    Construct an `HGNNHypergraph` from an incidence matrix. The incidence matrix is an `M`x`N` matrix, where `M` is the
+    number of vertices and `N` is the number of hyperedges.
+
+    function HGNNHypergraph(num_nodes::T; vdata=nothing, kws...) where {T<:Integer}
+
+    Construct an `HGNNHypergraph` with no hyperedges and `num_nodes` vertices.
+
+    function HGNNHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
+
+    Construct an `HGNNHypergraph` with minimal (perhaps no) information.
+
+
+**Arguments**
+
+    * `T` : type of weight values stored in the hypergraph's incidence matrix
+    * `D` : dictionary type for storing values; the default is `Dict{Int, T}`
+    * `hypergraph_ids` : Nothing (implying that all vertices belong to the same hypergraph) or a vector of ID integers
+    * `vdata` : an optional DataStore (from GNNGraphs.jl) containing vertex-level features. Each entry in `vdata`
+        should have `M` entries/observations, where `M` is the number of vertices in the hypergraph
+    * `hedata` : an optional DataStore containing hyperedge-level features. Each entry in `hedata` should have `N`
+        entries/observations, where `N` is the number of hyperedges in the hypergraph
+    * `hgdata` : an optional DataStore containing hypergraph-level features. Each entry in `hgdata` should have `G`
+        entries/observations, where `G` is the number of hypergraphs in the HGNNHypergraph (note: the maximum index
+        in `hypergraph_ids` should be `G`)
+    * `incidence` : a matrix representation; rows are vertices and columns are hyperedges
+    * `num_nodes` : the number of vertices in the hypergraph (i.e., `M`)
+"""
+struct HGNNHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNHypergraph{Union{T, Nothing}}
     v2he::Vector{D}
     he2v::Vector{D}
     num_vertices::Int
@@ -113,16 +164,39 @@ function add_vertex!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <: A
     throw("Not implemented! Number of vertices in HGNNHypergraph is fixed.")
 end
 
-function add_vertex(hg::HGNNHypergraph{T, D}, features::DataStore; hyperedges::D = D(), hypergraph_id::Int = 1) where {T <: Real, D <: AbstractDict{Int,T}}
+
+"""
+    add_vertex(
+        hg::HGNNHypergraph{T, D},
+        features::DataStore;
+        hyperedges::D = D(),
+        hypergraph_id::Int = 1
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
+
+    Create a new HGNNHypergraph that adds a vertex to an existing hypergraph `hg`. Note that the `features` DataStore
+    is not optional, but if the input hypergraph has no vertex data, this can be empty. Optionally, the vertex can be
+    added to existing hyperedges. The `hyperedges` parameter presents a dictionary of hyperedge identifiers and values
+    stored at the hyperedges.
+"""
+function add_vertex(
+    hg::HGNNHypergraph{T, D},
+    features::DataStore;
+    hyperedges::D = D(),
+    hypergraph_id::Int = 1
+) where {T <: Real, D <: AbstractDict{Int,T}}
     @boundscheck (checkbounds(hg,1,k) for k in keys(hyperedges))
 
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
-    data = Dict{Symbol, Any}()
-    for key in keys(hg.vdata)
-        @assert key in keys(features) && numobs(features.key) == 1
-        @assert typeof(features.key) === typeof(hg.vdata.key)
-        data[key] = cat_features(hg.vdata.key, features.key)
+    if !isnothing(hg.vdata)
+        data = Dict{Symbol, Any}()
+        for key in keys(hg.vdata)
+            @assert key in keys(features) && numobs(features.key) == 1
+            @assert typeof(features.key) === typeof(hg.vdata.key)
+            data[key] = cat_features(hg.vdata.key, features.key)
+        end
+    else
+        data = nothing
     end
 
     v2he = deepcopy(hg.v2he)
@@ -158,8 +232,6 @@ function add_vertex(hg::HGNNHypergraph{T, D}, features::DataStore; hyperedges::D
     )
 end
 
-# TODO: you are here
-
 
 """
     remove_vertex!(::HGNNHypergraph, ::Int)
@@ -177,6 +249,12 @@ function remove_vertex!(::HGNNHypergraph, ::Int)
     throw("Not implemented! Number of vertices in HGNNHypergraph is fixed.")
 end
 
+"""
+    remove_vertex(hg::HGNNHypergraph, v::Int)
+
+Removes the vertex `v` from a given `HGNNHypergraph` `hg`. Note that this creates a new HGNNHypergraph, as
+HGNNHypergraph objects are immutable.
+"""
 function remove_vertex(hg::HGNNHypergraph, v::Int)
     n = nhv(hg)
 
@@ -238,6 +316,19 @@ function add_hyperedge!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
+"""
+    add_hyperedge(
+        hg::HGNNHypergraph{T, D},
+        features::DataStore;
+        vertices::D = D(),
+        hypergraph_id::Int = 1
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
+
+    Adds a hyperedge to a given `HGNNHypergraph`. Because `HGNNHypergraph` is immutable, this creates a new
+    `HGNNHypergraph`. Optionally, existing vertices can be added to the created hyperedge. The paramater `vertices`
+    represents a dictionary of vertex identifiers and values stored at the hyperedges. Note that the `features`
+    DataStore is not optional; however, if `hg` has no `hedata` (i.e., if `hedata` is nothing), this can be empty.
+"""
 function add_hyperedge(
     hg::HGNNHypergraph{T, D},
     features::DataStore;
@@ -249,11 +340,15 @@ function add_hyperedge(
 
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
-    data = Dict{Symbol, Any}()
-    for key in keys(hg.hedata)
-        @assert key in keys(features) && numobs(features.key) == 1
-        @assert typeof(features.key) === typeof(hg.hedata.key)
-        data[key] = cat_features(hg.hedata.key, features.key)
+    if !isnothing(hg.hedata)
+        data = Dict{Symbol, Any}()
+        for key in keys(hg.hedata)
+            @assert key in keys(features) && numobs(features.key) == 1
+            @assert typeof(features.key) === typeof(hg.hedata.key)
+            data[key] = cat_features(hg.hedata.key, features.key)
+        end
+    else
+        data = nothing
     end
 
     v2he = deepcopy(hg.v2he)
@@ -305,6 +400,12 @@ function remove_hyperedge!(::HGNNHypergraph, ::Int)
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
+"""
+    remove_hyperedge(hg::HGNNHypergraph, e::Int)
+
+Removes the hyperedge `e` from a given undirected HGNNHypergraph `hg`. Note that this function creates a new
+HGNNHypergraph.
+"""
 function remove_hyperedge(hg::HGNNHypergraph, e::Int)
     ne = nhe(hg)
 	@assert(e <= ne)
@@ -452,9 +553,67 @@ end
 
 #####
 """
-TODO: docstring
+   HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
+
+A directed hypergraph type for use in hypergraph neural networks
+
+**Constructors**
+
+    HGNNDiHypergraph(
+        h::AbstractDirectedHypergraph{T};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata::Union{DataStore, Nothing} = nothing,
+        hedata::Union{DataStore, Nothing} = nothing,
+        hgdata::Union{DataStore, Nothing} = nothing
+    ) where {T<:Real}
+
+    Construct a `HGNNDiHypergraph` from a previously constructed directed hypergraph. Optionally, the user can specify
+    what hypergraph each vertex belongs to (if multiple distinct hypergraphs are included), as well as vertex,
+    hyperedge, and hypergraph features.
+
+    HGNNDiHypergraph(
+        incidence_tail::AbstractMatrix{Union{T, Nothing}},
+        incidence_head::AbstractMatrix{Union{T, Nothing}};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata::Union{DataStore, Nothing} = nothing,
+        hedata::Union{DataStore, Nothing} = nothing,
+        hgdata::Union{DataStore, Nothing} = nothing
+    ) where {T<:Real}
+
+    Construct a `HGNNDiHypergraph` from incidence matrices `incidence_tail` (containing information regarding which 
+    vertices are in the tails of which hyperedges) and `incidence_head` (containing the corresponding information
+    about the heads). The incidence matrices have dimensions `M`x`N`, where `M` is the
+    number of vertices and `N` is the number of hyperedges.
+
+    function HGNNDiHypergraph(num_nodes::T; vdata=nothing, kws...) where {T<:Integer}
+
+    Construct a `HGNNDiHypergraph` with no hyperedges and `num_nodes` vertices.
+
+    function HGNNDiHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
+
+    Construct a `HGNNDiHypergraph` with minimal (perhaps no) information.
+
+
+**Arguments**
+
+    * `T` : type of weight values stored in the hypergraph's incidence matrix
+    * `D` : dictionary type for storing values; the default is `Dict{Int, T}`
+    * `hypergraph_ids` : Nothing (implying that all vertices belong to the same hypergraph) or a vector of ID integers
+    * `vdata` : an optional DataStore (from GNNGraphs.jl) containing vertex-level features. Each entry in `vdata`
+        should have `M` entries/observations, where `M` is the number of vertices in the hypergraph
+    * `hedata` : an optional DataStore containing hyperedge-level features. Each entry in `hedata` should have `N`
+        entries/observations, where `N` is the number of hyperedges in the hypergraph
+    * `hgdata` : an optional DataStore containing hypergraph-level features. Each entry in `hgdata` should have `G`
+        entries/observations, where `G` is the number of hypergraphs in the HGNNHypergraph (note: the maximum index
+        in `hypergraph_ids` should be `G`)
+    * `incidence_tail` : a matrix representation of the tails of the hypergraph(s); rows are vertices and columns are
+        hyperedges
+    * `incidence_head` : a matrix representation of the heads of the hypergraph(s); rows are vertices and columns are
+        hyperedges
+    * `num_nodes` : the number of vertices in the hypergraph (i.e., `M`)
 """
-struct HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHypergraph{T}
+
+struct HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
     hg_tail::Hypergraph{T, D}
     hg_head::Hypergraph{T, D}
     num_vertices::Int
@@ -549,6 +708,9 @@ hashyperedgemeta(X::HGNNDiHypergraph) = true
 
 
 Base.zero(::Type{H}) where {H <: HGNNDiHypergraph} = H(0)
+
+# TODO: modification functions
+
 
 function Base.show(io::IO, hg::HGNNDiHypergraph)
     print(io, "HGNNDiHypergraph($(hg.num_vertices), $(hg.num_hyperedges), $(hg.num_hypergraphs)) with ")
