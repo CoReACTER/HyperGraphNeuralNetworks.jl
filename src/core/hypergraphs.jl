@@ -254,8 +254,8 @@ end
 """
     remove_vertex(hg::HGNNHypergraph, v::Int)
 
-Removes the vertex `v` from a given `HGNNHypergraph` `hg`. Note that this creates a new HGNNHypergraph, as
-HGNNHypergraph objects are immutable.
+    Removes the vertex `v` from a given `HGNNHypergraph` `hg`. Note that this creates a new HGNNHypergraph, as
+    HGNNHypergraph objects are immutable.
 """
 function remove_vertex(hg::HGNNHypergraph, v::Int)
     n = nhv(hg)
@@ -401,8 +401,8 @@ end
 """
     remove_hyperedge(hg::HGNNHypergraph, e::Int)
 
-Removes the hyperedge `e` from a given undirected HGNNHypergraph `hg`. Note that this function creates a new
-HGNNHypergraph.
+    Removes the hyperedge `e` from a given undirected HGNNHypergraph `hg`. Note that this function creates a new
+    HGNNHypergraph.
 """
 function remove_hyperedge(hg::HGNNHypergraph, e::Int)
     ne = nhe(hg)
@@ -452,8 +452,8 @@ Base.zero(::Type{H}) where {H <: HGNNHypergraph} = H(0)
 """
     copy(hg::HGNNHypergraph; deep=false)
 
-Create a copy of `hg`. If `deep` is `true`, then copy will be a deep copy (equivalent to `deepcopy(hg)`),
-otherwise it will be a shallow copy with the same underlying hypergraph data.
+    Create a copy of `hg`. If `deep` is `true`, then copy will be a deep copy (equivalent to `deepcopy(hg)`),
+    therwise it will be a shallow copy with the same underlying hypergraph data.
 """
 function Base.copy(hg::HGNNHypergraph; deep = false)
     if deep
@@ -821,8 +821,8 @@ end
 """
     remove_vertex(hg::HGNNDiHypergraph, v::Int)
 
-Removes the vertex `v` from a given `HGNNDiHypergraph` `hg`. Note that this creates a new HGNNDiHypergraph, as
-HGNNDiHypergraph objects are immutable.
+    Removes the vertex `v` from a given `HGNNDiHypergraph` `hg`. Note that this creates a new HGNNDiHypergraph, as
+    HGNNDiHypergraph objects are immutable.
 """
 function remove_vertex(hg::HGNNDiHypergraph, v::Int)
     n = nhv(hg)
