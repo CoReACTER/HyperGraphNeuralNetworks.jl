@@ -131,15 +131,71 @@ function get_hyperedge_weight(hg::H, he_ind::Int, op::Function; side::Symbol = :
     end
 end
 
-function Base.eltype()
+function Base.eltype(hg::HGNNHypergraph)
+    return eltype(hyperedge_index(hg))
+end
+
+# From Graphs.jl, but not directly implemented for hypergraphs
+has_vertex(hg::H, i::Int) where {H <: AbstractHGNNHypergraph} = 1 <= i <= hg.num_vertices
+has_vertex(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph} = 1 <= i <= hg.num_vertices
+
+vertices(hg::H) where {H <: AbstractHGNNHypergraph} = 1:(hg.num_vertices)
+vertices(hg::H) where {H <: AbstractHGNNDiHypergraph} = 1:(hg.num_vertices)
+
+#TODO: docstrings
+
+degree(hg::H) where {H <: AbstractHGNNHypergraph} = length.(keys.(hg.v2he))
+degree(hg::H, i::Int) where {H <: AbstractHGNNHypergraph} = length(hg.v2he[i])
+degree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNHypergraph} = [degree(hg, i) for i in inds]
+
+degree(hg::H) where {H <: AbstractHGNNDiHypergraph} = indegree(hg) .+ outdegree(hg)
+degree(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph} = indegree(hg, i) + outdegree(hg, i)
+degree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHypergraph} = [degree(hg, i) for i in inds]
+
+# TODO: do these need to be implemented for undirected hypergraphs? Seems like the answer is "no"
+indegree(hg::H) where {H <: AbstractHGNNDiHypergraph} = length.(keys.(hg.hg_head.v2he))
+indegree(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph} = length(hg.hg_head.v2he[i])
+indegree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHypergraph} = [indegree(hg, i) for i in inds]
+
+outdegree(hg::H) where {H <: AbstractHGNNDiHypergraph} = length.(keys.(hg.hg_tail.v2he))
+outdegree(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph} = length(hg.hg_tail.v2he[i])
+outdegree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHypergraph} = [indegree(hg, i) for i in inds]
+
+function all_neighbors(hg::H) where {H <: AbstractHGNNHypergraph}
+
+    # For undirected hypergraph, neighbor vertices are those that share a hyperedge with the vertex of interest
+    hes = collect.(keys.(hg.v2he))
+
+    # There's probably a more efficient way to do this
+    neighbors = Vector{Vector{Int}}(undef,n)
+    for (i, hes_i) in enumerate(hes)
+        for he in hes_i
+            cat(neighbors[i], collect(keys(hg.he2v[he])))
+        end
+        neighbors[i] = unique(neighbors[i])
+    end
+
+    neighbors
+end
+#TODO: finish instances of this function
+
+# TODO: you are here
+function hyperedge_neighbors()
+end
+
+#TODO: do we count vertices that share a tail/head with the vertex of interest?
+
+function in_neighbors()
 
 end
 
-# has_vertex
-# vertices
-# degree
-# indegree
-# outdegree
+function out_neighbors()
+
+end
+
+
+
+
 # isolated_vertices
 # laplacian_matrix
 # normalized_laplacian
