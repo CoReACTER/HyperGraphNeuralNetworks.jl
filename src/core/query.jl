@@ -284,12 +284,115 @@ function out_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: Abstrac
 end
 
 
-# TODO: you are here
-function hyperedge_neighbors()
+# TODO: docstrings
+function hyperedge_neighbors(hg::H) where {H <: AbstractHGNNHypergraph}
+    # Two hyperedges are considered "neighbors" if they share at least one vertex
+    vs = Set.(collect.(keys.(hg.he2v)))
+
+    neighbors = Vector{Vector{Int}}(undef,length(vs))
+    for i in eachindex(vs)
+        for j in eachindex(vs)[i+1:end]
+            if length(intersect(vs[i], vs[j])) > 0
+                push!(neighbors[i], j)
+                push!(neighbors[j], i)
+            end
+        end
+    end
+    sort!.(neighbors)
 end
 
-#TODO: do we count vertices that share a tail/head with the vertex of interest?
+function hyperedge_neighbors(hg::H, i::Int) where {H <: AbstractHGNNHypergraph}
+    # Two hyperedges are considered "neighbors" if they share at least one vertex
+    vs = Set(collect(keys(hg.he2v[i])))
 
+    neighbors = Vector{Int}[]
+    for j in eachindex(vs)
+        if i == j
+            continue
+        end
+
+        if length(intersect(vs[i], vs[j])) > 0
+            push!(neighbors, j)
+        end
+    end
+    sort!(neighbors)
+end
+
+function hyperedge_neighbors(hg::H; directed::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+    if !directed
+        # Two directed hyperedges are considered "neighbors" if they share at least one vertex in EITHER their tails or
+        # heads
+        vs = Set.(cat.(collect.(keys.(hg.hg_tail.he2v)), collect.(keys.(hg.hg_head.he2v))))
+
+        neighbors = Vector{Vector{Int}}(undef,length(vs))
+        for i in eachindex(vs)
+            for j in eachindex(vs)[i+1:end]
+                if length(intersect(vs[i], vs[j])) > 0
+                    push!(neighbors[i], j)
+                    push!(neighbors[j], i)
+                end
+            end
+        end
+    else
+        # Two directed hyperedges Ea and Eb are considered "directed neighbors" (TODO: term?) there is at least one vertex
+        # in the head of Ea that is in the tail of Eb
+        vs_tail = Set.(collect.(keys.(hg.hg_tail.he2v)))
+        vs_head = Set.(collect.(keys.(hg.hg_head.he2v)))
+
+        neighbors = Vector{Vector{Int}}(undef,length(vs_tail))
+        for i in eachindex(vs_head)
+            for j in eachindex(vs_tail)
+                if i == j
+                    continue
+                end
+
+                if length(intersect(vs_head[i], vs_tail[j])) > 0
+                    push!(neighbors[i], j)
+                end
+            end
+        end
+    end
+
+    sort!.(neighbors)
+end
+
+function hyperedge_neighbors(hg::H, i::Int; directed::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+    if !directed
+        # Two directed hyperedges are considered "neighbors" if they share at least one vertex in EITHER their tails or
+        # heads
+        vs = Set.(cat.(collect.(keys.(hg.hg_tail.he2v)), collect.(keys.(hg.hg_head.he2v))))
+
+        neighbors = Vector{Int}[]
+        for j in eachindex(vs)
+            if i == j
+                continue
+            end
+
+            if length(intersect(vs[i], vs[j])) > 0
+                push!(neighbors, j)
+            end
+        end
+    else
+        # Two directed hyperedges Ea and Eb are considered "directed neighbors" (TODO: term?) there is at least one vertex
+        # in the head of Ea that is in the tail of Eb
+        vs_tail = Set.(collect.(keys.(hg.hg_tail.he2v)))
+
+        vs_head = Set(collect(keys(hg.hg_head.he2v[i])))
+
+        neighbors = Vector{Int}[]
+        for j in eachindex(vs_tail)
+            if i == j
+                continue
+            end
+
+            if length(intersect(vs_head, vs_tail[j])) > 0
+                push!(neighbors, j)
+            end
+        end
+    end
+
+    sort!(neighbors)
+end
 
 
 
