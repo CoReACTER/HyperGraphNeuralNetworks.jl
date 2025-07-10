@@ -428,29 +428,57 @@ function complex_incidence_matrix(h::H) where {H <: AbstractDirectedHypergraph}
     M
 end
 
-function weight_matrix()
-
+function vertex_weight_matrix(h::H; weighting_function::Function=sum) where {H <: AbstractHypergraph}
+    # Weight matrix is the diagonal matrix of vertex weights
+    weights = [weighting_function(h[i,:]) for i in 1:nhv(h)]
+    
+    Diagonal(weights)
 end
 
-function vertex_degree_matrix()
-
+function hyperedge_weight_matrix(h::H; weighting_function::Function=sum) where {H <: AbstractHypergraph}
+    # Weight matrix is the diagonal matrix of hyperedge weights
+    weights = [weighting_function(h[:,i]) for i in 1:nhe(h)]
+    
+    Diagonal(weights)
 end
 
-function hyperedge_degree_matrix()
+vertex_degree_matrix(h::H) where {H <: AbstractSimpleHypergraph} = Diagonal(length.(keys.(h.v2he)))
 
+vertex_degree_matrix(h::H) where {H <: AbstractDirectedHypergraph} = (
+    Diagonal(length.(keys.(h.hg_tail.v2he))),
+    Diagonal(length.(keys.(h.hg_head.v2he)))
+)
+
+hyperedge_degree_matrix(h::H) where {H <: AbstractSimpleHypergraph} = Diagonal(length.(keys.(h.he2v)))
+
+hyperedge_degree_matrix(h::H) where {H <: AbstractDirectedHypergraph} = (
+    Diagonal(length.(keys.(h.hg_tail.he2v))),
+    Diagonal(length.(keys.(h.hg_head.he2v)))
+)
+
+function normalized_laplacian(h::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
+    Dv = vertex_degree_matrix(h)
+    De = hyperedge_degree_matrix(h)
+    W = hyperedge_weight_matrix(h; weighting_function=weighting_function)
+    A = incidence_matrix(h)
+
+    # From "Let There be Direction in Hypergraph Neural Networks" by Fiorini et al.
+    # https://openreview.net/forum?id=h48Ri6pmvi
+    I - Dv^(-1/2) * A * W * (inv(De)) * transpose(A) * Dv^(-1/2)
 end
 
-function laplacian_matrix()
+function normalized_laplacian(h::H; weighting_function::Function=sum) where {H <: AbstractDirectedHypergraph}
+    Dv = vertex_degree_matrix(h)
+    De = hyperedge_degree_matrix(h)
+    W = hyperedge_weight_matrix(h; weighting_function=weighting_function)
+    A = complex_incidence_matrix(h)
 
+    # From "Let There be Direction in Hypergraph Neural Networks" by Fiorini et al.
+    # https://openreview.net/forum?id=h48Ri6pmvi
+    I - Dv^(-1/2) * A * W * (inv(De)) * transpose(A) * Dv^(-1/2)
 end
 
-function normalized_laplacian()
 
-end
-
-function scaled_laplacian()
-
-end
 
 # eigenvalues
 # eigenvalues_laplacian
