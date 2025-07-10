@@ -394,12 +394,64 @@ function hyperedge_neighbors(hg::H, i::Int; directed::Bool=false) where {H <: Ab
     sort!(neighbors)
 end
 
+isolated_vertices(hg::H) where {H <: AbstractHGNNHypergraph} = [i for i in 1:nhv(hg) if length(hg.v2he[i]) == 0]
 
+isolated_vertices(hg::H) where {H <: AbstractHGNNDiHypergraph} = [
+    i for i in 1:nhv(hg) if length(hg.hg_tail.v2he[i]) == 0 && length(hg.hg_head.v2he[i]) == 0
+]
 
-# isolated_vertices
-# laplacian_matrix
-# normalized_laplacian
-# scaled_laplacian
+function incidence_matrix(h::H) where {H <: AbstractSimpleHypergraph}
+    M = Matrix(h)
+    M[M .!== nothing] .= 1
+    M[M .=== nothing] .= 0
+
+    M
+end
+
+function incidence_matrix(h::H) where {H <: AbstractDirectedHypergraph}
+    Mt = incidence_matrix(h.hg_tail)
+    Mh = incidence_matrix(h.hg_head)
+
+    Mt, Mh
+end
+
+function complex_incidence_matrix(h::H) where {H <: AbstractDirectedHypergraph}
+    Mt, Mh = incidence_matrix(h)
+
+    M = convert(Complex{typeof(Mh)}, Mh) .- (im .* convert(Complex{typeof(Mt)}, Mt))
+
+    # Means that there's overlap between head and hg_tail
+    if any(abs.(M) .> 1)
+        throw("Cannot have vertices in the tail and the head of the same directed hyperedge!")
+    end
+
+    M
+end
+
+function weight_matrix()
+
+end
+
+function vertex_degree_matrix()
+
+end
+
+function hyperedge_degree_matrix()
+
+end
+
+function laplacian_matrix()
+
+end
+
+function normalized_laplacian()
+
+end
+
+function scaled_laplacian()
+
+end
+
 # eigenvalues
 # eigenvalues_laplacian
 # hypergraph_ids
@@ -413,8 +465,4 @@ end
 
 
 # neighbors (within, incoming, outgoing)
-
-function incidence_matrix()
-
-end
 
