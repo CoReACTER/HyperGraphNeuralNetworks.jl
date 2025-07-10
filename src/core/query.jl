@@ -167,31 +167,128 @@ function all_neighbors(hg::H) where {H <: AbstractHGNNHypergraph}
     hes = collect.(keys.(hg.v2he))
 
     # There's probably a more efficient way to do this
-    neighbors = Vector{Vector{Int}}(undef,n)
+    neighbors = Vector{Vector{Int}}(undef,length(hes))
     for (i, hes_i) in enumerate(hes)
         for he in hes_i
             cat(neighbors[i], collect(keys(hg.he2v[he])))
         end
-        neighbors[i] = unique(neighbors[i])
+        neighbors[i] = sort!(unique!(neighbors[i]))
     end
 
     neighbors
 end
-#TODO: finish instances of this function
+
+function all_neighbors(hg::H, i::Int) where {H <: AbstractHGNNHypergraph}
+
+    hes = collect(keys(hg.v2he[i]))
+
+    # There's probably a more efficient way to do this
+    neighbors = Vector{Int}[]
+    for he in hes
+        cat(neighbors, collect(keys(hg.he2v[he])))
+    end
+    
+    sort!(unique!(neighbors))
+end
+
+function all_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+
+    incoming = in_neighbors(hg; same_side=same_side)
+    outgoing = out_neighbors(hg; same_side=same_side)
+
+    sort!(unique!([incoming; outgoing]))
+
+end
+
+function all_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+
+    incoming = in_neighbors(hg, i; same_side=same_side)
+    outgoing = out_neighbors(hg, i; same_side=same_side)
+
+    sort!(unique!([incoming; outgoing]))
+
+end
+
+function in_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+    if same_side
+        all_neighbors(hg.hg_head)
+    else
+        # Find the hyperedges for which each node is in the head
+        hes = collect.(keys.(hg.hg_head.v2he))
+
+        # Neighbors are the vertices in the associated tails
+        neighbors = Vector{Vector{Int}}(undef,length(hes))
+        for (i, hes_i) in enumerate(hes)
+            for he in hes_i
+                cat(neighbors[i], collect(keys(hg.hg_tail.he2v[he])))
+            end
+            neighbors[i] = sort!(unique!(neighbors[i]))
+        end
+
+        neighbors
+    end
+end
+
+function in_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+    if same_side
+        all_neighbors(hg.hg_head, i)
+    else
+        # Find the hyperedges for which this node is in the head
+        hes = collect(keys(hg.hg_head.v2he[i]))
+
+        # Neighbors are the vertices in the associated tails
+        neighbors = Vector{Int}[]
+        for he in hes
+            cat(neighbors, collect(keys(hg.hg_tail.he2v[he])))
+        end
+        
+        sort!(unique!(neighbors))
+    end
+end
+
+function out_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+    if same_side
+        all_neighbors(hg.hg_tail)
+    else
+        # Find the hyperedges for which each node is in the tail
+        hes = collect.(keys.(hg.hg_tail.v2he))
+
+        # Neighbors are the vertices in the associated heads
+        neighbors = Vector{Vector{Int}}(undef,length(hes))
+        for (i, hes_i) in enumerate(hes)
+            for he in hes_i
+                cat(neighbors[i], collect(keys(hg.hg_head.he2v[he])))
+            end
+            neighbors[i] = sort!(unique!(neighbors[i]))
+        end
+
+        neighbors
+    end
+end
+
+function out_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+    if same_side
+        all_neighbors(hg.hg_tail, i)
+    else
+        # Find the hyperedges for which this node is in the head
+        hes = collect(keys(hg.hg_head.v2he[i]))
+
+        # Neighbors are the vertices in the associated tails
+        neighbors = Vector{Int}[]
+        for he in hes
+            cat(neighbors, collect(keys(hg.hg_tail.he2v[he])))
+        end
+        
+        sort!(unique!(neighbors))
+    end
+end
+
 
 # TODO: you are here
 function hyperedge_neighbors()
 end
 
 #TODO: do we count vertices that share a tail/head with the vertex of interest?
-
-function in_neighbors()
-
-end
-
-function out_neighbors()
-
-end
 
 
 
