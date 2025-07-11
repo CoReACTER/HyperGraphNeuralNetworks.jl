@@ -780,16 +780,55 @@ function normalized_laplacian(
     I - Dv^(-1/2) * A * W * (inv(De)) * A' * Dv^(-1/2)
 end
 
+"""
+    hypergraph_ids(hg::H) where {H <: AbstractHGNNHypergraph}
+    hypergraph_ids(hg::H) where {H <: AbstractHGNNDiHypergraph}
 
-# hypergraph_ids
-# vertex_features
-# hyperedge_features
-# hypergraph_features
-# has_self_loops
+Return a vector containing the graph membership of each vertex in the hypergraph `hg`.
+"""
+function hypergraph_ids(hg::H) where {H <: AbstractHGNNHypergraph}
+    if isnothing(hg.hypergraph_ids)
+        gi = ones(Int, hg.num_vertices)
+    else
+        gi = hg.hypergraph_ids
+    end
+end
+
+function hypergraph_ids(hg::H) where {H <: AbstractHGNNDiHypergraph}
+    if isnothing(hg.hypergraph_ids)
+        gi = ones(Int, hg.num_vertices)
+    else
+        gi = hg.hypergraph_ids
+    end
+end
+
+has_self_loops(hg::H) where {H <: AbstractHGNNHypergraph} = false
+
+function has_self_loops(hg::H) where {H <: AbstractHGNNDiHypergraph}
+    vs_tail = Set.(collect.(keys.(hg.hg_tail.he2v)))
+    vs_head = Set.(collect.(keys.(hg.hg_head.he2v)))
+
+    any([length(intersect(vs_tail[i], vs_head[i])) for i in eachindex(vs_tail)])
+end
+
 # has_multi_hyperedges
+#TODO: docstring
+function has_multi_hyperedges(hg::H) where {H <: AbstractHGNNHypergraph}
+    vs = sort!.(collect.(keys.(hg.he2v)))
+
+    length(Set(vs)) < hg.num_hyperedges
+end
+
+function has_multi_hyperedges(hg::H) where {H <: AbstractHGNNDiHypergraph}
+    vs = [
+        (
+            sort!(collect(keys(hg.hg_tail.he2v[i]))),
+            sort!(collect(keys(hg.hg_head.he2v[i]))),
+        )
+        for i in eachindex(hg.hg_tail.he2v)
+    ]
+
+    length(Set(vs)) < hg.num_hyperedges
+end
 
 # ??? can I do khop_adj? does the trick of nth nearest neighbors being related to exponentiating the adjacency matrix work here?
-
-
-# neighbors (within, incoming, outgoing)
-
