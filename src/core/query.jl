@@ -608,7 +608,14 @@ function complex_incidence_matrix(hg::H) where {H <: AbstractDirectedHypergraph}
     M
 end
 
+"""
+    vertex_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
 
+    Return an NxN diagonal weight matrix for the undirected hypergraph `hg`, where N is the number of vertices in `hg`.
+    Because SimpleHypergraphs hypergraphs can have different weights for each vertex-hyperedge pair, the weight of a
+    vertex is ambiguous. The user can specify a `weighting_function` (default is `sum`) that operates on each row of
+    the hypergraph weighted incidence matrix.
+"""
 function vertex_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
     # Weight matrix is the diagonal matrix of vertex weights
     weights = [weighting_function(hg[i,:]) for i in 1:nhv(hg)]
@@ -616,6 +623,14 @@ function vertex_weight_matrix(hg::H; weighting_function::Function=sum) where {H 
     Diagonal(weights)
 end
 
+"""
+    hyperedge_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
+
+    Return an NxN diagonal weight matrix for the undirected hypergraph `hg`, where N is the number of hyperedges in
+    `hg`. Because SimpleHypergraphs hypergraphs can have different weights for each vertex-hyperedge pair, the weight
+    of a hyperedge is ambiguous. The user can specify a `weighting_function` (default is `sum`) that operates on each
+    column of the hypergraph weighted incidence matrix.
+"""
 function hyperedge_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
     # Weight matrix is the diagonal matrix of hyperedge weights
     weights = [weighting_function(hg[:,i]) for i in 1:nhe(hg)]
@@ -623,6 +638,15 @@ function hyperedge_weight_matrix(hg::H; weighting_function::Function=sum) where 
     Diagonal(weights)
 end
 
+"""
+    vertex_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractDirectedHypergraph}
+
+    Return two NxN diagonal weight matrices for the directed hypergraph `hg`, where N is the number of vertices in
+    `hg`. One matrix is based on the hyperedge tails that each vertex is included in; the other is based on the
+    hyperedge heads that each vertex is included in. Because SimpleHypergraphs hypergraphs can have different weights
+    for each vertex-hyperedge pair, the weight of a vertex is ambiguous. The user can specify a `weighting_function`
+    (default is `sum`) that operates on each row of the hypergraph tail/head weighted incidence matrix.
+"""
 function vertex_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractDirectedHypergraph}
     Wt = vertex_weight_matrix(hg.hg_tail; weighting_function=weighting_function)
     Wh = vertex_weight_matrix(hg.hg_head; weighting_function=weighting_function)
@@ -630,41 +654,118 @@ function vertex_weight_matrix(hg::H; weighting_function::Function=sum) where {H 
     (Wt, Wh)
 end
 
-function hyperedge_weight_matrix(h::H; weighting_function::Function=sum) where {H <: AbstractDirectedHypergraph}
+"""
+    hyperedge_weight_matrix(h::H; weighting_function::Function=sum) where {H <: AbstractDirectedHypergraph}
+
+    Return two NxN diagonal weight matrices for the directed hypergraph `hg`, where N is the number of hyperedges in
+    `hg`. One matrix is based on the hyperedge tails, and the other is based on the hyperedge heads. Because
+    SimpleHypergraphs hypergraphs can have different weights for each vertex-hyperedge pair, the weight of a hyperedge
+    is ambiguous. The user can specify a `weighting_function` (default is `sum`) that operates on each row of the
+    hypergraph tail/head weighted incidence matrix.
+"""
+function hyperedge_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractDirectedHypergraph}
     Wt = hyperedge_weight_matrix(hg.hg_tail; weighting_function=weighting_function)
     Wh = hyperedge_weight_matrix(hg.hg_head; weighting_function=weighting_function)
 
     (Wt, Wh)
 end
 
-vertex_degree_matrix(h::H) where {H <: AbstractSimpleHypergraph} = Diagonal(length.(keys.(h.v2he)))
+vertex_degree_matrix(hg::H) where {H <: AbstractSimpleHypergraph} = Diagonal(length.(keys.(hg.v2he)))
 
-vertex_degree_matrix(h::H) where {H <: AbstractDirectedHypergraph} = (
-    Diagonal(length.(keys.(h.hg_tail.v2he))),
-    Diagonal(length.(keys.(h.hg_head.v2he)))
+vertex_degree_matrix(hg::H) where {H <: AbstractDirectedHypergraph} = (
+    Diagonal(length.(keys.(hg.hg_tail.v2he))),
+    Diagonal(length.(keys.(hg.hg_head.v2he)))
 )
 
-hyperedge_degree_matrix(h::H) where {H <: AbstractSimpleHypergraph} = Diagonal(length.(keys.(h.he2v)))
+hyperedge_degree_matrix(hg::H) where {H <: AbstractSimpleHypergraph} = Diagonal(length.(keys.(hg.he2v)))
 
-hyperedge_degree_matrix(h::H) where {H <: AbstractDirectedHypergraph} = (
-    Diagonal(length.(keys.(h.hg_tail.he2v))),
-    Diagonal(length.(keys.(h.hg_head.he2v)))
+hyperedge_degree_matrix(hg::H) where {H <: AbstractDirectedHypergraph} = (
+    Diagonal(length.(keys.(hg.hg_tail.he2v))),
+    Diagonal(length.(keys.(hg.hg_head.he2v)))
 )
 
-function normalized_laplacian(h::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
-    Dv = vertex_degree_matrix(h)
-    De = hyperedge_degree_matrix(h)
-    W = hyperedge_weight_matrix(h; weighting_function=weighting_function)
-    A = incidence_matrix(h)
+"""
+    normalized_laplacian(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
+
+    Returns the normalized Laplacian for an undirected hypergraph `hg`.
+
+    Because of the ambiguity of defining hyperedge weight in the SimpleHypergraphs formalism, the user can
+    specify a `weighting_function` that, for each hyperedge, acts on the associated row of the matrix representation of
+    `hg`; the default is `sum`.
+
+    Ln = I - Qn,
+    Qn = Dv^(-1/2) A W De^(-1) A* Dv^(-1/2),
+
+    where
+        Ln = normalized signed Laplacian (MxM)
+        I = identity matrix (MxM)
+        Qn = normalized Laplacian (MxM)
+        Dv = vertex degree matrix (MxM)
+        De = hyperedge degree matrix (NxN)
+        A = incidence matrix (MxN)
+        A* = transpose of A (NxM)
+        W = hyperedge weight matrix (NxN)
+
+        M = # vertices in `hg`
+        N = # hyperedges in `hg`
+
+    Reference:
+        Fiorini, S., Coniglio, S., Ciavotta, M., Del Bue, A., Let There be Direction in Hypergraph Neural Networks.
+        Transactions on Machine Learning Research, 2024.
+"""
+function normalized_laplacian(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
+    Dv = vertex_degree_matrix(hg)
+    De = hyperedge_degree_matrix(hg)
+    W = hyperedge_weight_matrix(hg; weighting_function=weighting_function)
+    A = incidence_matrix(hg)
 
     # From "Let There be Direction in Hypergraph Neural Networks" by Fiorini et al.
     # https://openreview.net/forum?id=h48Ri6pmvi
     I - Dv^(-1/2) * A * W * (inv(De)) * transpose(A) * Dv^(-1/2)
 end
 
-_matrix_avg(a::AbstractMatrix, b::AbstractMatrix) = (a .+ b) ./ 2
+_matrix_avg(a::AbstractMatrix{T}, b::AbstractMatrix{T}) where {T <: Real} = (a .+ b) ./ 2
 
-function normalized_laplacian(h::H; weighting_function::Function=sum, combining_function::Function=_matrix_avg) where {H <: AbstractDirectedHypergraph}
+"""
+    normalized_laplacian(
+        h::H;
+        weighting_function::Function=sum,
+        combining_function::Function=_matrix_avg
+    )
+
+    Returns the normalized Laplacian for an undirected hypergraph `hg`.
+
+    Because of the ambiguity of defining hyperedge weight in the SimpleHypergraphs formalism, the user can
+    specify a `weighting_function` that, for each hyperedge, acts on the associated row of the matrix representation of
+    `hg`; the default is `sum`. The user can also specify a `combining_function` for how the hyperedge tail and head
+    weights should be combined to a single matrix; the default is to average the two matrices.
+
+    Ln = I - Qn,
+    Qn = Dv^(-1/2) A W De^(-1) A* Dv^(-1/2),
+
+    where
+        Ln = normalized signed Laplacian (MxM)
+        I = identity matrix (MxM)
+        Qn = normalized Laplacian (MxM)
+        Dv = vertex degree matrix (MxM) <-- obtained by summing the tail and head degree matrices
+        De = hyperedge degree matrix (NxN) <-- obtained by summing the tail and head degree matrices
+        A = incidence matrix (MxN)
+        A* = conjugate transpose of A (NxM)
+        W = hyperedge weight matrix (NxN) <-- obtained by applying `combining_function` (default: averaging) to the
+            tail and head weight matrices
+
+        M = # vertices in `hg`
+        N = # hyperedges in `hg`
+
+    Reference:
+        Fiorini, S., Coniglio, S., Ciavotta, M., Del Bue, A., Let There be Direction in Hypergraph Neural Networks.
+        Transactions on Machine Learning Research, 2024.
+"""
+function normalized_laplacian(
+    h::H;
+    weighting_function::Function=sum,
+    combining_function::Function=_matrix_avg
+) where {H <: AbstractDirectedHypergraph}
     V = vertex_degree_matrix(h)
     Dv = V[1] .+ V[2]
     E = hyperedge_degree_matrix(h)
