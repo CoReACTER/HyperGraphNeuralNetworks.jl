@@ -144,23 +144,59 @@ vertices(hg::H) where {H <: AbstractHGNNDiHypergraph} = 1:(hg.num_vertices)
 
 #TODO: docstrings
 
+"""
+    degree(hg::H) where {H <: AbstractHGNNHypergraph}
+    degree(hg::H, i::Int) where {H <: AbstractHGNNHypergraph}
+    degree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNHypergraph}
+    
+    Return the degree of all vertices (if no index is provided) or of a specific group of vertices.
+"""
 degree(hg::H) where {H <: AbstractHGNNHypergraph} = length.(keys.(hg.v2he))
 degree(hg::H, i::Int) where {H <: AbstractHGNNHypergraph} = length(hg.v2he[i])
 degree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNHypergraph} = [degree(hg, i) for i in inds]
 
+"""
+    degree(hg::H) where {H <: AbstractHGNNDiHypergraph}
+    degree(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph}
+    degree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHypergraph}
+
+    Return the degree of all vertices (if no index is provided) or of a specific group of indices
+    For directed hypergraphs, the total degree is the sum of the incoming degree (see `indegree`) and the
+    outgoing degree (see `outdegree`).
+"""
 degree(hg::H) where {H <: AbstractHGNNDiHypergraph} = indegree(hg) .+ outdegree(hg)
 degree(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph} = indegree(hg, i) + outdegree(hg, i)
 degree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHypergraph} = [degree(hg, i) for i in inds]
 
-# TODO: do these need to be implemented for undirected hypergraphs? Seems like the answer is "no"
+"""
+    indegree(hg::H) where {H <: AbstractHGNNDiHypergraph}
+    indegree(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph}
+    indegree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHypergraph}
+
+    Return the incoming degree of all vertices (if no index is provided) or of a specific group of indices for a
+    directed hypergraph. The incoming degree is the number of directed hyperedges containing a vertex in the head.
+"""
 indegree(hg::H) where {H <: AbstractHGNNDiHypergraph} = length.(keys.(hg.hg_head.v2he))
 indegree(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph} = length(hg.hg_head.v2he[i])
 indegree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHypergraph} = [indegree(hg, i) for i in inds]
 
+"""
+    outdegree(hg::H) where {H <: AbstractHGNNDiHypergraph}
+    outdegree(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph}
+    outdegree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHypergraph}
+
+    Return the outgoing degree of all vertices (if no index is provided) or of a specific group of indices for a
+    directed hypergraph. The outgoing degree is the number of directed hyperedges containing a vertex in the tail.
+"""
 outdegree(hg::H) where {H <: AbstractHGNNDiHypergraph} = length.(keys.(hg.hg_tail.v2he))
 outdegree(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph} = length(hg.hg_tail.v2he[i])
 outdegree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHypergraph} = [indegree(hg, i) for i in inds]
 
+"""
+    all_neighbors(hg::H) where {H <: AbstractHGNNHypergraph}
+
+    Collect all neighbors for all vertices in an undirected hypergraph.
+"""
 function all_neighbors(hg::H) where {H <: AbstractHGNNHypergraph}
 
     # For undirected hypergraph, neighbor vertices are those that share a hyperedge with the vertex of interest
@@ -178,6 +214,11 @@ function all_neighbors(hg::H) where {H <: AbstractHGNNHypergraph}
     neighbors
 end
 
+"""
+    all_neighbors(hg::H, i::Int) where {H <: AbstractHGNNHypergraph}
+
+    Returns the neighbors of vertex `i` in undirected hypergraph `hg`.
+"""
 function all_neighbors(hg::H, i::Int) where {H <: AbstractHGNNHypergraph}
 
     hes = collect(keys(hg.v2he[i]))
@@ -191,6 +232,21 @@ function all_neighbors(hg::H, i::Int) where {H <: AbstractHGNNHypergraph}
     sort!(unique!(neighbors))
 end
 
+"""
+    all_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+
+    Returns all neighbors for all vertices in a directed hypergraph. The set of all neighbors for a vertex is the union
+    of the set of all incoming neighbors and outgoing neighbors. Note that the definition of `incoming` and `outgoing`
+    neighbor depends on if `same_side` is true or false; see below.
+
+    Args:
+        hg::H where {H <: AbstractHGNNDiHypergraph} : Hypergraph
+        same_side::Bool : If true, return the neighbors within the same side of a hyperedge; i.e., if vertex
+        `i` and vertex `j` are both in the tail of hyperedge `e`, they are neighbors. If false, instead return
+        the neighbors on the opposite side of the hyperedge; i.e., if vertex `i` is in the tail of `e` and vertex
+        `j` is in the head of `e`, then `i` and `j` are neighbors. Default is false.
+
+"""
 function all_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
 
     incoming = in_neighbors(hg; same_side=same_side)
@@ -200,6 +256,22 @@ function all_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiH
 
 end
 
+"""
+    all_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+
+    Returns the neighbors for vertex `i` in a directed hypergraph `hg`. The set of all neighbors for a vertex is the
+    union of the set of all incoming neighbors and outgoing neighbors. Note that the definition of `incoming` and
+    `outgoing` neighbor depends on if `same_side` is true or false; see below.
+
+    Args:
+        hg::H where {H <: AbstractHGNNDiHypergraph} : Hypergraph
+        i::Int : Vertex index
+        same_side::Bool : If true, return the neighbors within the same side of a hyperedge; i.e., if vertex
+        `i` and vertex `j` are both in the tail of hyperedge `e`, they are neighbors. If false, instead return
+        the neighbors on the opposite side of the hyperedge; i.e., if vertex `i` is in the tail of `e` and vertex
+        `j` is in the head of `e`, then `i` and `j` are neighbors. Default is false.
+
+"""
 function all_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
 
     incoming = in_neighbors(hg, i; same_side=same_side)
@@ -209,6 +281,19 @@ function all_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: Abstrac
 
 end
 
+"""
+    in_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+
+    Return the incoming neighbors for a directed hypergraph `hg`. Note that the definition of `incoming` depends on
+    if `same_side` is true or false; see below.
+
+    Args:
+        hg::H where {H <: AbstractHGNNDiHypergraph} : Hypergraph
+        same_side::Bool : If true, return the neighbors that share a hyperedge head with each vertex; i.e., if vertex
+        `i` and vertex `j` are both in the head of some hyperedge `e`, they are incoming neighbors. If false, instead
+        return the neighbors on the opposite side of the hyperedge; i.e., if vertex `i` is in the head of `e` and vertex
+        `j` is in the tail of `e`, then `j` is an incoming neighbor to `i`. Default is false.
+"""
 function in_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
     if same_side
         all_neighbors(hg.hg_head)
@@ -229,6 +314,20 @@ function in_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHy
     end
 end
 
+"""
+    in_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+
+    Return the incoming neighbors for a vertex `i` of a directed hypergraph `hg`. Note that the definition of
+    `incoming` depends on if `same_side` is true or false; see below.
+
+    Args:
+        hg::H where {H <: AbstractHGNNDiHypergraph} : Hypergraph
+        i::Int : Vertex index
+        same_side::Bool : If true, return the neighbors that share a hyperedge head with each vertex; i.e., if vertex
+        `i` and vertex `j` are both in the head of some hyperedge `e`, they are incoming neighbors. If false, instead
+        return the neighbors on the opposite side of the hyperedge; i.e., if vertex `i` is in the head of `e` and vertex
+        `j` is in the tail of `e`, then `j` is an incoming neighbor to `i`. Default is false.
+"""
 function in_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
     if same_side
         all_neighbors(hg.hg_head, i)
@@ -246,6 +345,19 @@ function in_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: Abstract
     end
 end
 
+"""
+    out_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+
+    Return the outgoing neighbors for a directed hypergraph `hg`. Note that the definition of `outgoing` depends on
+    if `same_side` is true or false; see below.
+
+    Args:
+        hg::H where {H <: AbstractHGNNDiHypergraph} : Hypergraph
+        same_side::Bool : If true, return the neighbors that share a hyperedge tail with each vertex; i.e., if vertex
+        `i` and vertex `j` are both in the tail of some hyperedge `e`, they are outgoing neighbors. If false, instead
+        return the neighbors on the opposite side of the hyperedge; i.e., if vertex `i` is in the tail of `e` and vertex
+        `j` is in the head of `e`, then `j` is an outgoing neighbor to `i`. Default is false.
+"""
 function out_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
     if same_side
         all_neighbors(hg.hg_tail)
@@ -266,6 +378,20 @@ function out_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiH
     end
 end
 
+"""
+    out_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+
+    Return the outgoing neighbors for a vertex `i` of a directed hypergraph `hg`. Note that the definition of
+    `outgoing` depends on if `same_side` is true or false; see below.
+
+    Args:
+        hg::H where {H <: AbstractHGNNDiHypergraph} : Hypergraph
+        i::Int : Vertex index
+        same_side::Bool : If true, return the neighbors that share a hyperedge tail with each vertex; i.e., if vertex
+        `i` and vertex `j` are both in the tail of some hyperedge `e`, they are outgoing neighbors. If false, instead
+        return the neighbors on the opposite side of the hyperedge; i.e., if vertex `i` is in the tail of `e` and vertex
+        `j` is in the head of `e`, then `j` is an outgoing neighbor to `i`. Default is false.
+"""
 function out_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
     if same_side
         all_neighbors(hg.hg_tail, i)
@@ -284,7 +410,13 @@ function out_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: Abstrac
 end
 
 
-# TODO: docstrings
+"""
+    hyperedge_neighbors(hg::H) where {H <: AbstractHGNNHypergraph}
+
+    Returns the neighbors of each hyperedge in an undirected hypergraph `hg`. A hyperedge `e` is neighbors with a
+    hyperedge `f` if there is at least one vertex contained in both `e` and `f`.
+
+"""
 function hyperedge_neighbors(hg::H) where {H <: AbstractHGNNHypergraph}
     # Two hyperedges are considered "neighbors" if they share at least one vertex
     vs = Set.(collect.(keys.(hg.he2v)))
@@ -301,6 +433,13 @@ function hyperedge_neighbors(hg::H) where {H <: AbstractHGNNHypergraph}
     sort!.(neighbors)
 end
 
+"""
+    hyperedge_neighbors(hg::H, i::Int) where {H <: AbstractHGNNHypergraph}
+
+    Returns the neighbors of hyperedge `i` in an undirected hypergraph `hg`. A hyperedge `i` is neighbors with a
+    hyperedge `e` if there is at least one vertex contained in both `i` and `e`.
+
+"""
 function hyperedge_neighbors(hg::H, i::Int) where {H <: AbstractHGNNHypergraph}
     # Two hyperedges are considered "neighbors" if they share at least one vertex
     vs = Set(collect(keys(hg.he2v[i])))
@@ -318,6 +457,14 @@ function hyperedge_neighbors(hg::H, i::Int) where {H <: AbstractHGNNHypergraph}
     sort!(neighbors)
 end
 
+"""
+    hyperedge_neighbors(hg::H; directed::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+
+    Returns the neighbors of each hyperedge in directed hypergraph `hg`. If `directed` is true (default false), then
+    hyperedge `i` is neighbors with hyperedge `j` if and only if there is at least one vertex in the head of `i` that
+    is also in the tail of `j`. Otherwise, two hyperedges are neighbors if they share any vertices, irrespective of
+    whether those vertices are in the hyperedges' heads or tails.
+"""
 function hyperedge_neighbors(hg::H; directed::Bool=false) where {H <: AbstractHGNNDiHypergraph}
     if !directed
         # Two directed hyperedges are considered "neighbors" if they share at least one vertex in EITHER their tails or
@@ -356,6 +503,14 @@ function hyperedge_neighbors(hg::H; directed::Bool=false) where {H <: AbstractHG
     sort!.(neighbors)
 end
 
+"""
+    hyperedge_neighbors(hg::H, i::Int; directed::Bool=false) where {H <: AbstractHGNNDiHypergraph}
+
+    Returns the neighbors of hyperedge `i` in directed hypergraph `hg`. If `directed` is true (default false), then
+    hyperedge `i` is neighbors with hyperedge `j` if and only if there is at least one vertex in the head of `i` that
+    is also in the tail of `j`. Otherwise, two hyperedges are neighbors if they share any vertices, irrespective of
+    whether those vertices are in the hyperedges' heads or tails.
+"""
 function hyperedge_neighbors(hg::H, i::Int; directed::Bool=false) where {H <: AbstractHGNNDiHypergraph}
     if !directed
         # Two directed hyperedges are considered "neighbors" if they share at least one vertex in EITHER their tails or
@@ -400,23 +555,48 @@ isolated_vertices(hg::H) where {H <: AbstractHGNNDiHypergraph} = [
     i for i in 1:nhv(hg) if length(hg.hg_tail.v2he[i]) == 0 && length(hg.hg_head.v2he[i]) == 0
 ]
 
-function incidence_matrix(h::H) where {H <: AbstractSimpleHypergraph}
-    M = Matrix(h)
+"""
+    incidence_matrix(hg::H) where {H <: AbstractSimpleHypergraph}
+
+    Convert the matrix representation of an undirected hypergraph `hg` to an incidence matrix. The (i,j)-th element of
+    the incidence matrix `M` is 1 if vertex `i` is in hyperedge `j` and 0 otherwise.
+"""
+function incidence_matrix(hg::H) where {H <: AbstractSimpleHypergraph}
+    M = Matrix(hg)
     M[M .!== nothing] .= 1
     M[M .=== nothing] .= 0
 
     M
 end
 
-function incidence_matrix(h::H) where {H <: AbstractDirectedHypergraph}
-    Mt = incidence_matrix(h.hg_tail)
-    Mh = incidence_matrix(h.hg_head)
+"""
+    incidence_matrix(hg::H) where {H <: AbstractDirectedHypergraph}
+
+    Convert the matrix representation of an undirected hypergraph `hg` into two incidence matrices, `Mt` (the tail
+    incidence matrix) and `Mh` (the head incidence matrix). The (i,j)-th element of `Mt` is 1 if vertex `i` is in the
+    tail of hyperedge `j` and 0 otherwise. Likewise, `Mh`[i, j] is 1 if `i` is in the head of `j` and 0 otherwise
+"""
+function incidence_matrix(hg::H) where {H <: AbstractDirectedHypergraph}
+    Mt = incidence_matrix(hg.hg_tail)
+    Mh = incidence_matrix(hg.hg_head)
 
     Mt, Mh
 end
 
-function complex_incidence_matrix(h::H) where {H <: AbstractDirectedHypergraph}
-    Mt, Mh = incidence_matrix(h)
+"""
+    complex_incidence_matrix(hg::H) where {H <: AbstractDirectedHypergraph}
+
+    Convert the matrix representation of an undirected hypergraph `hg` into a single complex-valued incidence matrix
+    `M`. The (i,j)-th element of `M` is 1 if vertex `i` is in the head of hyperedge `j`, -im if `i` is in the tail of
+    `j`, and 0 otherwise. If there are any hyperedges where any vertex is in both the tail and the head, an error is
+    thrown.
+
+    Reference:
+        Fiorini, S., Coniglio, S., Ciavotta, M., Del Bue, A., Let There be Direction in Hypergraph Neural Networks.
+        Transactions on Machine Learning Research, 2024.
+"""
+function complex_incidence_matrix(hg::H) where {H <: AbstractDirectedHypergraph}
+    Mt, Mh = incidence_matrix(hg)
 
     M = convert(Complex{typeof(Mh)}, Mh) .- (im .* convert(Complex{typeof(Mt)}, Mt))
 
@@ -428,18 +608,33 @@ function complex_incidence_matrix(h::H) where {H <: AbstractDirectedHypergraph}
     M
 end
 
-function vertex_weight_matrix(h::H; weighting_function::Function=sum) where {H <: AbstractHypergraph}
+
+function vertex_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
     # Weight matrix is the diagonal matrix of vertex weights
-    weights = [weighting_function(h[i,:]) for i in 1:nhv(h)]
+    weights = [weighting_function(hg[i,:]) for i in 1:nhv(hg)]
     
     Diagonal(weights)
 end
 
-function hyperedge_weight_matrix(h::H; weighting_function::Function=sum) where {H <: AbstractHypergraph}
+function hyperedge_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
     # Weight matrix is the diagonal matrix of hyperedge weights
-    weights = [weighting_function(h[:,i]) for i in 1:nhe(h)]
+    weights = [weighting_function(hg[:,i]) for i in 1:nhe(hg)]
     
     Diagonal(weights)
+end
+
+function vertex_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractDirectedHypergraph}
+    Wt = vertex_weight_matrix(hg.hg_tail; weighting_function=weighting_function)
+    Wh = vertex_weight_matrix(hg.hg_head; weighting_function=weighting_function)
+
+    (Wt, Wh)
+end
+
+function hyperedge_weight_matrix(h::H; weighting_function::Function=sum) where {H <: AbstractDirectedHypergraph}
+    Wt = hyperedge_weight_matrix(hg.hg_tail; weighting_function=weighting_function)
+    Wh = hyperedge_weight_matrix(hg.hg_head; weighting_function=weighting_function)
+
+    (Wt, Wh)
 end
 
 vertex_degree_matrix(h::H) where {H <: AbstractSimpleHypergraph} = Diagonal(length.(keys.(h.v2he)))
@@ -467,21 +662,24 @@ function normalized_laplacian(h::H; weighting_function::Function=sum) where {H <
     I - Dv^(-1/2) * A * W * (inv(De)) * transpose(A) * Dv^(-1/2)
 end
 
-function normalized_laplacian(h::H; weighting_function::Function=sum) where {H <: AbstractDirectedHypergraph}
-    Dv = vertex_degree_matrix(h)
-    De = hyperedge_degree_matrix(h)
-    W = hyperedge_weight_matrix(h; weighting_function=weighting_function)
+_matrix_avg(a::AbstractMatrix, b::AbstractMatrix) = (a .+ b) ./ 2
+
+function normalized_laplacian(h::H; weighting_function::Function=sum, combining_function::Function=_matrix_avg) where {H <: AbstractDirectedHypergraph}
+    V = vertex_degree_matrix(h)
+    Dv = V[1] .+ V[2]
+    E = hyperedge_degree_matrix(h)
+    De = E[1] .+ E[2]
+    W = combining_function(
+        hyperedge_weight_matrix(h; weighting_function=weighting_function)...
+    )
     A = complex_incidence_matrix(h)
 
     # From "Let There be Direction in Hypergraph Neural Networks" by Fiorini et al.
     # https://openreview.net/forum?id=h48Ri6pmvi
-    I - Dv^(-1/2) * A * W * (inv(De)) * transpose(A) * Dv^(-1/2)
+    I - Dv^(-1/2) * A * W * (inv(De)) * A' * Dv^(-1/2)
 end
 
 
-
-# eigenvalues
-# eigenvalues_laplacian
 # hypergraph_ids
 # vertex_features
 # hyperedge_features
