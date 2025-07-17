@@ -149,68 +149,6 @@ function remove_self_loops(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:Abstra
     )
 end
 
-function remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
-    mask_to_keep = trues(nhe(hg))
-    mask_to_keep[to_remove] .= false
-    
-    v2he = deepcopy(hg.v2he)
-    for i in to_remove
-        for v in keys(hg.he2v[i])
-            delete!(v2he[v], i)
-        end
-    end
-
-    he2v = hg.he2v[mask_to_keep]
-
-    hedata = getobs(hg.hedata, mask_to_keep)
-
-    return HGNNHypergraph(
-        v2he,
-        he2v,
-        hg.num_vertices,
-        length(he2v),
-        hg.num_hypergraphs,
-        hg.hypergraph_ids,
-        hg.vdata,
-        hedata,
-        hg.hgdata
-    )
-end
-
-function remove_hyperedges(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
-    mask_to_keep = trues(nhe(hg))
-    mask_to_keep[to_remove] .= false
-
-    v2he_tail = deepcopy(hg.hg_tail.v2he)
-    v2he_head = deepcopy(hg.hg_head.v2he)
-
-    for i in to_remove
-        for v in keys(hg.hg_tail.he2v[i])
-            delete!(v2he_tail[v], i)
-        end
-        for v in keys(hg.hg_head.he2v[i])
-            delete!(v2he_head[v], i)
-        end
-    end
-
-    he2v_tail = hg.hg_tail.he2v[mask_to_keep]
-    he2v_head = hg.hg_head.he2v[mask_to_keep]
-
-    hedata = getobs(hg.hedata, mask_to_keep)
-
-    HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(nothing, length(v2he_tail)), Vector{Nothing}(nothing, length(he2v_tail))),
-        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(nothing, length(v2he_head)), Vector{Nothing}(nothing, length(he2v_head))),
-        hg.num_vertices,
-        length(he2v_tail),
-        hg.num_hypergraphs,
-        hg.hypergraph_ids,
-        hg.vdata,
-        hedata,
-        hg.hgdata
-    )
-end
-
 function remove_multi_hyperedges(hg::HGNNHypergraph)
     unique_vs = Set{Set{Int}}()
 
@@ -288,22 +226,11 @@ function remove_multi_hyperedges(hg::HGNNDiHypergraph)
     )
 end
 
-function remove_vertices()
-end
-
-function add_hyperedges()
-end
-
-function add_vertices()
-end
-
+# TODO: you are here
 function rewire_hyperedges()
 end
 
 function to_undirected()
-end
-
-function set_hyperedge_weight()
 end
 
 # MLUtils.batch

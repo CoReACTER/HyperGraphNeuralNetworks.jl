@@ -802,6 +802,7 @@ function hypergraph_ids(hg::H) where {H <: AbstractHGNNDiHypergraph}
     end
 end
 
+# TODO: be consistent in handling; see transform.jl
 has_self_loops(hg::H) where {H <: AbstractHGNNHypergraph} = false
 
 function has_self_loops(hg::H) where {H <: AbstractHGNNDiHypergraph}
