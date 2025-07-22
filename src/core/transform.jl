@@ -307,16 +307,141 @@ function to_undirected(hg::HGNNDiHypergraph{T,D}) where {T <: Real, D <: Abstrac
     )
 end
 
-# MLUtils.batch
-function batch()
+#TODO: docstrings
+function combine_hypergraphs(hg1::HGNNHypergraph{T, D}, hg2::HGNNHypergraph{T, D}) where {T <: Real, D <: AbstractDict{Int, T}}
+    num_vertices = hg1.num_vertices + hg2.num_vertices
+    num_hyperedges = hg1.num_hyperedges + hg2.num_hyperedges
+    num_hypergraphs = hg1.num_hypergraphs + hg2.num_hypergraphs
+    
+    v_increment = hg1.num_vertices
+    he_increment = hg1.num_hyperedges
+
+    v2he_new = deepcopy(hg1.v2he)
+    for v in hg2.v2he
+        newv = D()
+        for (he, val) in v
+            newv[he + he_increment] = val
+        end
+        push!(v2he_new, newv)
+    end
+
+    he2v_new = deepcopy(hg1.he2v)
+    for he in hg2.he2v
+        newhe = D()
+        for (v, val) in he
+            newhe[v + v_increment] = val
+        end
+        push!(he2v_new, newhe)
+    end
+
+    hgid_increment = hg1.num_hypergraphs
+    if isnothing(hg1.hypergraph_ids) && isnothing(hg1.hypergraph_ids)
+        hypergraph_ids = ones(num_vertices)
+    elseif isnothing(hg1.hypergraph_ids)
+        hypergraph_ids = cat(ones(hg1.num_vertices), (hg2.hypergraph_ids .+ hgid_increment))
+    elseif isnothing(hg2.hypergraph_ids)
+        hypergraph_ids = cat(hg1.hypergraph_ids, (ones(hg2.num_vertices) .+ hgid_increment))
+    else
+        hypergraph_ids = cat(hg1.hypergraph_ids, (hg2.hypergraph_ids .+ hgid_increment))
+    end
+
+    HGNNHypergraph(
+        v2he_new,
+        he2v_new,
+        num_vertices,
+        num_hyperedges,
+        num_hypergraphs,
+        hypergraph_ids,
+        cat_features(hg1.vdata, hg2.vdata),
+        cat_features(hg1.hedata, hg2.hedata),
+        cat_features(hg1.hgdata, hg2.hgdata)
+    )
 end
 
-# MLUtils.unbatch
-function unbatch()
+function combine_hypergraphs(hg1::HGNNHypergraph{T,D}, hgothers::HGNNHypergraph{T,D}...) where {T <: Real, D <: AbstractDict{Int, T}}
+    hg = hg1
+
+    for hgo in hgothers
+        hg = combine_hypergraphs(hg, hgo)
+    end
+
+    hg
+end
+
+function combine_hypergraphs(hgs::AbstractVector{HGNNHypergraph{T,D}}) where {T <: Real, D <: AbstractDict{Int, T}}
+    num_vs = [hg.num_vertices for hg in hgs]
+    num_hes = [hg.num_hyperedges for hg in hgs]
+    num_hgs = [hg.num_hypergraphs for hg in hgs]
+    
+    vsum = cumsum([0; num_vs])[1:(end - 1)]
+    hesum = cumsum([0; num_hes])[1:(end - 1)]
+    hgsum = cumsum([0; num_hgs])[1:(end - 1)]
+
+    v2hes = [hg.v2he for hg in hgs]
+    he2vs = [hg.he2v for hg in hgs]
+
+    v2he = D[]
+    he2v = D[]
+
+    for (i, v) in enumerate(v2hes)
+        new_v = D()
+        for (he, val) in v
+            new_v[he + hesum[i]] = val
+        end
+        push!(v2he, new_v)
+    end
+
+    for (i, he) in enumerate(he2vs)
+        new_he = D()
+        for (v, val) in he
+            new_he[v + vsum[i]] = val
+        end
+        push!(he2v, new_he)
+    end
+
+    function obtain_hg_inds(hg)
+        hg.hypergraph_ids === nothing ? ones(hg.num_vertices) : hg.hypergraph_ids
+    end
+    
+    hypergraph_id_vecs = obtain_hg_inds.(hgs)
+    hypergraph_ids = cat_features([nhg .+ inc for (nhg, inc) in zip(hgsum, hypergraph_id_vecs)])
+
+    HGNNHypergraph(
+        v2he,
+        he2v,
+        sum(num_vs),
+        sum(num_hes),
+        sum(num_hgs),
+        hypergraph_ids,
+        cat_features([hg.vdata for hg in hgs]),
+        cat_features([hg.hedata for hg in hgs]),
+        cat_features([hg.hgdata for hg in hgs])
+    )
+end
+
+#TODO: you are here
+function combine_hypergraphs(hg1::HGNNDiHypergraph{T, D}, hg2::HGNNDiHypergraph{T, D}) where {T <: Real, D <: AbstractDict{Int, T}}
+
+end
+
+function combine_hypergraphs(hg1::HGNNDiHypergraph{T,D}, hgothers::HGNNDiHypergraph{T,D}...) where {T <: Real, D <: AbstractDict{Int, T}}
+
+end
+
+function combine_hypergraphs(hgs::AbstractVector{HGNNDiHypergraph{T,D}}) where {T <: Real, D <: AbstractDict{Int, T}}
+
+end
+
+function MLUtils.batch()
 end
 
 function get_hypergraph()
 end
+
+function MLUtils.unbatch()
+end
+
+
 
 function negative_sample()
 end
