@@ -226,11 +226,30 @@ function remove_multi_hyperedges(hg::HGNNDiHypergraph)
     )
 end
 
-# TODO: you are here
-function rewire_hyperedges()
-end
+function to_undirected(hg::HGNNDiHypergraph{T,D}) where {T <: Real, D <: AbstractDict{Int, T}}
 
-function to_undirected()
+    incidence = Matrix{Union{T, Nothing}}(nothing, nhv(hg), nhe(hg))
+
+    this_nhe = nhe(hg)
+
+    for row in 1:nhv(hg)
+        for column in 1:this_nhe
+            tail_val, head_val = h[row, column]
+            if tail_val === nothing && head_val === nothing
+                incidence[row, column] = nothing
+            else
+                incidence[row, column] = convert(T, 1.0)
+            end
+        end
+    end
+
+    HGNNHypergraph{T, D}(
+        incidence;
+        hypergraph_ids=hg.hypergraph_ids,
+        vdata=hg.vdata,
+        hedata=hg.hedata,
+        hgdata=hg.hgdata
+    )
 end
 
 # MLUtils.batch
@@ -253,4 +272,4 @@ end
 function random_split_hyperedges()
 end
 
-# PageRank diffusion?
+# TODO: PageRank diffusion?

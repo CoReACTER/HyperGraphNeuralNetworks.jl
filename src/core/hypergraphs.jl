@@ -1068,8 +1068,69 @@ function remove_hyperedge(hg::HGNNDiHypergraph, e::Int)
 
 end
 
-
 # TODO: docstring
+function remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
+    mask_to_keep = trues(nhv(hg))
+    mask_to_keep[to_remove] .= false
+    
+    he2v = deepcopy(hg.he2v)
+    for i in to_remove
+        for he in keys(hg.v2he[i])
+            delete!(he2v[he], i)
+        end
+    end
+
+    v2he = hg.v2he[mask_to_keep]
+
+    vdata = getobs(hg.vdata, mask_to_keep)
+
+    return HGNNHypergraph(
+        v2he,
+        he2v,
+        hg.num_vertices,
+        length(he2v),
+        hg.num_hypergraphs,
+        hg.hypergraph_ids,
+        vdata,
+        hg.hedata,
+        hg.hgdata
+    )
+end
+
+function remove_vertices(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
+    mask_to_keep = trues(nhe(hg))
+    mask_to_keep[to_remove] .= false
+
+    he2v_tail = deepcopy(hg.hg_tail.he2v)
+    he2v_head = deepcopy(hg.hg_head.he2v)
+
+    for i in to_remove
+        for he in keys(hg.hg_tail.v2he[i])
+            delete!(he2v_tail[he], i)
+        end
+        for he in keys(hg.hg_head.v2he[i])
+            delete!(he2v_head[he], i)
+        end
+    end
+
+    v2he_tail = hg.hg_tail.v2he[mask_to_keep]
+    v2he_head = hg.hg_head.v2he[mask_to_keep]
+
+    vdata = getobs(hg.vdata, mask_to_keep)
+
+    HGNNDiHypergraph(
+        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(nothing, length(v2he_tail)), Vector{Nothing}(nothing, length(he2v_tail))),
+        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(nothing, length(v2he_head)), Vector{Nothing}(nothing, length(he2v_head))),
+        hg.num_vertices,
+        length(he2v_tail),
+        hg.num_hypergraphs,
+        hg.hypergraph_ids,
+        vdata,
+        hg.hedata,
+        hg.hgdata
+    )
+end
+
 function remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
     mask_to_keep = trues(nhe(hg))
     mask_to_keep[to_remove] .= false
@@ -1132,16 +1193,73 @@ function remove_hyperedges(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
     )
 end
 
-# TODO
-function remove_vertices()
+function add_vertices(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    features::DataStore;
+    hyperedges::AbstractVector{D} = Vector{D}(D(), n),
+    hypergraph_ids::AbstractVector{Int} = ones(n)
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_vertex(hg, getobs(features, i); hyperedges=hyperedges, hypergraph_id=hypergraph_ids[i])
+    end
+
+    hg
+
 end
 
-function add_hyperedges()
+function add_vertices(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    features::DataStore;
+    hyperedges_tail::AbstractVector{D} = Vector{D}(D(), n),
+    hyperedges_head::AbstractVector{D} = Vector{D}(D(), n),
+    hypergraph_ids::AbstractVector{Int} = ones(n)
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_vertex(
+            hg,
+            getobs(features, i);
+            hyperedges_tail = hyperedges_tail[i],
+            hyperedges_head = hyperedges_head[i],
+            hypergraph_id = hypergraph_ids[i]
+        )
+    end
+
+    hg
+
 end
 
-function add_vertices()
+function add_hyperedges(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    features::DataStore;
+    vertices::AbstractVector{D} = Vector{D}(D(), n)    
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_hyperedge(hg, getobs(features, i); vertices=vertices[i])
+    end
+
+    hg
 end
 
+function add_hyperedges(
+    hg::HGNNDiHypergraph,
+    n::Int,
+    features::DataStore;
+    vertices_tail::AbstractVector{D} = Vector{D}(D(), n),
+    vertices_head::AbstractVector{D} = Vector{D}(D(), n)
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_hyperedge(hg, getobs(features, i); vertices_tail=vertices_tail[i], vertices_head=vertices_head[i])
+    end
+
+    hg
+end
 
 
 function Base.show(io::IO, hg::HGNNDiHypergraph)
