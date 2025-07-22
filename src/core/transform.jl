@@ -1,8 +1,15 @@
-"""
-TODO: add docstrings
-"""
 
+"""
+    add_self_loops(
+        hg::HGNNHypergraph{T, D};
+        add_repeated_hyperedge::Bool = false
+    ) where {T<:Real, D<:AbstractDict{Int,T}}
 
+    Add self-loops (hyperedges containing a single vertex) to an undirected hypergraph. If `add_repeated_hyperedge` is
+    true (default is false), then new self-loops will be added, even when a self-loop already exists for some vertex.
+
+    NOTE: this function will throw an AssertionError if hg.hedata is not empty
+"""
 function add_self_loops(hg::HGNNHypergraph{T, D}; add_repeated_hyperedge::Bool = false) where {T<:Real, D<:AbstractDict{Int,T}}
     
     @assert isempty(hg.hedata)
@@ -39,6 +46,18 @@ function add_self_loops(hg::HGNNHypergraph{T, D}; add_repeated_hyperedge::Bool =
     )
 end
 
+"""
+    add_self_loops(
+        hg::HGNNDiHypergraph{T, D};
+        add_repeated_hyperedge::Bool = false
+    ) where {T<:Real, D<:AbstractDict{Int,T}}
+
+    Add self-loops (hyperedges with the tail and the head both containing only a single vertex `v`) to a directed
+    hypergraph. If `add_repeated_hyperedge` is true (default is false), then new self-loops will be added, even when
+    a self-loop already exists for some vertex.
+
+    NOTE: this function will throw an AssertionError if hg.hedata is not empty
+"""
 function add_self_loops(hg::HGNNDiHypergraph{T, D}; add_repeated_hyperedge::Bool = false) where {T<:Real, D<:AbstractDict{Int,T}}
 
     @assert isempty(hg.hedata)
@@ -83,7 +102,11 @@ function add_self_loops(hg::HGNNDiHypergraph{T, D}; add_repeated_hyperedge::Bool
     )
 end
 
+"""
+    remove_self_loops(hg::HGNNHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
 
+    Remove self-loops (hyperedges containing only one vertex) from an undirected hypergraph `hg`.
+"""
 function remove_self_loops(hg::HGNNHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
     @assert isempty(hg.hedata)
     
@@ -114,6 +137,12 @@ function remove_self_loops(hg::HGNNHypergraph{T, D}) where {T<:Real, D<:Abstract
     )
 end
 
+"""
+    remove_self_loops(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
+
+    Remove self-loops (hyperedges where the tail and head both contain only a single, shared vertex `v`) from a
+    directed hypergraph `hg`.
+"""
 function remove_self_loops(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
     @assert isempty(hg.hedata)
 
@@ -149,6 +178,11 @@ function remove_self_loops(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:Abstra
     )
 end
 
+"""
+    remove_multi_hyperedges(hg::HGNNHypergraph)
+
+    Remove duplicate hyperedges (hyperedges containing identical vertices) from an undirected hypergraph `hg`.
+"""
 function remove_multi_hyperedges(hg::HGNNHypergraph)
     unique_vs = Set{Set{Int}}()
 
@@ -185,6 +219,12 @@ function remove_multi_hyperedges(hg::HGNNHypergraph)
     )
 end
 
+"""
+    remove_multi_hyperedges(hg::HGNNHypergraph)
+
+    Remove duplicate hyperedges, i.e., hyperedges ei = (ti, hi), ej = (tj, hj), where t represents a hyperedge tail, h
+    represents a hyperedge head, and ti = tj and hi = hj, from a directed hypergraph `hg`.
+"""
 function remove_multi_hyperedges(hg::HGNNDiHypergraph)
     unique_vs = Set{Tuple{Set{Int}, Set{Int}}}()
 
@@ -226,6 +266,21 @@ function remove_multi_hyperedges(hg::HGNNDiHypergraph)
     )
 end
 
+"""
+    to_undirected(hg::HGNNDiHypergraph{T,D}) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Converts a directed hypergraph into an undirected hypergraph.
+    Tail and head hyperedges are combined; that is, for all hyperedges he_orig in
+    the directed hypergraph h, all vertices in the head or tail are added to a
+    corresponding undirected hyperedge he_new in the undirected hypergraph h'.
+
+    Vertex, hyperedge, and hypergraph features, as well as the hypergraph IDs, are undisturbed.
+
+    Because vertex-hyperedge weights are restricted to real numbers, we cannot
+    combine the weights, so we simply set the values to 1.0 if a given vertex
+    is in a given hyperedge 
+
+"""
 function to_undirected(hg::HGNNDiHypergraph{T,D}) where {T <: Real, D <: AbstractDict{Int, T}}
 
     incidence = Matrix{Union{T, Nothing}}(nothing, nhv(hg), nhe(hg))

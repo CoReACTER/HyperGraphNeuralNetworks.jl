@@ -260,19 +260,17 @@ end
 function remove_vertex(hg::HGNNHypergraph, v::Int)
     n = nhv(hg)
 
+    mask_to_keep = trues(nhv(hg))
+    mask_to_keep[v] = false
+
     # Extract all data NOT for the given vertex
-    # TODO: simplify this; see transform.jl
     if !isnothing(hg.vdata)
-        data = Dict{Symbol, Any}()
-        for key in keys(hg.vdata)
-            data[key] = getobs(hg.vdata.key, Not(v))
-        end
-        data = DataStore(data)
+        data = getobs(hg.hedata, mask_to_keep)
     else
         data = nothing
     end
 
-    v2he = deepcopy(hg.v2he)[Not(v)]
+    v2he = deepcopy(hg.v2he)[mask_to_keep]
 
     # Decrement vertex indices where needed
     he2v = deepcopy(hg.he2v)
@@ -293,7 +291,7 @@ function remove_vertex(hg::HGNNHypergraph, v::Int)
     if isnothing(hg.hypergraph_ids)
         hypergraph_ids = nothing
     else
-        hypergraph_ids = hg.hypergraph_ids[Not(v)]
+        hypergraph_ids = hg.hypergraph_ids[mask_to_keep]
     end
 
     return HGNNHypergraph(
@@ -411,12 +409,12 @@ function remove_hyperedge(hg::HGNNHypergraph, e::Int)
 
     # Extract all data NOT for the given hyperedge
     # TODO: simplify this; see transform.jl
-    data = Dict{Symbol, Any}()
-    for key in keys(hg.hedata)
-        data[key] = getobs(hg.hedata.key, Not(e))
-    end
+    mask_to_keep = trues(nhe(hg))
+    mask_to_keep[e] = false
 
-    he2v = deepcopy(hg.he2v)[Not(e)]
+    data = getobs(hg.hedata, mask_to_keep)
+
+    he2v = deepcopy(hg.he2v)[mask_to_keep]
 
     # Decrement vertex indices where needed
     v2he = deepcopy(hg.v2he)
@@ -442,12 +440,77 @@ function remove_hyperedge(hg::HGNNHypergraph, e::Int)
         hg.num_hypergraphs,
         hg.hypergraph_ids,
         hg.vdata,
-        DataStore(data),
+        data,
         hg.hgdata
     )
 
 end
 
+"""
+    remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
+
+    Removes a set of vertices (`to_remove`) from an undirected hypergraph `hg` by index
+"""
+function remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
+    mask_to_keep = trues(nhv(hg))
+    mask_to_keep[to_remove] .= false
+    
+    he2v = deepcopy(hg.he2v)
+    for i in to_remove
+        for he in keys(hg.v2he[i])
+            delete!(he2v[he], i)
+        end
+    end
+
+    v2he = hg.v2he[mask_to_keep]
+
+    vdata = getobs(hg.vdata, mask_to_keep)
+
+    return HGNNHypergraph(
+        v2he,
+        he2v,
+        hg.num_vertices,
+        length(he2v),
+        hg.num_hypergraphs,
+        hg.hypergraph_ids,
+        vdata,
+        hg.hedata,
+        hg.hgdata
+    )
+end
+
+"""
+    remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
+
+    Removes a set of hyperedges (`to_remove`) from an undirected hypergraph `hg` by index
+"""
+function remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
+    mask_to_keep = trues(nhe(hg))
+    mask_to_keep[to_remove] .= false
+    
+    v2he = deepcopy(hg.v2he)
+    for i in to_remove
+        for v in keys(hg.he2v[i])
+            delete!(v2he[v], i)
+        end
+    end
+
+    he2v = hg.he2v[mask_to_keep]
+
+    hedata = getobs(hg.hedata, mask_to_keep)
+
+    return HGNNHypergraph(
+        v2he,
+        he2v,
+        hg.num_vertices,
+        length(he2v),
+        hg.num_hypergraphs,
+        hg.hypergraph_ids,
+        hg.vdata,
+        hedata,
+        hg.hgdata
+    )
+end
 
 Base.zero(::Type{H}) where {H <: HGNNHypergraph} = H(0)
 
@@ -548,7 +611,6 @@ function Base.getproperty(hg::HGNNHypergraph, s::Symbol)
 end
 
 
-#####
 """
    HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
 
@@ -779,6 +841,7 @@ function add_vertex(
 
     for k in keys(hyperedges_head)
         he2v_head[k][ix] = hyperedges_head[k]
+    end
 
     if isnothing(hg.hypergraph_ids)
         hypergraph_ids = nothing
@@ -830,18 +893,16 @@ function remove_vertex(hg::HGNNDiHypergraph, v::Int)
     n = nhv(hg)
 
     # Extract all data NOT for the given vertex
+    mask_to_keep = trues(nhv(hg))
+    mask_to_keep[v] = false
     if !isnothing(hg.vdata)
-        data_dict = Dict{Symbol, Any}()
-        for key in keys(hg.vdata)
-            data_dict[key] = getobs(hg.vdata.key, Not(v))
-        end
-        data = DataStore(data_dict)
+        data = getobs(hg.vdata, mask_to_keep)
     else
         data = nothing
     end
 
-    v2he_tail = deepcopy(hg.hg_tail.v2he)[Not(v)]
-    v2he_head = deepcopy(hg.hg_head.v2he)[Not(v)]
+    v2he_tail = deepcopy(hg.hg_tail.v2he)[mask_to_keep]
+    v2he_head = deepcopy(hg.hg_head.v2he)[mask_to_keep]
 
     # Decrement vertex indices where needed
     he2v_tail = deepcopy(hg.hg_tail.he2v)
@@ -1004,18 +1065,16 @@ function remove_hyperedge(hg::HGNNDiHypergraph, e::Int)
 	@assert(e <= ne)
 
     # Extract all data NOT for the given hyperedge
+    mask_to_keep = trues(nhe(hg))
+    mask_to_keep[e] = false
     if !isnothing(hg.hedata)
-        data_dict = Dict{Symbol, Any}()
-        for key in keys(hg.hedata)
-            data_dict[key] = getobs(hg.hedata.key, Not(e))
-        end
-        data = DataStore(data_dict)
+        data = getobs(hg.hedata, mask_to_keep)
     else
         data = nothing
     end
 
-    he2v_tail = deepcopy(hg.hg_tail.he2v)[Not(e)]
-    he2v_head = deepcopy(hg.hg_head.he2v)[Not(e)]
+    he2v_tail = deepcopy(hg.hg_tail.he2v)[mask_to_keep]
+    he2v_head = deepcopy(hg.hg_head.he2v)[mask_to_keep]
 
     # Decrement vertex indices where needed
     v2he_tail = deepcopy(hg.hg_tail.v2he)
@@ -1068,35 +1127,11 @@ function remove_hyperedge(hg::HGNNDiHypergraph, e::Int)
 
 end
 
-# TODO: docstring
-function remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
-    mask_to_keep = trues(nhv(hg))
-    mask_to_keep[to_remove] .= false
-    
-    he2v = deepcopy(hg.he2v)
-    for i in to_remove
-        for he in keys(hg.v2he[i])
-            delete!(he2v[he], i)
-        end
-    end
+"""
+    remove_vertices(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
 
-    v2he = hg.v2he[mask_to_keep]
-
-    vdata = getobs(hg.vdata, mask_to_keep)
-
-    return HGNNHypergraph(
-        v2he,
-        he2v,
-        hg.num_vertices,
-        length(he2v),
-        hg.num_hypergraphs,
-        hg.hypergraph_ids,
-        vdata,
-        hg.hedata,
-        hg.hgdata
-    )
-end
-
+    Removes a set of vertices (`to_remove`) from a directed hypergraph `hg` by index
+"""
 function remove_vertices(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
     mask_to_keep = trues(nhe(hg))
     mask_to_keep[to_remove] .= false
@@ -1131,34 +1166,11 @@ function remove_vertices(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
     )
 end
 
-function remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
-    mask_to_keep = trues(nhe(hg))
-    mask_to_keep[to_remove] .= false
-    
-    v2he = deepcopy(hg.v2he)
-    for i in to_remove
-        for v in keys(hg.he2v[i])
-            delete!(v2he[v], i)
-        end
-    end
+"""
+    remove_hyperedges(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
 
-    he2v = hg.he2v[mask_to_keep]
-
-    hedata = getobs(hg.hedata, mask_to_keep)
-
-    return HGNNHypergraph(
-        v2he,
-        he2v,
-        hg.num_vertices,
-        length(he2v),
-        hg.num_hypergraphs,
-        hg.hypergraph_ids,
-        hg.vdata,
-        hedata,
-        hg.hgdata
-    )
-end
-
+    Removes a set of hyperedges (`to_remove`) from a directed hypergraph `hg` by index
+"""
 function remove_hyperedges(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
     mask_to_keep = trues(nhe(hg))
     mask_to_keep[to_remove] .= false
@@ -1344,9 +1356,11 @@ function Base.getproperty(hg::HGNNDiHypergraph, s::Symbol)
     if s in fieldnames(HGNNDiHypergraph)
         return getfield(hg, s)
     end
+    
     if (s in keys(hg.vdata)) + (s in keys(hg.hedata)) + (s in keys(hg.hgdata)) > 1
         throw(ArgumentError("Ambiguous property name $s"))
     end
+
     if s in keys(hg.vdata)
         return hg.vdata[s]
     elseif s in keys(hg.hedata)
@@ -1356,4 +1370,5 @@ function Base.getproperty(hg::HGNNDiHypergraph, s::Symbol)
     else
         throw(ArgumentError("$(s) is not a field of HGNNDiHypergraph"))
     end
+
 end
