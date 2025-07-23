@@ -568,10 +568,15 @@ function combine_hypergraphs(hgs::AbstractVector{HGNNDiHypergraph{T,D}}) where {
     )
 end
 
-# TODO: you are here
-function MLUtils.batch()
+function MLUtils.batch(hgs::AbstractVector{HGNNHypergraph{T,D}}) where {T <: Real, D <: AbstractDict{Int, T}}
+    combine_hypergraphs(hgs)
 end
 
+function MLUtils.batch(hgs::AbstractVector{HGNNDiHypergraph{T,D}}) where {T <: Real, D <: AbstractDict{Int, T}}
+    combine_hypergraphs(hgs)
+end
+
+# TODO: you are here
 function get_hypergraph()
 end
 
