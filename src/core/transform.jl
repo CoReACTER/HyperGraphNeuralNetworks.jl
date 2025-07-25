@@ -646,6 +646,97 @@ function MLUtils.unbatch(hg::HGNNHypergraph)
     return [get_hypergraph(hg, i) for i in 1:(hg.num_hypergraphs)]
 end
 
+get_hypergraph(hg::HGNNDiHypergraph, i::Int; kws...) = getgraph(hg, [i]; kws...)
+
+function get_hypergraph(hg::HGNNDiHypergraph, i::AbstractVector{Int}; map_vertices::Bool = false)
+    if hg.hypergraph_ids === nothing
+        @assert i == [1]
+
+        if map_vertices
+            return hg, 1:(hg.num_vertices)
+        else
+            return hg
+        end
+    end
+
+    vertex_mask = hg.hypergraph_ids .∈ Ref(i)
+    vertices = (1:(hg.num_vertices))[vertex_mask]
+    vertex_map = Dict(v => vnew for (vnew, v) in enumerate(vertices))
+
+    hgmap = Dict(i => inew for (inew, i) in enumerate(i))
+    hypergraph_ids = [hgmap[i] for i in hg.hypergraph_ids[vertex_mask]]
+
+    he_mask = all.(keys.(hg.hg_tail.he2v) .∈ Ref(vertices)) .* all.(keys.(hg.hg_head.he2v) .∈ Ref(vertices))
+    hyperedges = (1:(hg.num_hyperedges))[he_mask]
+    hyperedge_map = Dict(he => henew for (henew, he) in enumerate(hyperedges))
+
+    he2v_tail = hg.hg_tail.he2v[he_mask]
+    for (i, he) in enumerate(he2v_tail)
+        new_he = D()
+        for (v, val) in he
+            new_he[vertex_map[v]] = val
+        end
+        he2v_tail[i] = new_he
+    end
+
+    he2v_head = hg.hg_head.he2v[he_mask]
+    for (i, he) in enumerate(he2v_head)
+        new_he = D()
+        for (v, val) in he
+            new_he[vertex_map[v]] = val
+        end
+        he2v_head[i] = new_he
+    end
+
+    v2he_tail = hg.hg_tail.v2he[vertex_mask]
+    for (i, v) in enumerate(v2he_tail)
+        new_v = D()
+        for (he, val) in v
+            if he_mask[he]
+                new_v[hyperedge_map[he]] = val
+            end
+        end
+        v2he_tail[i] = new_v
+    end
+
+    v2he_head = hg.hg_head.v2he[vertex_mask]
+    for (i, v) in enumerate(v2he_head)
+        new_v = D()
+        for (he, val) in v
+            if he_mask[he]
+                new_v[hyperedge_map[he]] = val
+            end
+        end
+        v2he_head[i] = new_v
+    end
+
+    vdata = getobs(hg.vdata, vertex_mask)
+    hedata = getobs(hg.hedata, he_mask)
+    hgdata = getobs(hg.hgdata, i)
+
+    num_vertices = length(vertices)
+    num_hyperedges = length(hyperedges)
+    num_hypergraphs = length(i)
+
+    HGNNDiHypergraph(
+        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(undef, num_vertices), Vector{Nothing}(undef, num_hyperedges)),
+        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(undef, num_vertices), Vector{Nothing}(undef, num_hyperedges)),
+        num_vertices, num_hyperedges, num_hypergraphs,
+        hypergraph_ids,
+        vdata, hedata, hgdata
+    )
+
+    if map_vertices
+        return hg_new, vertices
+    else
+        return hg_new
+    end
+end
+
+function MLUtils.unbatch(hg::HGNNDiHypergraph)
+    return [get_hypergraph(hg, i) for i in 1:(hg.num_hypergraphs)]
+end
+
 function negative_sample()
 end
 
