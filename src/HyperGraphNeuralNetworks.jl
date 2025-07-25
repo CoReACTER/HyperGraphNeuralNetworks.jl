@@ -9,13 +9,13 @@ using SimpleDirectedHypergraphs
 
 include("core/abstracttypes.jl")
 include("core/hypergraphs.jl")
-include("core/generate.jl")
 
 export AbstractHGNNHypergraph, AbstractHGNNDiHypergraph
 export HGNNHypergraph, HGNNDiHypergraph
-# TODO: 
 export add_vertex, add_vertices, remove_vertex, remove_vertices
 export add_hyperedge, add_hyperedges, remove_hyperedge, remove_hyperedges
+
+include("core/generate.jl")
 
 export erdos_renyi_hypergraph, random_kuniform_hypergraph, random_dregular_hypergraph, random_preferential_hypergraph
 
@@ -32,9 +32,8 @@ export hypergraph_ids, has_self_loops, has_multi_hyperedges
 include("core/transform.jl")
 
 export add_self_loops, remove_self_loops, remove_multi_hyperedges
-# TODO:
 export rewire_hyperedges, to_undirected
-export get_hypergraph, negative_sample
+export combine_hypergraphs, get_hypergraph, negative_sample
 export random_split_vertices, random_split_hyperedges
 
 include("core/utils.jl")

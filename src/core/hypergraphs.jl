@@ -160,7 +160,7 @@ hashyperedgemeta(X::HGNNHypergraph) = true
     To create a new HGNNHypergraph object with an additional vertex, use `add_vertex`.
 
 """
-function add_vertex!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function add_vertex!(hg::HGNNHypergraph{T, D}; hyperedges::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of vertices in HGNNHypergraph is fixed.")
 end
 
@@ -321,7 +321,7 @@ end
     To create a new HGNNHypergraph object with an additional hyperedge, use `add_hyperedge`.
 
 """
-function add_hyperedge!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function add_hyperedge!(hg::HGNNHypergraph{T, D}; vertices::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
@@ -782,7 +782,7 @@ Base.zero(::Type{H}) where {H <: HGNNDiHypergraph} = H(0)
     To create a new HGNNDiHypergraph object with an additional vertex, use `add_vertex`.
 
 """
-function add_vertex!(::HGNNDiHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function add_vertex!(hg::HGNNDiHypergraph{T, D}; hyperedges::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of vertices in HGNNDiHypergraph is fixed.")
 end
 
@@ -879,7 +879,7 @@ end
     To create a new HGNNDiHypergraph object with a vertex removed, use `remove_vertex`.
 
 """
-function remove_vertex!(::HGNNDiHypergraph, ::Int)
+function remove_vertex!(hg::HGNNDiHypergraph, v::Int)
     throw("Not implemented! Number of vertices in HGNNDiHypergraph is fixed.")
 end
 
@@ -966,7 +966,7 @@ end
     To create a new HGNNDiHypergraph object with an additional hyperedge, use `add_hyperedge`.
 
 """
-function add_hyperedge!(::HGNNHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function add_hyperedge!(hg::HGNNDiHypergraph{T, D}; vertices::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
@@ -1050,7 +1050,7 @@ end
 
     To create a new HGNNHypergraph object with a hyperedge removed, use `remove_hyperedge`.
 """
-function remove_hyperedge!(::HGNNHypergraph, ::Int)
+function remove_hyperedge!(::HGNNDiHypergraph, ::Int)
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
@@ -1259,7 +1259,7 @@ function add_hyperedges(
 end
 
 function add_hyperedges(
-    hg::HGNNDiHypergraph,
+    hg::HGNNDiHypergraph{T, D},
     n::Int,
     features::DataStore;
     vertices_tail::AbstractVector{D} = Vector{D}(D(), n),
