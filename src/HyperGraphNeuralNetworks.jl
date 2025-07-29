@@ -1,7 +1,8 @@
 module HyperGraphNeuralNetworks
 
 using Random
-using StatsBase
+using DataStructures: counter
+using StatsBase: FrequencyWeights, sample
 using Graphs
 using GNNGraphs
 using MLUtils
