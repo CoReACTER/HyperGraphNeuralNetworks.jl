@@ -1,5 +1,7 @@
 module HyperGraphNeuralNetworks
 
+using Random
+using StatsBase
 using Graphs
 using GNNGraphs
 using MLUtils

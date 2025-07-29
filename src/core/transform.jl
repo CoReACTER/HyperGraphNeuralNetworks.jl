@@ -738,7 +738,169 @@ function MLUtils.unbatch(hg::HGNNDiHypergraph)
 end
 
 # TODO: you are here
-function negative_sample()
+abstract type AbstractNegativeSamplingStrategy end
+struct UniformSample <: AbstractNegativeSamplingStrategy end
+struct SizedSample <: AbstractNegativeSamplingStrategy end
+struct MotifSample <: AbstractNegativeSamplingStrategy end
+struct CliqueSample <: AbstractNegativeSamplingStrategy end
+
+
+# TODO: should actually return an HGNNHypergraph
+function uniform_negative_sample(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    vertices = 1:hg.num_vertices
+    he2v = Set.(keys.(hg.he2v))
+
+    choices = Set{Set{Int}}()
+
+    # Multiple attempts to generate n negative hyperedges
+    for _ in 1:max_trials
+        for _ in 1:(n - length(choices))
+            size = rand(rng, vertices)
+            verts = Set(sample(rng, vertices, size; replace=false))
+            if !((verts in he2v) || (verts in choices))
+                push!(choices, verts)
+            end
+        end
+
+        if length(choices) >= n
+            break
+        end
+    end
+
+    base_h = Hypergraph{T, D}(hg.num_vertices, length(choices))
+    for (i, choice) in enumerate(choices)
+        base_h[collect(choice), i] .= convert(T, 1)
+    end
+
+    return HGNNHypergraph(base_h)
+
+end
+
+function uniform_negative_sample(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    vertices = 1:hg.num_vertices
+
+    he2v_tail = Set.(keys.(hg.hg_tail.he2v))
+    he2v_head = Set.(keys.(hg.hg_head.he2v))
+
+    he2v = collect(zip(he2v_tail, he2v_head))
+
+    choices = Tuple{Set{Int}, Set{Int}}[]
+
+    for _ in 1:max_trials
+        for _ in 1:(n - length(choices))
+            total_size = rand(rng, vertices)
+            size_tail = rand(rng, 1:total_size)
+            size_head = total_size - size_tail
+            
+            verts_tail = Set(sample(rng, vertices, size_tail; replace=false))
+            verts_head = Set(sample(rng, setdiff(collect(vertices), collect(verts_tail)), size_head; replace=false))
+            verts = (verts_tail, verts_head)
+            if !(verts in he2v || verts in choices)
+                push!(choices, verts)
+            end
+        end
+
+        if length(choices) >= n
+            break
+        end
+    end
+
+    hg_tail = Hypergraph{T, D}(hg.num_vertices, length(choices))
+    hg_head = Hypergraph{T, D}(hg.num_vertices, length(choices))
+
+    for (i, choice) in enumerate(choices)
+        hg_tail[collect(choice[1]), i] .= convert(T, 1)
+        hg_head[collect(choice[2]), i] .= convert(T, 1)
+    end
+
+    return HGNNDiHypergraph(DirectedHypergraph(hg_tail, hg_head))
+end
+
+function sized_negative_sample(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+end
+
+function sized_negative_sample(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+end
+
+function motif_negative_sample(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+end
+
+function motif_negative_sample(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+end
+
+function clique_negative_sample(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+end
+
+function clique_negative_sample(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+end
+
+
+function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_trials::Int = 10) where {H <: AbstractSimpleHypergraph, S <: AbstractNegativeSamplingStrategy}
+    if S <: UniformSample
+        return uniform_negative_sample(hg, n, rng; max_trials=max_trials)
+    elseif S <: SizedSample
+        return sized_negative_sample(hg, n, rng; max_trials=max_trials)
+    elseif S <: MotifSample
+        return motif_negative_sample(hg, n, rng; max_trials=max_trials)
+    elseif S <: CliqueSample
+        return clique_negative_sample(hg, n, rng; max_trials=max_trials)
+    else
+        throw("negative_sample not implemented for strategy of type $S; please call a sampling function directly.")
+    end
+end
+
+function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_trials::Int = 10) where {H <: AbstractDirectedHypergraph, S <: AbstractNegativeSamplingStrategy}
+    if S <: UniformSample
+        return uniform_negative_sample(hg, n, rng; max_trials=max_trials)
+    elseif S <: SizedSample
+        return sized_negative_sample(hg, n, rng; max_trials=max_trials)
+    elseif S <: MotifSample
+        return motif_negative_sample(hg, n, rng; max_trials=max_trials)
+    elseif S <: CliqueSample
+        return clique_negative_sample(hg, n, rng; max_trials=max_trials)
+    else
+        throw("negative_sample not implemented for strategy of type $S; please call a sampling function directly.")
+    end
 end
 
 function random_split_vertices()
