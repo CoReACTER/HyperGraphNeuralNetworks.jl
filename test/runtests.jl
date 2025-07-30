@@ -66,12 +66,16 @@ using GNNGraphs
     h1[10, 5] = 7.0
 
     id1 = [1,1,1,1,1,1,2,2,2,2,2]
-    hedata1 = DataStore(i = ([10, 20, 30, 40, 50]))
+    hedata1 = DataStore(i = [10, 20, 30, 40, 50])
     
     #construct using exsiting hypergraph
     HGNN1 = HGNNHypergraph(h1; hypergraph_ids = id1)
     @test HGNN1.hypergraph_ids == id1
-
+    @test size(HGNN1) == (11, 5)
+    
+    
+    
+    # @test HGNN1.hedata == hedata1
     #incident matrix
     # m1 = Matrix(h1)
     # @test m1 == h1
