@@ -68,12 +68,12 @@ struct HGNNHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNHypergraph
 end
 
 function HGNNHypergraph(
-    h::AbstractSimpleHypergraph{T};
+    h::AbstractSimpleHypergraph;
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
     vdata::Union{DataStore, Nothing} = nothing,
     hedata::Union{DataStore, Nothing} = nothing,
     hgdata::Union{DataStore, Nothing} = nothing
-) where {T<:Real}
+)
     nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
 
     # From GNNGraphs.jl
@@ -96,26 +96,28 @@ function HGNNHypergraph(
     )
 
     HGNNHypergraph(
-        deepcopy!(h.v2he),
-        deepcopy!(h.he2v),
+        deepcopy(h.v2he),
+        deepcopy(h.he2v),
         nhv(h),
         nhe(h),
         nhg,
         hypergraph_ids,
-        vdaata,
+        vdata,
         hedata,
         hgdata
     )
 end
 
 function HGNNHypergraph(
-    incidence::AbstractMatrix{Union{T, Nothing}};
+    incidence::Matrix{Union{T, Nothing}};
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
     vdata::Union{DataStore, Nothing} = nothing,
     hedata::Union{DataStore, Nothing} = nothing,
     hgdata::Union{DataStore, Nothing} = nothing
 ) where {T<:Real}
+
     h = Hypergraph(incidence)
+
     HGNNHypergraph(
         h; 
         hypergraph_ids=hypergraph_ids,
