@@ -66,7 +66,7 @@ using GNNGraphs
     h1[10, 5] = 7.0
 
     id1 = [1,1,1,1,1,1,2,2,2,2,2]
-    hedata1 = DataStore(i = [10, 20, 30, 40, 50])
+    hedata1 = DataStore(i = ([10, 20, 30, 40, 50]))
     
     #construct using exsiting hypergraph
     HGNN1 = HGNNHypergraph(h1; hypergraph_ids = id1)
