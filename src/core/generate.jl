@@ -230,3 +230,5 @@ function random_preferential_hypergraph(
 
     HType(pref_hg; kws...)
 end
+
+# TODO: Hypercurveball algorithm

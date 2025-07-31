@@ -1,6 +1,6 @@
 name = "HyperGraphNeuralNetworks"
 uuid = "1aebdcae-dc77-44ee-b348-f058d326ae63"
-authors = ["Evan Walter Clark Spotte-Smith"]
+authors = ["Evan Walter Clark Spotte-Smith", "Punna Amornvivat"]
 version = "0.0.1-DEV"
 
 [deps]
