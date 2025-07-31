@@ -824,7 +824,7 @@ function uniform_negative_sample(
     return HGNNDiHypergraph(DirectedHypergraph(hg_tail, hg_head))
 end
 
-# TODO: you are here
+
 function sized_negative_sample(
     hg::HGNNHypergraph{T, D},
     n::Int,
@@ -924,8 +924,51 @@ function motif_negative_sample(
     rng::AbstractRNG;
     max_trials::Int = 10
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    vertices = 1:hg.num_vertices
+
+    # Likelihood of hyperedge of size s is based on how often s-sized hyperedges appear in hg
+    he2v = Set.(keys.(hg.he2v))
+    c = counter(length.(he2v))
+    size_dist = FrequencyWeights([c[i] for i in vertices])
+
+    choices = Set{Set{Int}}()
+
+    adjmat = get_twosection_adjacency_mx(hg)
+    g = SimpleGraph(adjmat)
+    edges = [Set([src(e), dst(e)]) for e in edges(g_ind)]
+
+    for _ in 1:max_trials
+        for _ in 1:(n - length(choices))
+            size = sample(rng, vertices, size_dist)
+            e0 = rand(rng, edges)
+            he = deepcopy(e0)
+            while length(he) < size
+                e_options = [e for e in edges if length(intersect(he, e)) == 1]
+                if length(e_options) == 0
+                    break
+                end
+
+                e = rand(rng, e_options)
+                union!(he, e)
+            end
+            push!(choices, he)
+        end
+
+        if length(choices) >= n
+            break
+        end
+    end
+
+    base_h = Hypergraph{T, D}(hg.num_vertices, length(choices))
+    for (i, choice) in enumerate(choices)
+        base_h[collect(choice), i] .= convert(T, 1)
+    end
+
+    return HGNNHypergraph(base_h)
 end
 
+# TODO: you are here
 function motif_negative_sample(
     hg::HGNNDiHypergraph{T, D},
     n::Int,
