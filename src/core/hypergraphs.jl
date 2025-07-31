@@ -336,7 +336,7 @@ end
 
     Adds a hyperedge to a given `HGNNHypergraph`. Because `HGNNHypergraph` is immutable, this creates a new
     `HGNNHypergraph`. Optionally, existing vertices can be added to the created hyperedge. The paramater `vertices`
-    represents a dictionary of vertex identifiers and values stored at the hyperedges. Note that the `features`
+    represents a dictionary of vertex identifiers andvalues stored at the hyperedges. Note that the `features`
     DataStore is not optional; however, if `hg` has no `hedata` (i.e., if `hedata` is nothing), this can be empty.
 """
 function add_hyperedge(
@@ -373,7 +373,7 @@ function add_hyperedge(
     return HGNNHypergraph(
         v2he,
         he2v,
-        he.num_vertices,
+        hg.num_vertices,
         ix,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
@@ -437,7 +437,7 @@ function remove_hyperedge(hg::HGNNHypergraph, e::Int)
     return HGNNHypergraph(
         v2he,
         he2v,
-        he.num_vertices,
+        hg.num_vertices,
         ne - 1,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
