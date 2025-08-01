@@ -87,6 +87,9 @@ function normalize_graphdata(data; default_name::Symbol, kws...)
     normalize_graphdata(NamedTuple{(default_name,)}((data,)); default_name, kws...)
 end
 
+function normalize_graphdata(data::DataStore)
+end
+
 function normalize_graphdata(data::NamedTuple; default_name::Symbol, n::Int, 
         duplicate_if_needed::Bool = false, glob::Bool = false)
     # This had to workaround two Zygote bugs with NamedTuples
