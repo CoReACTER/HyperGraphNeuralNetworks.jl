@@ -970,6 +970,7 @@ function motif_negative_sample(
     return HGNNHypergraph(base_h)
 end
 
+# TODO: does this have the same nice properties re: edge distribution as the undirected case?
 function motif_negative_sample(
     hg::HGNNDiHypergraph{T, D},
     n::Int,
@@ -985,8 +986,6 @@ function motif_negative_sample(
     # Likelihood of hyperedge of size s is based on how often s-sized hyperedges appear in hg
     c_total = counter(length.(he2v_tail) .+ length.(he2v_head))
     size_dist = FrequencyWeights([c_total[i] for i in vertices])
-
-    he2v = collect(zip(he2v_tail, he2v_head))
 
     adjmat = get_twosection_adjacency_mx(hg; replace_weights=1)
     g = SimpleDiGraph(adjmat)
@@ -1048,15 +1047,70 @@ function clique_negative_sample(
     rng::AbstractRNG;
     max_trials::Int = 10
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    vertices = 1:hg.num_vertices
+
+    # Likelihood of hyperedge of size s is based on how often s-sized hyperedges appear in hg
+    he2v = Set.(keys.(hg.he2v))
+    c = counter(length.(he2v))
+    size_dist = FrequencyWeights([c[i] for i in vertices])
+
+    choices = Set{Set{Int}}()
+
+    adjmat = get_twosection_adjacency_mx(hg)
+    g = SimpleGraph(adjmat)
+    edges = [Set([src(e), dst(e)]) for e in edges(g)]
+
+    for _ in 1:max_trials
+        for _ in 1:(n - length(choices))
+            he = rand(rng, he2v)
+
+            elim = rand(rng, he)
+
+            heminus = setdiff(he, elim)
+
+            # TODO: I'm sure there's a more efficient way to implement this
+            neighbors = Set{Int}()
+            for i in setdiff(Set(vertices), he)
+                for j in heminus
+                    if any(map(x -> i in x && j in x, he2v))
+                        push!(neighbors, i)
+                    end
+                end
+            end
+
+            if length(neighbors) == 0
+                continue
+            end
+
+            incl = rand(rng, neighbors)
+
+            push!(choices, union(heminus, incl))
+        end
+
+        if length(choices) >= n
+            break
+        end
+    end
+
+    base_h = Hypergraph{T, D}(hg.num_vertices, length(choices))
+    for (i, choice) in enumerate(choices)
+        base_h[collect(choice), i] .= convert(T, 1)
+    end
+
+    return HGNNHypergraph(base_h)
+
 end
 
-function clique_negative_sample(
-    hg::HGNNDiHypergraph{T, D},
-    n::Int,
-    rng::AbstractRNG;
-    max_trials::Int = 10
-) where {T <: Real, D <: AbstractDict{Int, T}}
-end
+# TODO: clique only defined for undirected graph
+# Is there a way to adapt this for dihypergraphs?
+# function clique_negative_sample(
+#     hg::HGNNDiHypergraph{T, D},
+#     n::Int,
+#     rng::AbstractRNG;
+#     max_trials::Int = 10
+# ) where {T <: Real, D <: AbstractDict{Int, T}}
+# end
 
 
 function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_trials::Int = 10) where {H <: AbstractSimpleHypergraph, S <: AbstractNegativeSamplingStrategy}
@@ -1080,8 +1134,6 @@ function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_tri
         return sized_negative_sample(hg, n, rng; max_trials=max_trials)
     elseif S <: MotifSample
         return motif_negative_sample(hg, n, rng; max_trials=max_trials)
-    elseif S <: CliqueSample
-        return clique_negative_sample(hg, n, rng; max_trials=max_trials)
     else
         throw("negative_sample not implemented for strategy of type $S; please call a sampling function directly.")
     end
