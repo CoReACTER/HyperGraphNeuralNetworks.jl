@@ -1,13 +1,14 @@
-# Pkg.add(["SimpleDirectedHypergraphs", "SimpleHypergraphs", "StatsBase", "Random", "DataStructures", "Graphs", "Test"])
-using HyperGraphNeuralNetworks 
-using SimpleDirectedHypergraphs
-using SimpleHypergraphs
-using StatsBase
 using Random
-using DataStructures
+using StatsBase
+
 using Graphs
-using Test
 using GNNGraphs
+
+using SimpleHypergraphs
+using SimpleDirectedHypergraphs
+using HyperGraphNeuralNetworks 
+
+using Test
 
 # @testset "Undirected HGNN            " begin
 #     h = hg_load("data/test_UndiHGNN"; T=Int, HType=Hypergraph)
