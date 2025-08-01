@@ -68,12 +68,12 @@ struct HGNNHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNHypergraph
 end
 
 function HGNNHypergraph(
-    h::AbstractSimpleHypergraph{T};
+    h::AbstractSimpleHypergraph;
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-    vdata::Union{DataStore, Nothing} = nothing,
-    hedata::Union{DataStore, Nothing} = nothing,
-    hgdata::Union{DataStore, Nothing} = nothing
-) where {T<:Real}
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+)
     nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
 
     # From GNNGraphs.jl
@@ -96,26 +96,28 @@ function HGNNHypergraph(
     )
 
     HGNNHypergraph(
-        deepcopy!(h.v2he),
-        deepcopy!(h.he2v),
+        deepcopy(h.v2he),
+        deepcopy(h.he2v),
         nhv(h),
         nhe(h),
         nhg,
         hypergraph_ids,
-        vdaata,
+        vdata,
         hedata,
         hgdata
     )
 end
 
 function HGNNHypergraph(
-    incidence::AbstractMatrix{Union{T, Nothing}};
+    incidence::Matrix{Union{T, Nothing}};
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
     vdata::Union{DataStore, Nothing} = nothing,
     hedata::Union{DataStore, Nothing} = nothing,
     hgdata::Union{DataStore, Nothing} = nothing
 ) where {T<:Real}
+
     h = Hypergraph(incidence)
+
     HGNNHypergraph(
         h; 
         hypergraph_ids=hypergraph_ids,
@@ -469,8 +471,8 @@ function remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
     return HGNNHypergraph(
         v2he,
         he2v,
-        hg.num_vertices,
-        length(he2v),
+        length(v2he),
+        hg.num_hyperedges,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
         vdata,
@@ -687,9 +689,9 @@ end
 function HGNNDiHypergraph(
     h::AbstractDirectedHypergraph{T};
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-    vdata::Union{DataStore, Nothing} = nothing,
-    hedata::Union{DataStore, Nothing} = nothing,
-    hgdata::Union{DataStore, Nothing} = nothing
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
 ) where {T<:Real}
     nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
 
@@ -1156,8 +1158,8 @@ function remove_vertices(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
     HGNNDiHypergraph(
         Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(nothing, length(v2he_tail)), Vector{Nothing}(nothing, length(he2v_tail))),
         Hypergraph(v2he_head, he2v_head, Vector{Nothing}(nothing, length(v2he_head)), Vector{Nothing}(nothing, length(he2v_head))),
-        hg.num_vertices,
-        length(he2v_tail),
+        length(v2he_tail),
+        hg.num_hyperedges,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
         vdata,

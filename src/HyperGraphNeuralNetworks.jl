@@ -1,5 +1,8 @@
 module HyperGraphNeuralNetworks
 
+using Random
+using DataStructures: counter
+using StatsBase: FrequencyWeights, sample
 using Graphs
 using GNNGraphs
 using MLUtils
@@ -39,5 +42,6 @@ export random_split_vertices, random_split_hyperedges
 include("core/utils.jl")
 
 export check_num_vertices, check_num_hyperedges
+export normalize_graphdata
 
 end
