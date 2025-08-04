@@ -111,9 +111,9 @@ end
 function HGNNHypergraph(
     incidence::Matrix{Union{T, Nothing}};
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-    vdata::Union{DataStore, Nothing} = nothing,
-    hedata::Union{DataStore, Nothing} = nothing,
-    hgdata::Union{DataStore, Nothing} = nothing
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
 ) where {T<:Real}
 
     h = Hypergraph(incidence)
@@ -144,10 +144,10 @@ function HGNNHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
 end
 
 # TODO: setters and getters
-hasvertexmeta(::Type{HGNNHypergraph}) = true
-hasvertexmeta(X::HGNNHypergraph) = true
-hashyperedgemeta(::Type{HGNNHypergraph}) = true
-hashyperedgemeta(X::HGNNHypergraph) = true
+SimpleHypergraphs.hasvertexmeta(::Type{HGNNHypergraph}) = true
+SimpleHypergraphs.hasvertexmeta(X::HGNNHypergraph) = true
+SimpleHypergraphs.hashyperedgemeta(::Type{HGNNHypergraph}) = true
+SimpleHypergraphs.hashyperedgemeta(X::HGNNHypergraph) = true
 
 
 """
@@ -162,7 +162,7 @@ hashyperedgemeta(X::HGNNHypergraph) = true
     To create a new HGNNHypergraph object with an additional vertex, use `add_vertex`.
 
 """
-function add_vertex!(hg::HGNNHypergraph{T, D}; hyperedges::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function SimpleHypergraphs.add_vertex!(hg::HGNNHypergraph{T, D}; hyperedges::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of vertices in HGNNHypergraph is fixed.")
 end
 
@@ -192,13 +192,12 @@ function add_vertex(
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
     if !isnothing(hg.vdata)
-        data_dict = Dict{Symbol, Any}()
+        @assert sort(collect(keys(hg.vdata))) == sort(collect(keys(features)))
         for key in keys(hg.vdata)
-            @assert key in keys(features) && numobs(features.key) == 1
-            @assert typeof(features.key) === typeof(hg.vdata.key)
-            data_dict[key] = cat_features(hg.vdata.key, features.key)
+            @assert numobs(features[key]) == 1
+            @assert typeof(features[key]) === typeof(hg.vdata[key])
         end
-        data = DataStore(data_dict)
+        data = cat_features(hg.vdata, features)
     else
         data = nothing
     end
@@ -249,7 +248,7 @@ end
     To create a new HGNNHypergraph object with a vertex removed, use `remove_vertex`.
 
 """
-function remove_vertex!(::HGNNHypergraph, ::Int)
+function SimpleHypergraphs.remove_vertex!(::HGNNHypergraph, ::Int)
     throw("Not implemented! Number of vertices in HGNNHypergraph is fixed.")
 end
 
@@ -323,7 +322,7 @@ end
     To create a new HGNNHypergraph object with an additional hyperedge, use `add_hyperedge`.
 
 """
-function add_hyperedge!(hg::HGNNHypergraph{T, D}; vertices::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function SimpleHypergraphs.add_hyperedge!(hg::HGNNHypergraph{T, D}; vertices::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
@@ -350,12 +349,12 @@ function add_hyperedge(
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
     if !isnothing(hg.hedata)
-        data = Dict{Symbol, Any}()
+        @assert sort(collect(keys(hg.hedata))) == sort(collect(keys(features)))
         for key in keys(hg.hedata)
-            @assert key in keys(features) && numobs(features.key) == 1
-            @assert typeof(features.key) === typeof(hg.hedata.key)
-            data[key] = cat_features(hg.hedata.key, features.key)
+            @assert numobs(features[key]) == 1
+            @assert typeof(features[key]) === typeof(hg.hedata[key])
         end
+        data = cat_features(hg.hedata, features)
     else
         data = nothing
     end
@@ -395,7 +394,7 @@ end
 
     To create a new HGNNHypergraph object with a hyperedge removed, use `remove_hyperedge`.
 """
-function remove_hyperedge!(::HGNNHypergraph, ::Int)
+function SimpleHypergraphs.remove_hyperedge!(::HGNNHypergraph, ::Int)
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
@@ -762,10 +761,10 @@ function HGNNDiHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
 end
 
 # TODO: setters and getters
-hasvertexmeta(::Type{HGNNDiHypergraph}) = true
-hasvertexmeta(X::HGNNDiHypergraph) = true
-hashyperedgemeta(::Type{HGNNDiHypergraph}) = true
-hashyperedgemeta(X::HGNNDiHypergraph) = true
+SimpleHypergraphs.hasvertexmeta(::Type{HGNNDiHypergraph}) = true
+SimpleHypergraphs.hasvertexmeta(X::HGNNDiHypergraph) = true
+SimpleHypergraphs.hashyperedgemeta(::Type{HGNNDiHypergraph}) = true
+SimpleHypergraphs.hashyperedgemeta(X::HGNNDiHypergraph) = true
 
 
 Base.zero(::Type{H}) where {H <: HGNNDiHypergraph} = H(0)
@@ -784,7 +783,7 @@ Base.zero(::Type{H}) where {H <: HGNNDiHypergraph} = H(0)
     To create a new HGNNDiHypergraph object with an additional vertex, use `add_vertex`.
 
 """
-function add_vertex!(hg::HGNNDiHypergraph{T, D}; hyperedges::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function SimpleHypergraphs.add_vertex!(hg::HGNNDiHypergraph{T, D}; hyperedges::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of vertices in HGNNDiHypergraph is fixed.")
 end
 
@@ -817,12 +816,12 @@ function add_vertex(
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
     if !isnothing(hg.vdata)
-        data = Dict{Symbol, Any}()
+        @assert sort(collect(keys(hg.vdata))) == sort(collect(keys(features)))
         for key in keys(hg.vdata)
-            @assert key in keys(features) && numobs(features.key) == 1
-            @assert typeof(features.key) === typeof(hg.vdata.key)
-            data[key] = cat_features(hg.vdata.key, features.key)
+            @assert numobs(features[key]) == 1
+            @assert typeof(features[key]) === typeof(hg.vdata[key])
         end
+        data = cat_features(hg.vdata, features)
     else
         data = nothing
     end
@@ -881,7 +880,7 @@ end
     To create a new HGNNDiHypergraph object with a vertex removed, use `remove_vertex`.
 
 """
-function remove_vertex!(hg::HGNNDiHypergraph, v::Int)
+function SimpleHypergraphs.remove_vertex!(hg::HGNNDiHypergraph, v::Int)
     throw("Not implemented! Number of vertices in HGNNDiHypergraph is fixed.")
 end
 
@@ -968,7 +967,7 @@ end
     To create a new HGNNDiHypergraph object with an additional hyperedge, use `add_hyperedge`.
 
 """
-function add_hyperedge!(hg::HGNNDiHypergraph{T, D}; vertices::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function SimpleHypergraphs.add_hyperedge!(hg::HGNNDiHypergraph{T, D}; vertices::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
@@ -998,13 +997,12 @@ function add_hyperedge(
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
     if !isnothing(hg.hedata)
-        data_dict = Dict{Symbol, Any}()
+        @assert sort(collect(keys(hg.hedata))) == sort(collect(keys(features)))
         for key in keys(hg.hedata)
-            @assert key in keys(features) && numobs(features.key) == 1
-            @assert typeof(features.key) === typeof(hg.hedata.key)
-            data_dict[key] = cat_features(hg.hedata.key, features.key)
+            @assert numobs(features[key]) == 1
+            @assert typeof(features[key]) === typeof(hg.hedata[key])
         end
-        data = DataStore(data_dict)
+        data = cat_features(hg.hedata, features)
     else
         data = nothing
     end
@@ -1052,7 +1050,7 @@ end
 
     To create a new HGNNHypergraph object with a hyperedge removed, use `remove_hyperedge`.
 """
-function remove_hyperedge!(::HGNNDiHypergraph, ::Int)
+function SimpleHypergraphs.remove_hyperedge!(::HGNNDiHypergraph, ::Int)
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 

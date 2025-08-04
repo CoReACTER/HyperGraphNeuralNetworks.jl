@@ -5,6 +5,7 @@ using DataStructures: counter
 using StatsBase: FrequencyWeights, sample
 using Graphs
 using GNNGraphs
+import GNNGraphs: getn, getdata, normalize_graphdata, cat_features, shortsummary
 using MLUtils
 using InvertedIndices
 using SimpleHypergraphs

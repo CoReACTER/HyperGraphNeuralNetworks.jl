@@ -127,6 +127,11 @@ end
     @test HGNN2.v2he[5] == Dict(2 => 4.0)
     @test HGNN2 != HGNN1
 
+    @test_throws "Not implemented! Number of vertices in HGNNHypergraph is fixed." SimpleHypergraphs.add_vertex!(HGNN1)
+    @test_throws "Not implemented! Number of vertices in HGNNHypergraph is fixed." SimpleHypergraphs.remove_vertex!(HGNN1, 1)
+    @test_throws "Not implemented! Number of hyperedges in HGNNHypergraph is fixed." SimpleHypergraphs.add_hyperedge!(HGNN1)
+    @test_throws "Not implemented! Number of hyperedges in HGNNHypergraph is fixed." SimpleHypergraphs.remove_hyperedge!(HGNN1, 1)
+
     HGNN3 = remove_vertex(HGNN2, 5)
     @test HGNN3.num_vertices == 4
     @test HGNN1 == HGNN3
