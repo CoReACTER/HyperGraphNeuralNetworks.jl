@@ -1052,14 +1052,8 @@ function clique_negative_sample(
 
     # Likelihood of hyperedge of size s is based on how often s-sized hyperedges appear in hg
     he2v = Set.(keys.(hg.he2v))
-    c = counter(length.(he2v))
-    size_dist = FrequencyWeights([c[i] for i in vertices])
 
     choices = Set{Set{Int}}()
-
-    adjmat = get_twosection_adjacency_mx(hg)
-    g = SimpleGraph(adjmat)
-    edges = [Set([src(e), dst(e)]) for e in edges(g)]
 
     for _ in 1:max_trials
         for _ in 1:(n - length(choices))
@@ -1139,6 +1133,7 @@ function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_tri
     end
 end
 
+# TODO: you are here
 function random_split_vertices()
 end
 

@@ -773,7 +773,7 @@ Base.zero(::Type{H}) where {H <: HGNNDiHypergraph} = H(0)
 # TODO: modification functions
 
 """
-    add_vertex!(::HGNNDiHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+    (::HGNNDiHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
 
     This function is not implemented for HGNNDiHypergraph.
         
