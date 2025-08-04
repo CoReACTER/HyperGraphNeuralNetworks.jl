@@ -8,45 +8,9 @@ using DataStructures
 using Graphs
 using Test
 using GNNGraphs
+using MLUtils
 
-# @testset "Undirected HGNN            " begin
-#     h = hg_load("data/test_UndiHGNN"; T=Int, HType=Hypergraph)
-#     @test size(h) == (11, 5)
-#     @test nhv(h) == 11
-#     @test nhe(h) == 5
-#     m = Matrix(h)
-#     @test m == h
-    # 
-
-#     mktemp("data") do path, _
-#         println(path)
-#         hg_save(path, h)
-
-#         loaded_hg = replace(read(path, String), r"\n*$" => "")
-
-#         @test loaded_hg ==
-#             reduce(replace,
-#                 ["\r\n"=>"\n",
-#                 r"^\"\"\"(?s).*\"\"\"\n"=>"", #remove initial comments
-#                 r"\n*$"=>""], #remove final \n*
-#                 init=read("data/test_UndiHGNN", String)) #no comments
-
-#         @test loaded_hg ==
-#             reduce(replace,
-#                 ["\r\n"=>"\n",
-#                 r"^\"\"\"(?s).*\"\"\"\n"=>"", #remove initial comments
-#                 r"\n*$"=>""], #remove final \n*
-#                 init=read("data/singlelinecomment", String)) #single line comment
-
-#         @test loaded_hg ==
-#             reduce(replace,
-#                 ["\r\n"=>"\n",
-#                 r"^\"\"\"(?s).*\"\"\"\n"=>"", #remove initial comments
-#                 r"\n*$"=>""], #remove final \n*
-#                 init=read("data/multiplelinescomment", String)) #multiple lines comment
-#     end
-
-@testset "construction and traits" begin
+@testset "HyperGraphNeuralNetworks Construction and Traits" begin
     h1 = Hypergraph{Float64, Int, String}(11,5)
     #1st graph
     h1[1, 1] = 1.0
@@ -66,15 +30,15 @@ using GNNGraphs
     h1[10, 5] = 7.0
 
     id1 = [1,1,1,1,1,1,2,2,2,2,2]
-    hedata1 = DataStore(i = ([10, 20, 30, 40, 50])) #cannot input this
+    hedata1 = [10, 20, 30, 40, 50] 
 
     #construct using exsiting hypergraph
-    HGNN1 = HGNNHypergraph(h1; hypergraph_ids = id1)
+    HGNN1 = HGNNHypergraph(h1; hypergraph_ids = id1, hedata = hedata1)
     @test size(HGNN1) == (11, 5)
     @test nhv(HGNN1) == 11
     @test nhe(HGNN1) == 5
     @test HGNN1.hypergraph_ids == id1
-    @test HGNN1.hedata == DataStore(5) #this should be nothing instead of empty DataStore
+    @test HGNN1.hedata == DataStore(e = hedata1) 
     @test HGNN1.hgdata == DataStore(2)
 
     #construct using matrix
@@ -91,7 +55,7 @@ using GNNGraphs
                 nothing nothing nothing nothing 5.0
                 nothing nothing nothing 1.0     7.0
                 nothing nothing nothing 4.0     nothing]
-    HGNN2 = HGNNHypergraph(m; hypergraph_ids = id1)
+    HGNN2 = HGNNHypergraph(m; hypergraph_ids = id1, hedata = hedata1)
     @test HGNN2 == HGNN1
 
     #construct with no hypergraph and num_nodes vertices
@@ -104,19 +68,18 @@ using GNNGraphs
     @test HGNN4.num_vertices == 0
 
     #hasvertexmeta and hashyperedgemeta
-    @test hasvertexmeta(HGNN1) == true #all return false
+    @test hasvertexmeta(HGNN1) == true 
     @test hashyperedgemeta(HGNN1) == true
     @test hasvertexmeta(HGNNHypergraph) == true
     @test hashyperedgemeta(HGNNHypergraph) == true
 end
 
-@testset "add/remove vertex/hyperedge" begin
+@testset "HyperGraphNeuralNetworks vertices and hyperedges add and remove" begin
     incident = [1.0     2.0
                 1.0     nothing
                 nothing 1.0
                 nothing nothing]
     HGNN1 = HGNNHypergraph(incident)
-    #do i have to test functions with !
     
     @test HGNN1.num_vertices == 4
     features1 = DataStore(1)
@@ -141,12 +104,85 @@ end
     @test HGNN5.num_hyperedges == 2
     @test HGNN5 == HGNN3
 
-    HGNN6 = remove_vertices(HGNN5, [1, 3])
-    print("num ver", HGNN6.num_vertices)
-    print("v2he", HGNN6.v2he)
-    # @test HGNN6.num_vertices == 2
-    # @test HGNN6.v2he == [Dict(1 => 1.0), Dict()]
-    ###the num_vertices is still 4 but the lenght of v2he is 2
+    h = Hypergraph{Float64, Int, String}(7,4)
+    h[1, 1] = 1.0
+    h[2, 1] = 1.0
+    h[3, 1] = 1.0
+    h[3, 2] = 1.0
+    h[4, 2] = 1.0
+    h[4, 3] = 1.0
+    h[5, 3] = 1.0
+    h[6, 3] = 1.0
+    h[7, 4] = 1.0
+    HGNN5 = HGNNHypergraph(h)
+    HGNN6 = remove_vertices(HGNN5, [2, 5, 6, 7])
+    @test HGNN6.num_vertices == 3
+    @test HGNN6.num_hyperedges == 4
+    @test HGNN6.v2he == [Dict(1 => 1.0), 
+                        Dict(1 => 1.0, 2 => 1.0),  
+                        Dict(2 => 1.0, 3 => 1.0)]
+    @test HGNN6.he2v == [Dict(1 => 1.0, 2 => 1.0)
+                        Dict(2 => 1.0, 3 => 1.0)
+                        Dict(3 => 1.0)
+                        Dict{Int64, Float64}()]
+    
+    HGNN7 = remove_hyperedges(HGNN6, [2, 4])
+    @test HGNN7.num_vertices == 3
+    @test HGNN7.num_hyperedges == 2
+    @test HGNN7.v2he == [Dict(1 => 1.0),
+                        Dict(1 => 1.0),  
+                        Dict(2 => 1.0)]
+    @test HGNN7.he2v == [Dict(1 => 1.0, 2 => 1.0)
+                        Dict(3 => 1.0)]
+
+    # these functions should throw errors
+    # @test_throws MethodError add_vertex!(HGNN1) #ERROR:`add_vertex!` not defined in `Main` ??
+    @test_throws MethodError remove_vertex!(HGNN1, 1)
+    @test_throws MethodError add_hyperedge!(HGNN1)
+    @test_throws MethodError remove_hyperedge!(HGNN1, 1)
+end
+
+@testset "Base function of HGNNHypergraph" begin
+    # Base.zero
+    zeroHGNN = zero(HGNNHypergraph)
+    @test zeroHGNN.num_vertices == 0
+    @test zeroHGNN.num_hyperedges == 0
+    @test zeroHGNN.num_hypergraphs == 1
+
+    h = Hypergraph{Float64, Int, String}(2, 1)
+    h[1, 1] = 1.0
+    h[2, 1] = 2.0
+    vdata = (a = [[1,2],[3,4]], b = [1, -1])
+    hedata = (b = [1],)
+    HGNN = HGNNHypergraph(h; vdata = vdata, hedata = hedata)
+
+    # Base.copy
+    copyHGNN = copy(HGNN; deep = false)
+    @test copyHGNN == HGNN
+    @test copyHGNN.v2he === HGNN.v2he
+    @test copyHGNN.he2v === HGNN.he2v
+    deepcopyHGNN = copy(HGNN; deep = true)
+    @test deepcopyHGNN !== HGNN
+    @test deepcopyHGNN.v2he !== HGNN.v2he
+    @test deepcopyHGNN.he2v !== HGNN.he2v
+
+    # Base.show: how do I test this function??
+
+    #MLUtils.numobs
+    @test numobs(HGNN) == HGNN.num_hypergraphs 
+
+    # equality should be tested in the previous examples
+
+    #Bese.hash
+    # newHGNN = add_vertex(HGNN, DataStore(a = [[1, 2]], b = [3]))
+    @test hash(HGNN) == hash(copyHGNN)
+    @test hash(HGNN) != hash(zeroHGNN)
+
+    #Base.getproperty
+    @test getproperty(HGNN, :v2he) == HGNN.v2he
+    @test_throws ArgumentError getproperty(HGNN, :b)
+    @test getproperty(HGNN, :a) == vdata.a
+    @test_throws ArgumentError getproperty(HGNN, :foo) 
 
 end
 
