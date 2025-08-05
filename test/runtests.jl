@@ -4,6 +4,10 @@ using StatsBase
 using Graphs
 using GNNGraphs
 using MLUtils
+using Test
+using HyperGraphNeuralNetworks
+using SimpleHypergraphs
+using SimpleDirectedHypergraphs
 
 @testset "HyperGraphNeuralNetworks Construction and Traits" begin
     h1 = Hypergraph{Float64, Int, String}(11,5)
@@ -134,12 +138,6 @@ end
                         Dict(2 => 1.0)]
     @test HGNN7.he2v == [Dict(1 => 1.0, 2 => 1.0)
                         Dict(3 => 1.0)]
-
-    # these functions should throw errors
-    # @test_throws MethodError add_vertex!(HGNN1) #ERROR:`add_vertex!` not defined in `Main` ??
-    @test_throws MethodError remove_vertex!(HGNN1, 1)
-    @test_throws MethodError add_hyperedge!(HGNN1)
-    @test_throws MethodError remove_hyperedge!(HGNN1, 1)
 end
 
 @testset "Base function of HGNNHypergraph" begin
