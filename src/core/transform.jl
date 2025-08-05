@@ -1134,13 +1134,58 @@ function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_tri
 end
 
 # TODO: you are here
-function random_split_vertices()
+# function random_split_vertices(
+#     hg::HGNNHypergraph{T,D},
+#     fracs::AbstractVector{<:Real},
+#     rng::AbstractRNG
+# ) where {T <: Real, D <: AbstractDict{Int, T}}
+#     # For all f ∈ fracs, 0 < f <= 1
+#     @assert all(fracs .> 0) && all(fracs .<= 1)
+#     # Fractions must sum to 1
+#     @assert abs(sum(fracs) - 1) <= 1e-5
+
+#     num_choices = round.(fracs .* hg.num_vertices)
+#     rand_inds = shuffle(rng, Vector(1:hg.num_vertices))
+    
+#     partitions = Vector{Int}[]
+#     start_point = 1
+
+#     for _ in 1:()
+
+# end
+
+function random_split_vertices(
+    hg::HGNNDiHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
 end
 
-function random_split_hyperedges()
+function random_split_hyperedges(
+    hg::HGNNHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
 end
 
-function random_split_hypergraphs()
+function random_split_hyperedges(
+    hg::HGNNDiHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
 end
 
-# TODO: PageRank diffusion?
+function random_split_hypergraphs(
+    hg::HGNNHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
+end
+
+function random_split_hypergraphs(
+    hg::HGNNDiHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
+end
