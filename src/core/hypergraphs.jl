@@ -451,20 +451,35 @@ end
     remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
 
     Removes a set of vertices (`to_remove`) from an undirected hypergraph `hg` by index
+    Note that the index of both vertex and hyperedge will be shifted down after the removal.
 """
 function remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
     mask_to_keep = trues(nhv(hg))
     mask_to_keep[to_remove] .= false
-    
-    he2v = deepcopy(hg.he2v)
-    for i in to_remove
-        for he in keys(hg.v2he[i])
-            delete!(he2v[he], i)
+
+    count = 1
+    vertexMap = Dict{Int, Int}()
+    for i  = 1: nhv(hg)
+        if mask_to_keep[i]
+            vertexMap[i] = count
+            count += 1
         end
     end
+    
+    he2v = deepcopy(hg.he2v)
+    newhe2v = Vector{Dict{Int, Float64}}()
+    for he in he2v
+        push!(newhe2v, Dict{Int, Float64}())
+        for key in keys(he)
+            if !(key in to_remove)
+                newhe2v[end][vertexMap[key]] = he[key]
+            end
+        end
+        
+    end
 
+    he2v = newhe2v
     v2he = hg.v2he[mask_to_keep]
-
     vdata = getobs(hg.vdata, mask_to_keep)
 
     return HGNNHypergraph(
@@ -490,14 +505,29 @@ function remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
     mask_to_keep[to_remove] .= false
     
     v2he = deepcopy(hg.v2he)
-    for i in to_remove
-        for v in keys(hg.he2v[i])
-            delete!(v2he[v], i)
+    newv2he = Vector{Dict{Int, Float64}}()
+
+    heMap = Dict{Int, Int}()
+    count = 1
+    for i = 1:nhe(hg)
+        if mask_to_keep[i]
+            heMap[i] = count
+            count += 1
+        end
+    end
+    print("heMap: $heMap\n")
+
+    for v in v2he
+        push!(newv2he, Dict{Int, Float64}())
+        for key in keys(v)
+            if !(key in to_remove)
+                newv2he[end][heMap[key]] = v[key]
+            end
         end
     end
 
+    v2he = newv2he
     he2v = hg.he2v[mask_to_keep]
-
     hedata = getobs(hg.hedata, mask_to_keep)
 
     return HGNNHypergraph(
@@ -537,6 +567,12 @@ function Base.copy(hg::HGNNHypergraph; deep = false)
             hg.vdata, hg.hedata, hg.hgdata
         )
     end
+end
+
+function print_all_features(io::IO, vdata, hedata, hgdata)
+    print(io, "vertex features: $(vdata), 
+                hyperedge features: $(hedata), 
+                hypergraph features: $(hgdata)")
 end
 
 function Base.show(io::IO, hg::HGNNHypergraph)
