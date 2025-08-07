@@ -1133,27 +1133,76 @@ function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_tri
     end
 end
 
-# TODO: you are here
-# function random_split_vertices(
-#     hg::HGNNHypergraph{T,D},
-#     fracs::AbstractVector{<:Real},
-#     rng::AbstractRNG
-# ) where {T <: Real, D <: AbstractDict{Int, T}}
-#     # For all f ∈ fracs, 0 < f <= 1
-#     @assert all(fracs .> 0) && all(fracs .<= 1)
-#     # Fractions must sum to 1
-#     @assert abs(sum(fracs) - 1) <= 1e-5
+function random_split_vertices(
+    hg::HGNNHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    # For all f ∈ fracs, 0 < f <= 1
+    @assert all(fracs .> 0) && all(fracs .<= 1)
+    # Fractions must sum to 1
+    @assert abs(sum(fracs) - 1) <= 1e-5
 
-#     num_choices = round.(fracs .* hg.num_vertices)
-#     rand_inds = shuffle(rng, Vector(1:hg.num_vertices))
+    num_choices = round.(fracs .* hg.num_vertices)
+    rand_inds = shuffle(rng, Vector(1:hg.num_vertices))
     
-#     partitions = Vector{Int}[]
-#     start_point = 1
+    partitions = Vector{Int}[]
+    start_point = 1
 
-#     for _ in 1:()
+    # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
+    for i in 1:(length(num_choices) - 1)
+        part = rand_inds[start_point:start_point + num_choices[i] - 1]
+        start_point += num_choices
+        push!(partitions, sort(part))
+    end
+    push!(partitions, sort(rand_inds[start_point:end]))
 
-# end
+    res = HGNNHypergraph{T,D}[]
 
+    # Partition v2he and he2v, being careful of indices
+    for part in partitions
+        v2he = hg.v2he[part]
+        he2v = D[]
+
+        vmap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
+        hemap = Dict{Int, Int}()
+
+        for (i, he) in enumerate(hg.he2v)
+            newhe = filter(((k,v), ) -> k in part, he)
+            if length(newhe) > 0
+                newhe = D(vmap[k] => v for (k, v) in newhe)
+                push!(he2v, newhe)
+                hemap[i] = length(he2v)
+            end
+        end
+
+        for i in eachindex(v2he)
+            v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
+        end
+
+        hypergraph_ids = hg.hypergraph_ids[part]
+        unique_hgids = collect(Set(hypergraph_ids))
+
+        push!(
+            res,
+            HGNNHypergraph(
+                v2he,
+                he2v,
+                length(v2he),
+                length(he2v),
+                length(unique_hgids),
+                hypergraph_ids,
+                getobs(hg.vdata, part),
+                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hgdata, unique_hgids)
+            )
+        )
+    end
+
+    return res
+end
+
+# TODO: you are here
 function random_split_vertices(
     hg::HGNNDiHypergraph{T,D},
     fracs::AbstractVector{<:Real},
