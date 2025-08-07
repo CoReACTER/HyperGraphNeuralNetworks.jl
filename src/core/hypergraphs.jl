@@ -760,6 +760,26 @@ function HGNNDiHypergraph(
     )
 end
 
+function HGNNDiHypergraph{T, D}(
+    hg_tail::Hypergraph{T, D},
+    hg_head::Hypergraph{T, D};
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real, D<:AbstractDict{Int, T}}
+    base_hg = DirectedHypergraph{T,D}(hg_tail, hg_head)
+
+    HGNNDiHypergraph{T,D}(
+        base_hg;
+        hypergraph_ids=hypergraph_ids,
+        vdata=vdata,
+        hedata=hedata,
+        hgdata=hgdata
+    )
+end
+
+
 function HGNNDiHypergraph(
     incidence_tail::AbstractMatrix{Union{T, Nothing}},
     incidence_head::AbstractMatrix{Union{T, Nothing}};
@@ -802,8 +822,6 @@ SimpleHypergraphs.hashyperedgemeta(X::HGNNDiHypergraph) = true
 
 
 Base.zero(::Type{H}) where {H <: HGNNDiHypergraph} = H(0)
-
-# TODO: modification functions
 
 """
     (::HGNNDiHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
