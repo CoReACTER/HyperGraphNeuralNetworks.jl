@@ -475,7 +475,6 @@ function remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
                 newhe2v[end][vertexMap[key]] = he[key]
             end
         end
-        
     end
 
     he2v = newhe2v
@@ -515,7 +514,6 @@ function remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
             count += 1
         end
     end
-    print("heMap: $heMap\n")
 
     for v in v2he
         push!(newv2he, Dict{Int, Float64}())
@@ -584,7 +582,7 @@ end
 function Base.show(io::IO, ::MIME"text/plain", hg::HGNNHypergraph)
     if get(io, :compact, false)
         print(io, "HGNNHypergraph($(hg.num_vertices), $(hg.num_hyperedges), $(hg.num_hypergraphs)) with ")
-        print_all_features(io, g.vdata, g.hedata, g.hgdata)
+        print_all_features(io, hg.vdata, hg.hedata, hg.hgdata)
         print(io, " data")
     else
         print(io,
@@ -722,12 +720,12 @@ struct HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHyperg
 end
 
 function HGNNDiHypergraph(
-    h::AbstractDirectedHypergraph{T};
+    h::AbstractDirectedHypergraph;
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
     vdata = nothing,
     hedata = nothing,
     hgdata = nothing
-) where {T<:Real}
+) 
     nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
 
     # From GNNGraphs.jl
@@ -750,13 +748,13 @@ function HGNNDiHypergraph(
     )
 
     HGNNDiHypergraph(
-        deepcopy!(h.hg_tail),
-        deepcopy!(h.hg_head),
+        deepcopy(h.hg_tail),
+        deepcopy(h.hg_head),
         nhv(h),
         nhe(h),
         nhg,
         hypergraph_ids,
-        vdaata,
+        vdata,
         hedata,
         hgdata
     )
@@ -766,9 +764,9 @@ function HGNNDiHypergraph(
     incidence_tail::AbstractMatrix{Union{T, Nothing}},
     incidence_head::AbstractMatrix{Union{T, Nothing}};
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-    vdata::Union{DataStore, Nothing} = nothing,
-    hedata::Union{DataStore, Nothing} = nothing,
-    hgdata::Union{DataStore, Nothing} = nothing
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
 ) where {T<:Real}
     h = DirectedHypergraph(incidence_tail, incidence_head)
     HGNNDiHypergraph(
@@ -892,7 +890,7 @@ function add_vertex(
 
     return HGNNDiHypergraph(
         Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
-        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
+        Hypergraph(v2he_head, he2v_head, nothing, nothing),
         ix,
         hg.num_hyperedges,
         hg.num_hypergraphs,
