@@ -744,6 +744,8 @@ function Base.getproperty(hg::HGNNHypergraph, s::Symbol)
 end
 
 
+# TODO: update docstring
+# ALSO: test new constructors
 """
    HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
 
@@ -829,13 +831,13 @@ struct HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHyperg
     hgdata::DataStore
 end
 
-function HGNNDiHypergraph(
-    h::AbstractDirectedHypergraph;
+function HGNNDiHypergraph{T,D}(
+    h::DirectedHypergraph{T,D};
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
     vdata = nothing,
     hedata = nothing,
     hgdata = nothing
-) 
+) where {T<:Real, D<:AbstractDict{Int,T}}
     nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
 
     # From GNNGraphs.jl
@@ -857,7 +859,7 @@ function HGNNDiHypergraph(
         glob = true
     )
 
-    HGNNDiHypergraph(
+    HGNNDiHypergraph{T,D}(
         deepcopy(h.hg_tail),
         deepcopy(h.hg_head),
         nhv(h),
@@ -867,6 +869,42 @@ function HGNNDiHypergraph(
         vdata,
         hedata,
         hgdata
+    )
+end
+
+function HGNNDiHypergraph{T}(
+    h::DirectedHypergraph{T};
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real}
+    D = valtype(h.hg_tail.v2he)
+    HGNNDiHypergraph{T, D}(
+        h;
+        hypergraph_ids=hypergraph_ids,
+        vdata=vdata,
+        hedata=hedata,
+        hgdata=hgdata
+    )
+end
+
+function HGNNDiHypergraph(
+    h::DirectedHypergraph;
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+)
+    D = valtype(h.hg_tail.v2he)
+    T = valtype(D)
+
+    HGNNDiHypergraph{T, D}(
+        h;
+        hypergraph_ids=hypergraph_ids,
+        vdata=vdata,
+        hedata=hedata,
+        hgdata=hgdata
     )
 end
 
@@ -889,6 +927,61 @@ function HGNNDiHypergraph{T, D}(
     )
 end
 
+function HGNNDiHypergraph{T}(
+    hg_tail::Hypergraph{T},
+    hg_head::Hypergraph{T};
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real}
+    D = valtype(h.hg_tail.v2he)
+
+    HGNNDiHypergraph{T,D}(
+        hg_tail,
+        hg_head;
+        hypergraph_ids=hypergraph_ids,
+        vdata=vdata,
+        hedata=hedata,
+        hgdata=hgdata
+    )
+end
+
+function HGNNDiHypergraph(
+    hg_tail::Hypergraph{T},
+    hg_head::Hypergraph{T};
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real}
+    HGNNDiHypergraph{T,D}(
+        hg_tail,
+        hg_head;
+        hypergraph_ids=hypergraph_ids,
+        vdata=vdata,
+        hedata=hedata,
+        hgdata=hgdata
+    )
+end
+
+function HGNNDiHypergraph{T}(
+    incidence_tail::AbstractMatrix{Union{T, Nothing}},
+    incidence_head::AbstractMatrix{Union{T, Nothing}};
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real}
+    h = DirectedHypergraph{T}(incidence_tail, incidence_head)
+    HGNNDiHypergraph{T}(
+        h; 
+        hypergraph_ids=hypergraph_ids,
+        vdata=vdata,
+        hedata=hedata,
+        hgdata=hgdata
+    )
+end
 
 function HGNNDiHypergraph(
     incidence_tail::AbstractMatrix{Union{T, Nothing}},
@@ -898,9 +991,9 @@ function HGNNDiHypergraph(
     hedata = nothing,
     hgdata = nothing
 ) where {T<:Real}
-    h = DirectedHypergraph(incidence_tail, incidence_head)
-    HGNNDiHypergraph(
-        h; 
+    HGNNDiHypergraph{T}(
+        incidence_tail,
+        incidence_head;
         hypergraph_ids=hypergraph_ids,
         vdata=vdata,
         hedata=hedata,
