@@ -1,7 +1,6 @@
 # TODO: what functions from SimpleHypergraphs/SimpleDirectedHypergraphs need to be implemented to finish interface?
 
 
-# TODO: update this docstring
 """
    HGNNHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNHypergraph{Union{T, Nothing}}
 
@@ -9,24 +8,56 @@ An undirected hypergraph type for use in hypergraph neural networks
 
 **Constructors**
 
-    HGNNHypergraph(
-        h::AbstractSimpleHypergraph{T};
+    HGNNHypergraph{T,D}(
+        h::AbstractSimpleHypergraph;
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real, D<:AbstractDict{Int, T}}
+
+    HGNNHypergraph{T}(
+        h::AbstractSimpleHypergraph;
         hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
         vdata::Union{DataStore, Nothing} = nothing,
         hedata::Union{DataStore, Nothing} = nothing,
         hgdata::Union{DataStore, Nothing} = nothing
     ) where {T<:Real}
 
+    HGNNHypergraph(
+        h::AbstractSimpleHypergraph;
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    )
+
     Construct an `HGNNHypergraph` from a previously constructed hypergraph. Optionally, the user can specify
     what hypergraph each vertex belongs to (if multiple distinct hypergraphs are included), as well as vertex,
     hyperedge, and hypergraph features.
 
-    function HGNNHypergraph(
-        incidence::AbstractMatrix{Union{T, Nothing}};
+    HGNNHypergraph{T,D}(
+        incidence::Matrix{Union{T, Nothing}};
         hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-        vdata::Union{DataStore, Nothing} = nothing,
-        hedata::Union{DataStore, Nothing} = nothing,
-        hgdata::Union{DataStore, Nothing} = nothing
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real, D<:AbstractDict{Int, T}}
+
+    HGNNHypergraph{T}(
+        incidence::Matrix{Union{T, Nothing}};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real}
+
+    HGNNHypergraph(
+        incidence::Matrix{Union{T, Nothing}};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
     ) where {T<:Real}
 
     Construct an `HGNNHypergraph` from an incidence matrix. The incidence matrix is an `M`x`N` matrix, where `M` is the
@@ -116,37 +147,12 @@ function HGNNHypergraph{T}(
     hedata = nothing,
     hgdata = nothing
 ) where {T<:Real}
-    nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
-
-    # From GNNGraphs.jl
-    vdata = normalize_graphdata(
-        vdata,
-        default_name = :x,
-        n = nhv(h)
-    )
-    hedata = normalize_graphdata(
-        hedata,
-        default_name = :e,
-        n = nhe(h),
-        duplicate_if_needed = true
-    )
-    hgdata = normalize_graphdata(
-        hgdata,
-        default_name = :u,
-        n = nhg,
-        glob = true
-    )
-
     HGNNHypergraph{T, Dict{Int, T}}(
-        convert(Vector{Dict{Int, T}}, h.v2he),
-        convert(Vector{Dict{Int, T}}, h.he2v),
-        nhv(h),
-        nhe(h),
-        nhg,
-        hypergraph_ids,
-        vdata,
-        hedata,
-        hgdata
+        h;
+        hypergraph_ids = hypergraph_ids,
+        vdata = vdata,
+        hedata = hedata,
+        hgdata = hgdata
     )
 end
 
@@ -157,39 +163,14 @@ function HGNNHypergraph(
     hedata = nothing,
     hgdata = nothing
 )
-    nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
-
-    # From GNNGraphs.jl
-    vdata = normalize_graphdata(
-        vdata,
-        default_name = :x,
-        n = nhv(h)
-    )
-    hedata = normalize_graphdata(
-        hedata,
-        default_name = :e,
-        n = nhe(h),
-        duplicate_if_needed = true
-    )
-    hgdata = normalize_graphdata(
-        hgdata,
-        default_name = :u,
-        n = nhg,
-        glob = true
-    )
-
     T = valtype(valtype(h.v2he))
 
     HGNNHypergraph{T, Dict{Int, T}}(
-        convert(Vector{Dict{Int, T}}, h.v2he),
-        convert(Vector{Dict{Int, T}}, h.he2v),
-        nhv(h),
-        nhe(h),
-        nhg,
-        hypergraph_ids,
-        vdata,
-        hedata,
-        hgdata
+        h;
+        hypergraph_ids = hypergraph_ids,
+        vdata = vdata,
+        hedata = hedata,
+        hgdata = hgdata
     )
 end
 
@@ -219,11 +200,8 @@ function HGNNHypergraph{T}(
     hedata = nothing,
     hgdata = nothing
 ) where {T<:Real}
-
-    h = Hypergraph{T,Nothing,Nothing,Dict{Int,T}}(incidence)
-
-    HGNNHypergraph{T,Dict{Int, T}}(
-        h; 
+    HGNNHypergraph{T, Dict{Int, T}}(
+        incidence;
         hypergraph_ids=hypergraph_ids,
         vdata=vdata,
         hedata=hedata,
@@ -238,11 +216,8 @@ function HGNNHypergraph(
     hedata = nothing,
     hgdata = nothing
 ) where {T<:Real}
-
-    h = Hypergraph{T,Nothing,Nothing,Dict{Int,T}}(incidence)
-
-    HGNNHypergraph{T,Dict{Int, T}}(
-        h; 
+    HGNNHypergraph{T, Dict{Int, T}}(
+        incidence;
         hypergraph_ids=hypergraph_ids,
         vdata=vdata,
         hedata=hedata,
