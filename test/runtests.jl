@@ -133,15 +133,12 @@ end
                         Dict(2 => 1.0)]
     @test HGNN7.he2v == [Dict(1 => 1.0, 2 => 1.0)
                         Dict(3 => 1.0)]
-<<<<<<< HEAD
-=======
 
     @test_throws "Not implemented! Number of vertices in HGNNHypergraph is fixed." SimpleHypergraphs.add_vertex!(HGNN1)
     @test_throws "Not implemented! Number of vertices in HGNNHypergraph is fixed." SimpleHypergraphs.remove_vertex!(HGNN1, 1)
     @test_throws "Not implemented! Number of hyperedges in HGNNHypergraph is fixed." SimpleHypergraphs.add_hyperedge!(HGNN1)
     @test_throws "Not implemented! Number of hyperedges in HGNNHypergraph is fixed." SimpleHypergraphs.remove_hyperedge!(HGNN1, 1)
 
->>>>>>> punna/main
 end
 
 @testset "Base function of HGNN Undirected Hypergraph" begin

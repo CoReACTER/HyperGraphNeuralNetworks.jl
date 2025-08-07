@@ -67,6 +67,88 @@ struct HGNNHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNHypergraph
     hgdata::DataStore
 end
 
+function HGNNHypergraph{T,D}(
+    h::AbstractSimpleHypergraph;
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real, D<:AbstractDict{Int, T}}
+    nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
+
+    # From GNNGraphs.jl
+    vdata = normalize_graphdata(
+        vdata,
+        default_name = :x,
+        n = nhv(h)
+    )
+    hedata = normalize_graphdata(
+        hedata,
+        default_name = :e,
+        n = nhe(h),
+        duplicate_if_needed = true
+    )
+    hgdata = normalize_graphdata(
+        hgdata,
+        default_name = :u,
+        n = nhg,
+        glob = true
+    )
+
+    HGNNHypergraph{T, D}(
+        convert(Vector{D}, h.v2he),
+        convert(Vector{D}, h.he2v),
+        nhv(h),
+        nhe(h),
+        nhg,
+        hypergraph_ids,
+        vdata,
+        hedata,
+        hgdata
+    )
+end
+
+function HGNNHypergraph{T}(
+    h::AbstractSimpleHypergraph;
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real}
+    nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
+
+    # From GNNGraphs.jl
+    vdata = normalize_graphdata(
+        vdata,
+        default_name = :x,
+        n = nhv(h)
+    )
+    hedata = normalize_graphdata(
+        hedata,
+        default_name = :e,
+        n = nhe(h),
+        duplicate_if_needed = true
+    )
+    hgdata = normalize_graphdata(
+        hgdata,
+        default_name = :u,
+        n = nhg,
+        glob = true
+    )
+
+    HGNNHypergraph{T, Dict{Int, T}}(
+        convert(Vector{Dict{Int, T}}, h.v2he),
+        convert(Vector{Dict{Int, T}}, h.he2v),
+        nhv(h),
+        nhe(h),
+        nhg,
+        hypergraph_ids,
+        vdata,
+        hedata,
+        hgdata
+    )
+end
+
 function HGNNHypergraph(
     h::AbstractSimpleHypergraph;
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
@@ -95,9 +177,11 @@ function HGNNHypergraph(
         glob = true
     )
 
-    HGNNHypergraph(
-        deepcopy(h.v2he),
-        deepcopy(h.he2v),
+    T = valtype(valtype(h.v2he))
+
+    HGNNHypergraph{T, Dict{Int, T}}(
+        convert(Vector{Dict{Int, T}}, h.v2he),
+        convert(Vector{Dict{Int, T}}, h.he2v),
         nhv(h),
         nhe(h),
         nhg,
@@ -105,6 +189,44 @@ function HGNNHypergraph(
         vdata,
         hedata,
         hgdata
+    )
+end
+
+function HGNNHypergraph{T,D}(
+    incidence::Matrix{Union{T, Nothing}};
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real, D<:AbstractDict{Int, T}}
+
+    h = Hypergraph{T,Nothing,Nothing,D}(incidence)
+
+    HGNNHypergraph{T,D}(
+        h; 
+        hypergraph_ids=hypergraph_ids,
+        vdata=vdata,
+        hedata=hedata,
+        hgdata=hgdata
+    )
+end
+
+function HGNNHypergraph{T}(
+    incidence::Matrix{Union{T, Nothing}};
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real}
+
+    h = Hypergraph{T,Nothing,Nothing,Dict{Int,T}}(incidence)
+
+    HGNNHypergraph{T,Dict{Int, T}}(
+        h; 
+        hypergraph_ids=hypergraph_ids,
+        vdata=vdata,
+        hedata=hedata,
+        hgdata=hgdata
     )
 end
 
@@ -116,9 +238,9 @@ function HGNNHypergraph(
     hgdata = nothing
 ) where {T<:Real}
 
-    h = Hypergraph(incidence)
+    h = Hypergraph{T,Nothing,Nothing,Dict{Int,T}}(incidence)
 
-    HGNNHypergraph(
+    HGNNHypergraph{T,Dict{Int, T}}(
         h; 
         hypergraph_ids=hypergraph_ids,
         vdata=vdata,
@@ -664,6 +786,18 @@ A directed hypergraph type for use in hypergraph neural networks
     Construct a `HGNNDiHypergraph` from a previously constructed directed hypergraph. Optionally, the user can specify
     what hypergraph each vertex belongs to (if multiple distinct hypergraphs are included), as well as vertex,
     hyperedge, and hypergraph features.
+
+    HGNNDiHypergraph{T, D}(
+        hg_tail::Hypergraph{T, D},
+        hg_head::Hypergraph{T, D};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real, D<:AbstractDict{Int, T}}
+
+    Construct a `HGNNDiHypergraph` from two undirected hypergraphs representing the tails and the heads of hyperedges
+    in a directed hypergraph.
 
     HGNNDiHypergraph(
         incidence_tail::AbstractMatrix{Union{T, Nothing}},
