@@ -1,6 +1,7 @@
 # TODO: what functions from SimpleHypergraphs/SimpleDirectedHypergraphs need to be implemented to finish interface?
 
 
+# TODO: update this docstring
 """
    HGNNHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNHypergraph{Union{T, Nothing}}
 
@@ -1040,9 +1041,17 @@ function add_vertex(
         )
     end
 
+    hg_tail = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
     return HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
-        Hypergraph(v2he_head, he2v_head, nothing, nothing),
+        hg_tail,
+        hg_head,
         ix,
         hg.num_hyperedges,
         hg.num_hypergraphs,

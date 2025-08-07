@@ -312,8 +312,8 @@ end
     HGNN2 = add_vertex(HGNN1, features1; hyperedges_tail = hyperedges_tail1)
     @test HGNN2.num_vertices == 5 ## error
    
-    @test_throws "Not implemented! Number of vertices in HGNNDiHypergraph is fixed." SimpleDirectedHypergraphs.add_vertex!(HGNN1)
-    @test_throws "Not implemented! Number of vertices in HGNNDiHypergraph is fixed." SimpleDirectedHypergraphs.remove_vertex!(HGNN1, 1)
-    @test_throws "Not implemented! Number of hyperedges in HGNNDiHypergraph is fixed." SimpleDirectedHypergraphs.add_hyperedge!(HGNN1)
-    @test_throws "Not implemented! Number of hyperedges in HGNNDiHypergraph is fixed." SimpleDirectedHypergraphs.remove_hyperedge!(HGNN1, 1)
+    @test_throws "Not implemented! Number of vertices in HGNNDiHypergraph is fixed." SimpleHypergraphs.add_vertex!(HGNN1)
+    @test_throws "Not implemented! Number of vertices in HGNNDiHypergraph is fixed." SimpleHypergraphs.remove_vertex!(HGNN1, 1)
+    @test_throws "Not implemented! Number of hyperedges in HGNNDiHypergraph is fixed." SimpleHypergraphs.add_hyperedge!(HGNN1)
+    @test_throws "Not implemented! Number of hyperedges in HGNNDiHypergraph is fixed." SimpleHypergraphs.remove_hyperedge!(HGNN1, 1)
 end
