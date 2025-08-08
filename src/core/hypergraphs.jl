@@ -1,6 +1,7 @@
 # TODO: what functions from SimpleHypergraphs/SimpleDirectedHypergraphs need to be implemented to finish interface?
 
 
+# TODO: update this docstring
 """
    HGNNHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNHypergraph{Union{T, Nothing}}
 
@@ -67,12 +68,53 @@ struct HGNNHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNHypergraph
     hgdata::DataStore
 end
 
-function HGNNHypergraph(
-    h::AbstractSimpleHypergraph{T};
+function HGNNHypergraph{T,D}(
+    h::AbstractSimpleHypergraph;
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-    vdata::Union{DataStore, Nothing} = nothing,
-    hedata::Union{DataStore, Nothing} = nothing,
-    hgdata::Union{DataStore, Nothing} = nothing
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real, D<:AbstractDict{Int, T}}
+    nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
+
+    # From GNNGraphs.jl
+    vdata = normalize_graphdata(
+        vdata,
+        default_name = :x,
+        n = nhv(h)
+    )
+    hedata = normalize_graphdata(
+        hedata,
+        default_name = :e,
+        n = nhe(h),
+        duplicate_if_needed = true
+    )
+    hgdata = normalize_graphdata(
+        hgdata,
+        default_name = :u,
+        n = nhg,
+        glob = true
+    )
+
+    HGNNHypergraph{T, D}(
+        convert(Vector{D}, h.v2he),
+        convert(Vector{D}, h.he2v),
+        nhv(h),
+        nhe(h),
+        nhg,
+        hypergraph_ids,
+        vdata,
+        hedata,
+        hgdata
+    )
+end
+
+function HGNNHypergraph{T}(
+    h::AbstractSimpleHypergraph;
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
 ) where {T<:Real}
     nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
 
@@ -95,28 +137,111 @@ function HGNNHypergraph(
         glob = true
     )
 
-    HGNNHypergraph(
-        deepcopy!(h.v2he),
-        deepcopy!(h.he2v),
+    HGNNHypergraph{T, Dict{Int, T}}(
+        convert(Vector{Dict{Int, T}}, h.v2he),
+        convert(Vector{Dict{Int, T}}, h.he2v),
         nhv(h),
         nhe(h),
         nhg,
         hypergraph_ids,
-        vdaata,
+        vdata,
         hedata,
         hgdata
     )
 end
 
 function HGNNHypergraph(
-    incidence::AbstractMatrix{Union{T, Nothing}};
+    h::AbstractSimpleHypergraph;
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-    vdata::Union{DataStore, Nothing} = nothing,
-    hedata::Union{DataStore, Nothing} = nothing,
-    hgdata::Union{DataStore, Nothing} = nothing
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+)
+    nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
+
+    # From GNNGraphs.jl
+    vdata = normalize_graphdata(
+        vdata,
+        default_name = :x,
+        n = nhv(h)
+    )
+    hedata = normalize_graphdata(
+        hedata,
+        default_name = :e,
+        n = nhe(h),
+        duplicate_if_needed = true
+    )
+    hgdata = normalize_graphdata(
+        hgdata,
+        default_name = :u,
+        n = nhg,
+        glob = true
+    )
+
+    T = valtype(valtype(h.v2he))
+
+    HGNNHypergraph{T, Dict{Int, T}}(
+        convert(Vector{Dict{Int, T}}, h.v2he),
+        convert(Vector{Dict{Int, T}}, h.he2v),
+        nhv(h),
+        nhe(h),
+        nhg,
+        hypergraph_ids,
+        vdata,
+        hedata,
+        hgdata
+    )
+end
+
+function HGNNHypergraph{T,D}(
+    incidence::Matrix{Union{T, Nothing}};
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real, D<:AbstractDict{Int, T}}
+
+    h = Hypergraph{T,Nothing,Nothing,D}(incidence)
+
+    HGNNHypergraph{T,D}(
+        h; 
+        hypergraph_ids=hypergraph_ids,
+        vdata=vdata,
+        hedata=hedata,
+        hgdata=hgdata
+    )
+end
+
+function HGNNHypergraph{T}(
+    incidence::Matrix{Union{T, Nothing}};
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
 ) where {T<:Real}
-    h = Hypergraph(incidence)
-    HGNNHypergraph(
+
+    h = Hypergraph{T,Nothing,Nothing,Dict{Int,T}}(incidence)
+
+    HGNNHypergraph{T,Dict{Int, T}}(
+        h; 
+        hypergraph_ids=hypergraph_ids,
+        vdata=vdata,
+        hedata=hedata,
+        hgdata=hgdata
+    )
+end
+
+function HGNNHypergraph(
+    incidence::Matrix{Union{T, Nothing}};
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real}
+
+    h = Hypergraph{T,Nothing,Nothing,Dict{Int,T}}(incidence)
+
+    HGNNHypergraph{T,Dict{Int, T}}(
         h; 
         hypergraph_ids=hypergraph_ids,
         vdata=vdata,
@@ -142,10 +267,10 @@ function HGNNHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
 end
 
 # TODO: setters and getters
-hasvertexmeta(::Type{HGNNHypergraph}) = true
-hasvertexmeta(X::HGNNHypergraph) = true
-hashyperedgemeta(::Type{HGNNHypergraph}) = true
-hashyperedgemeta(X::HGNNHypergraph) = true
+SimpleHypergraphs.hasvertexmeta(::Type{HGNNHypergraph}) = true
+SimpleHypergraphs.hasvertexmeta(X::HGNNHypergraph) = true
+SimpleHypergraphs.hashyperedgemeta(::Type{HGNNHypergraph}) = true
+SimpleHypergraphs.hashyperedgemeta(X::HGNNHypergraph) = true
 
 
 """
@@ -160,7 +285,7 @@ hashyperedgemeta(X::HGNNHypergraph) = true
     To create a new HGNNHypergraph object with an additional vertex, use `add_vertex`.
 
 """
-function add_vertex!(hg::HGNNHypergraph{T, D}; hyperedges::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function SimpleHypergraphs.add_vertex!(hg::HGNNHypergraph{T, D}; hyperedges::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of vertices in HGNNHypergraph is fixed.")
 end
 
@@ -190,13 +315,12 @@ function add_vertex(
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
     if !isnothing(hg.vdata)
-        data_dict = Dict{Symbol, Any}()
+        @assert sort(collect(keys(hg.vdata))) == sort(collect(keys(features)))
         for key in keys(hg.vdata)
-            @assert key in keys(features) && numobs(features.key) == 1
-            @assert typeof(features.key) === typeof(hg.vdata.key)
-            data_dict[key] = cat_features(hg.vdata.key, features.key)
+            @assert numobs(features[key]) == 1
+            @assert typeof(features[key]) === typeof(hg.vdata[key])
         end
-        data = DataStore(data_dict)
+        data = cat_features(hg.vdata, features)
     else
         data = nothing
     end
@@ -247,7 +371,7 @@ end
     To create a new HGNNHypergraph object with a vertex removed, use `remove_vertex`.
 
 """
-function remove_vertex!(::HGNNHypergraph, ::Int)
+function SimpleHypergraphs.remove_vertex!(::HGNNHypergraph, ::Int)
     throw("Not implemented! Number of vertices in HGNNHypergraph is fixed.")
 end
 
@@ -321,7 +445,7 @@ end
     To create a new HGNNHypergraph object with an additional hyperedge, use `add_hyperedge`.
 
 """
-function add_hyperedge!(hg::HGNNHypergraph{T, D}; vertices::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function SimpleHypergraphs.add_hyperedge!(hg::HGNNHypergraph{T, D}; vertices::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
@@ -334,7 +458,7 @@ end
 
     Adds a hyperedge to a given `HGNNHypergraph`. Because `HGNNHypergraph` is immutable, this creates a new
     `HGNNHypergraph`. Optionally, existing vertices can be added to the created hyperedge. The paramater `vertices`
-    represents a dictionary of vertex identifiers and values stored at the hyperedges. Note that the `features`
+    represents a dictionary of vertex identifiers andvalues stored at the hyperedges. Note that the `features`
     DataStore is not optional; however, if `hg` has no `hedata` (i.e., if `hedata` is nothing), this can be empty.
 """
 function add_hyperedge(
@@ -348,12 +472,12 @@ function add_hyperedge(
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
     if !isnothing(hg.hedata)
-        data = Dict{Symbol, Any}()
+        @assert sort(collect(keys(hg.hedata))) == sort(collect(keys(features)))
         for key in keys(hg.hedata)
-            @assert key in keys(features) && numobs(features.key) == 1
-            @assert typeof(features.key) === typeof(hg.hedata.key)
-            data[key] = cat_features(hg.hedata.key, features.key)
+            @assert numobs(features[key]) == 1
+            @assert typeof(features[key]) === typeof(hg.hedata[key])
         end
+        data = cat_features(hg.hedata, features)
     else
         data = nothing
     end
@@ -371,7 +495,7 @@ function add_hyperedge(
     return HGNNHypergraph(
         v2he,
         he2v,
-        he.num_vertices,
+        hg.num_vertices,
         ix,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
@@ -393,7 +517,7 @@ end
 
     To create a new HGNNHypergraph object with a hyperedge removed, use `remove_hyperedge`.
 """
-function remove_hyperedge!(::HGNNHypergraph, ::Int)
+function SimpleHypergraphs.remove_hyperedge!(::HGNNHypergraph, ::Int)
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
@@ -435,7 +559,7 @@ function remove_hyperedge(hg::HGNNHypergraph, e::Int)
     return HGNNHypergraph(
         v2he,
         he2v,
-        he.num_vertices,
+        hg.num_vertices,
         ne - 1,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
@@ -450,27 +574,41 @@ end
     remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
 
     Removes a set of vertices (`to_remove`) from an undirected hypergraph `hg` by index
+    Note that the index of he2v will be shifted down after the vertices removal.
 """
 function remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
     mask_to_keep = trues(nhv(hg))
     mask_to_keep[to_remove] .= false
+
+    count = 1
+    vertexMap = Dict{Int, Int}()
+    for i  = 1: nhv(hg)
+        if mask_to_keep[i]
+            vertexMap[i] = count
+            count += 1
+        end
+    end
     
     he2v = deepcopy(hg.he2v)
-    for i in to_remove
-        for he in keys(hg.v2he[i])
-            delete!(he2v[he], i)
+    newhe2v = Vector{Dict{Int, Float64}}()
+    for he in he2v
+        push!(newhe2v, Dict{Int, Float64}())
+        for key in keys(he)
+            if !(key in to_remove)
+                newhe2v[end][vertexMap[key]] = he[key]
+            end
         end
     end
 
+    he2v = newhe2v
     v2he = hg.v2he[mask_to_keep]
-
     vdata = getobs(hg.vdata, mask_to_keep)
 
     return HGNNHypergraph(
         v2he,
         he2v,
-        hg.num_vertices,
-        length(he2v),
+        length(v2he),
+        hg.num_hyperedges,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
         vdata,
@@ -483,20 +621,34 @@ end
     remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
 
     Removes a set of hyperedges (`to_remove`) from an undirected hypergraph `hg` by index
+    Note that the index of v2he will be shifted down after the hyperedges removal.
 """
 function remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
     mask_to_keep = trues(nhe(hg))
     mask_to_keep[to_remove] .= false
     
-    v2he = deepcopy(hg.v2he)
-    for i in to_remove
-        for v in keys(hg.he2v[i])
-            delete!(v2he[v], i)
+    count = 1
+    heMap = Dict{Int, Int}()
+    for i = 1:nhe(hg)
+        if mask_to_keep[i]
+            heMap[i] = count
+            count += 1
         end
     end
 
-    he2v = hg.he2v[mask_to_keep]
+    v2he = deepcopy(hg.v2he)
+    newv2he = Vector{Dict{Int, Float64}}()
+    for v in v2he
+        push!(newv2he, Dict{Int, Float64}())
+        for key in keys(v)
+            if !(key in to_remove)
+                newv2he[end][heMap[key]] = v[key]
+            end
+        end
+    end
 
+    v2he = newv2he
+    he2v = hg.he2v[mask_to_keep]
     hedata = getobs(hg.hedata, mask_to_keep)
 
     return HGNNHypergraph(
@@ -538,6 +690,12 @@ function Base.copy(hg::HGNNHypergraph; deep = false)
     end
 end
 
+function print_all_features(io::IO, vdata, hedata, hgdata)
+    print(io, "vertex features: $(vdata), 
+                hyperedge features: $(hedata), 
+                hypergraph features: $(hgdata)")
+end
+
 function Base.show(io::IO, hg::HGNNHypergraph)
     print(io, "HGNNHypergraph($(hg.num_vertices), $(hg.num_hyperedges), $(hg.num_hypergraphs)) with ")
     print_all_features(io, hg.vdata, hg.hedata, hg.hgdata)
@@ -547,7 +705,7 @@ end
 function Base.show(io::IO, ::MIME"text/plain", hg::HGNNHypergraph)
     if get(io, :compact, false)
         print(io, "HGNNHypergraph($(hg.num_vertices), $(hg.num_hyperedges), $(hg.num_hypergraphs)) with ")
-        print_all_features(io, g.vdata, g.hedata, g.hgdata)
+        print_all_features(io, hg.vdata, hg.hedata, hg.hgdata)
         print(io, " data")
     else
         print(io,
@@ -630,6 +788,18 @@ A directed hypergraph type for use in hypergraph neural networks
     what hypergraph each vertex belongs to (if multiple distinct hypergraphs are included), as well as vertex,
     hyperedge, and hypergraph features.
 
+    HGNNDiHypergraph{T, D}(
+        hg_tail::Hypergraph{T, D},
+        hg_head::Hypergraph{T, D};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real, D<:AbstractDict{Int, T}}
+
+    Construct a `HGNNDiHypergraph` from two undirected hypergraphs representing the tails and the heads of hyperedges
+    in a directed hypergraph.
+
     HGNNDiHypergraph(
         incidence_tail::AbstractMatrix{Union{T, Nothing}},
         incidence_head::AbstractMatrix{Union{T, Nothing}};
@@ -685,12 +855,12 @@ struct HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHyperg
 end
 
 function HGNNDiHypergraph(
-    h::AbstractDirectedHypergraph{T};
+    h::AbstractDirectedHypergraph;
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-    vdata::Union{DataStore, Nothing} = nothing,
-    hedata::Union{DataStore, Nothing} = nothing,
-    hgdata::Union{DataStore, Nothing} = nothing
-) where {T<:Real}
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) 
     nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
 
     # From GNNGraphs.jl
@@ -713,25 +883,45 @@ function HGNNDiHypergraph(
     )
 
     HGNNDiHypergraph(
-        deepcopy!(h.hg_tail),
-        deepcopy!(h.hg_head),
+        deepcopy(h.hg_tail),
+        deepcopy(h.hg_head),
         nhv(h),
         nhe(h),
         nhg,
         hypergraph_ids,
-        vdaata,
+        vdata,
         hedata,
         hgdata
     )
 end
 
+function HGNNDiHypergraph{T, D}(
+    hg_tail::Hypergraph{T, D},
+    hg_head::Hypergraph{T, D};
+    hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
+) where {T<:Real, D<:AbstractDict{Int, T}}
+    base_hg = DirectedHypergraph{T,D}(hg_tail, hg_head)
+
+    HGNNDiHypergraph{T,D}(
+        base_hg;
+        hypergraph_ids=hypergraph_ids,
+        vdata=vdata,
+        hedata=hedata,
+        hgdata=hgdata
+    )
+end
+
+
 function HGNNDiHypergraph(
     incidence_tail::AbstractMatrix{Union{T, Nothing}},
     incidence_head::AbstractMatrix{Union{T, Nothing}};
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-    vdata::Union{DataStore, Nothing} = nothing,
-    hedata::Union{DataStore, Nothing} = nothing,
-    hgdata::Union{DataStore, Nothing} = nothing
+    vdata = nothing,
+    hedata = nothing,
+    hgdata = nothing
 ) where {T<:Real}
     h = DirectedHypergraph(incidence_tail, incidence_head)
     HGNNDiHypergraph(
@@ -760,18 +950,16 @@ function HGNNDiHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
 end
 
 # TODO: setters and getters
-hasvertexmeta(::Type{HGNNDiHypergraph}) = true
-hasvertexmeta(X::HGNNDiHypergraph) = true
-hashyperedgemeta(::Type{HGNNDiHypergraph}) = true
-hashyperedgemeta(X::HGNNDiHypergraph) = true
+SimpleHypergraphs.hasvertexmeta(::Type{HGNNDiHypergraph}) = true
+SimpleHypergraphs.hasvertexmeta(X::HGNNDiHypergraph) = true
+SimpleHypergraphs.hashyperedgemeta(::Type{HGNNDiHypergraph}) = true
+SimpleHypergraphs.hashyperedgemeta(X::HGNNDiHypergraph) = true
 
 
 Base.zero(::Type{H}) where {H <: HGNNDiHypergraph} = H(0)
 
-# TODO: modification functions
-
 """
-    add_vertex!(::HGNNDiHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+    (::HGNNDiHypergraph{T, D}; ::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
 
     This function is not implemented for HGNNDiHypergraph.
         
@@ -782,7 +970,7 @@ Base.zero(::Type{H}) where {H <: HGNNDiHypergraph} = H(0)
     To create a new HGNNDiHypergraph object with an additional vertex, use `add_vertex`.
 
 """
-function add_vertex!(hg::HGNNDiHypergraph{T, D}; hyperedges::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function SimpleHypergraphs.add_vertex!(hg::HGNNDiHypergraph{T, D}; hyperedges::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of vertices in HGNNDiHypergraph is fixed.")
 end
 
@@ -815,12 +1003,12 @@ function add_vertex(
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
     if !isnothing(hg.vdata)
-        data = Dict{Symbol, Any}()
+        @assert sort(collect(keys(hg.vdata))) == sort(collect(keys(features)))
         for key in keys(hg.vdata)
-            @assert key in keys(features) && numobs(features.key) == 1
-            @assert typeof(features.key) === typeof(hg.vdata.key)
-            data[key] = cat_features(hg.vdata.key, features.key)
+            @assert numobs(features[key]) == 1
+            @assert typeof(features[key]) === typeof(hg.vdata[key])
         end
+        data = cat_features(hg.vdata, features)
     else
         data = nothing
     end
@@ -853,9 +1041,17 @@ function add_vertex(
         )
     end
 
+    hg_tail = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
     return HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
-        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
+        hg_tail,
+        hg_head,
         ix,
         hg.num_hyperedges,
         hg.num_hypergraphs,
@@ -879,7 +1075,7 @@ end
     To create a new HGNNDiHypergraph object with a vertex removed, use `remove_vertex`.
 
 """
-function remove_vertex!(hg::HGNNDiHypergraph, v::Int)
+function SimpleHypergraphs.remove_vertex!(hg::HGNNDiHypergraph, v::Int)
     throw("Not implemented! Number of vertices in HGNNDiHypergraph is fixed.")
 end
 
@@ -889,7 +1085,8 @@ end
     Removes the vertex `v` from a given `HGNNDiHypergraph` `hg`. Note that this creates a new HGNNDiHypergraph, as
     HGNNDiHypergraph objects are immutable.
 """
-function remove_vertex(hg::HGNNDiHypergraph, v::Int)
+function remove_vertex(hg::HGNNDiHypergraph{T, D}, v::Int
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
     n = nhv(hg)
 
     # Extract all data NOT for the given vertex
@@ -939,9 +1136,17 @@ function remove_vertex(hg::HGNNDiHypergraph, v::Int)
         hypergraph_ids = hg.hypergraph_ids[Not(v)]
     end
 
+    hg_tail = Hypergraph{T, D}(n-1, hg.num_hyperedges)
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, D}(n-1, hg.num_hyperedges)
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
     return HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
-        Hypergraph(v2he_head, he2v_head, nothing, nothing),
+        hg_tail,
+        hg_head,
         n - 1,
         hg.num_hyperedges,
         hg.num_hypergraphs,
@@ -966,7 +1171,7 @@ end
     To create a new HGNNDiHypergraph object with an additional hyperedge, use `add_hyperedge`.
 
 """
-function add_hyperedge!(hg::HGNNDiHypergraph{T, D}; vertices::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
+function SimpleHypergraphs.add_hyperedge!(hg::HGNNDiHypergraph{T, D}; vertices::D = D()) where {T <: Real, D <: AbstractDict{Int,T}}
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
@@ -996,13 +1201,12 @@ function add_hyperedge(
     # Verify that all all expected properties are present
     # Additional properties in `features` that are not in `hg` will be ignored
     if !isnothing(hg.hedata)
-        data_dict = Dict{Symbol, Any}()
+        @assert sort(collect(keys(hg.hedata))) == sort(collect(keys(features)))
         for key in keys(hg.hedata)
-            @assert key in keys(features) && numobs(features.key) == 1
-            @assert typeof(features.key) === typeof(hg.hedata.key)
-            data_dict[key] = cat_features(hg.hedata.key, features.key)
+            @assert numobs(features[key]) == 1
+            @assert typeof(features[key]) === typeof(hg.hedata[key])
         end
-        data = DataStore(data_dict)
+        data = cat_features(hg.hedata, features)
     else
         data = nothing
     end
@@ -1025,15 +1229,23 @@ function add_hyperedge(
         v2he_head[k][ix] = vertices_head[k]
     end
 
-    return HGNNHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
-        Hypergraph(v2he_head, he2v_head, nothing, nothing),
-        he.num_vertices,
+    hg_tail = Hypergraph{T, D}(hg.num_vertices, ix)
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, D}(hg.num_vertices, ix)
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
+    return HGNNDiHypergraph(
+        hg_tail,
+        hg_head,
+        hg.num_vertices,
         ix,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
         hg.vdata,
-        data,
+        DataStore(data),
         hg.hgdata
     )
 
@@ -1050,7 +1262,7 @@ end
 
     To create a new HGNNHypergraph object with a hyperedge removed, use `remove_hyperedge`.
 """
-function remove_hyperedge!(::HGNNDiHypergraph, ::Int)
+function SimpleHypergraphs.remove_hyperedge!(::HGNNDiHypergraph, ::Int)
     throw("Not implemented! Number of hyperedges in HGNNHypergraph is fixed.")
 end
 
@@ -1060,7 +1272,8 @@ end
 Removes the hyperedge `e` from a given undirected HGNNDiHypergraph `hg`. Note that this function creates a new
 HGNNDiHypergraph.
 """
-function remove_hyperedge(hg::HGNNDiHypergraph, e::Int)
+function remove_hyperedge(hg::HGNNDiHypergraph{T, D}, e::Int
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
     ne = nhe(hg)
 	@assert(e <= ne)
 
@@ -1113,15 +1326,23 @@ function remove_hyperedge(hg::HGNNDiHypergraph, e::Int)
         hypergraph_ids = hg.hypergraph_ids[Not(e)]
     end
     
+    hg_tail = Hypergraph{T, D}(hg.num_vertices, ne - 1)
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, D}(hg.num_vertices, ne - 1)
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
     return HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
-        Hypergraph(v2he_head, he2v_head, nothing, nothing),
-        he.num_vertices,
+        hg_tail,
+        hg_head,
+        hg.num_vertices,
         ne - 1,
         hg.num_hypergraphs,
-        hypergraph_ids,
+        hg.hypergraph_ids,
         hg.vdata,
-        data,
+        DataStore(data),
         hg.hgdata
     )
 
@@ -1131,20 +1352,43 @@ end
     remove_vertices(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
 
     Removes a set of vertices (`to_remove`) from a directed hypergraph `hg` by index
+    Note that the index of both he2v_tail and he2v_head will be shifted down after 
+    the vertices removal.
 """
-function remove_vertices(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
-    mask_to_keep = trues(nhe(hg))
+function remove_vertices(hg::HGNNDiHypergraph{T, D}, to_remove::AbstractVector{Int}
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
+    mask_to_keep = trues(nhv(hg))
     mask_to_keep[to_remove] .= false
+
+    count = 1
+    vertexMap = Dict{Int, Int}()
+    for i  = 1: nhv(hg)
+        if mask_to_keep[i]
+            vertexMap[i] = count
+            count += 1
+        end
+    end
 
     he2v_tail = deepcopy(hg.hg_tail.he2v)
     he2v_head = deepcopy(hg.hg_head.he2v)
 
-    for i in to_remove
-        for he in keys(hg.hg_tail.v2he[i])
-            delete!(he2v_tail[he], i)
+    newhe2v_tail = Vector{Dict{Int, Float64}}()
+    newhe2v_head = Vector{Dict{Int, Float64}}()
+    for he_tail in he2v_tail
+        push!(newhe2v_tail, Dict{Int, Float64}())
+        for key in keys(he_tail)
+            if !(key in to_remove)
+                newhe2v_tail[end][vertexMap[key]] = he_tail[key]
+            end
         end
-        for he in keys(hg.hg_head.v2he[i])
-            delete!(he2v_head[he], i)
+    end
+
+    for he_head in he2v_head
+        push!(newhe2v_head, Dict{Int, Float64}())
+        for key in keys(he_head)
+            if !(key in to_remove)
+                newhe2v_head[end][vertexMap[key]] = he_head[key]
+            end
         end
     end
 
@@ -1153,11 +1397,21 @@ function remove_vertices(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
 
     vdata = getobs(hg.vdata, mask_to_keep)
 
+    ix = length(v2he_tail)
+
+    hg_tail = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= newhe2v_tail
+
+    hg_head = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= newhe2v_head
+
     HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(nothing, length(v2he_tail)), Vector{Nothing}(nothing, length(he2v_tail))),
-        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(nothing, length(v2he_head)), Vector{Nothing}(nothing, length(he2v_head))),
-        hg.num_vertices,
-        length(he2v_tail),
+        hg_tail,
+        hg_head,
+        ix,
+        hg.num_hyperedges,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
         vdata,
@@ -1170,20 +1424,43 @@ end
     remove_hyperedges(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
 
     Removes a set of hyperedges (`to_remove`) from a directed hypergraph `hg` by index
+    Note that the index of both v2he_tail and v2he_head will be shifted down after 
+    the vertices removal.
 """
-function remove_hyperedges(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
+function remove_hyperedges(hg::HGNNDiHypergraph{T, D}, to_remove::AbstractVector{Int}
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
     mask_to_keep = trues(nhe(hg))
     mask_to_keep[to_remove] .= false
+
+    count = 1
+    heMap = Dict{Int, Int}()
+    for i = 1:nhe(hg)
+        if mask_to_keep[i]
+            heMap[i] = count
+            count += 1
+        end
+    end
 
     v2he_tail = deepcopy(hg.hg_tail.v2he)
     v2he_head = deepcopy(hg.hg_head.v2he)
 
-    for i in to_remove
-        for v in keys(hg.hg_tail.he2v[i])
-            delete!(v2he_tail[v], i)
+    newv2he_tail = Vector{Dict{Int, Float64}}()
+    newv2he_head = Vector{Dict{Int, Float64}}()
+    for v_tail in v2he_tail
+        push!(newv2he_tail, Dict{Int, Float64}())
+        for key in keys(v_tail)
+            if !(key in to_remove)
+                newv2he_tail[end][heMap[key]] = v_tail[key]
+            end
         end
-        for v in keys(hg.hg_head.he2v[i])
-            delete!(v2he_head[v], i)
+    end
+
+    for v_head in v2he_head
+        push!(newv2he_head, Dict{Int, Float64}())
+        for key in keys(v_head)
+            if !(key in to_remove)
+                newv2he_head[end][heMap[key]] = v_head[key]
+            end
         end
     end
 
@@ -1192,11 +1469,22 @@ function remove_hyperedges(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
 
     hedata = getobs(hg.hedata, mask_to_keep)
 
+    ne = length(he2v_tail)
+
+    hg_tail = Hypergraph{T, D}(hg.num_vertices, ne)
+    hg_tail.v2he .= newv2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, D}(hg.num_vertices, ne)
+    hg_head.v2he .= newv2he_head
+    hg_head.he2v .= he2v_head
+
+
     HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(nothing, length(v2he_tail)), Vector{Nothing}(nothing, length(he2v_tail))),
-        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(nothing, length(v2he_head)), Vector{Nothing}(nothing, length(he2v_head))),
+        hg_tail,
+        hg_head,
         hg.num_vertices,
-        length(he2v_tail),
+        ne,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
         hg.vdata,
