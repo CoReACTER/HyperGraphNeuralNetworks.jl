@@ -574,7 +574,7 @@ end
     remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
 
     Removes a set of vertices (`to_remove`) from an undirected hypergraph `hg` by index
-    Note that the index of both vertex and hyperedge will be shifted down after the removal.
+    Note that the index of he2v will be shifted down after the vertices removal.
 """
 function remove_vertices(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
     mask_to_keep = trues(nhv(hg))
@@ -621,16 +621,14 @@ end
     remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
 
     Removes a set of hyperedges (`to_remove`) from an undirected hypergraph `hg` by index
+    Note that the index of v2he will be shifted down after the hyperedges removal.
 """
 function remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
     mask_to_keep = trues(nhe(hg))
     mask_to_keep[to_remove] .= false
     
-    v2he = deepcopy(hg.v2he)
-    newv2he = Vector{Dict{Int, Float64}}()
-
-    heMap = Dict{Int, Int}()
     count = 1
+    heMap = Dict{Int, Int}()
     for i = 1:nhe(hg)
         if mask_to_keep[i]
             heMap[i] = count
@@ -638,6 +636,8 @@ function remove_hyperedges(hg::HGNNHypergraph, to_remove::AbstractVector{Int})
         end
     end
 
+    v2he = deepcopy(hg.v2he)
+    newv2he = Vector{Dict{Int, Float64}}()
     for v in v2he
         push!(newv2he, Dict{Int, Float64}())
         for key in keys(v)
@@ -1085,7 +1085,8 @@ end
     Removes the vertex `v` from a given `HGNNDiHypergraph` `hg`. Note that this creates a new HGNNDiHypergraph, as
     HGNNDiHypergraph objects are immutable.
 """
-function remove_vertex(hg::HGNNDiHypergraph, v::Int)
+function remove_vertex(hg::HGNNDiHypergraph{T, D}, v::Int
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
     n = nhv(hg)
 
     # Extract all data NOT for the given vertex
@@ -1135,9 +1136,17 @@ function remove_vertex(hg::HGNNDiHypergraph, v::Int)
         hypergraph_ids = hg.hypergraph_ids[Not(v)]
     end
 
+    hg_tail = Hypergraph{T, D}(n-1, hg.num_hyperedges)
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, D}(n-1, hg.num_hyperedges)
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
     return HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
-        Hypergraph(v2he_head, he2v_head, nothing, nothing),
+        hg_tail,
+        hg_head,
         n - 1,
         hg.num_hyperedges,
         hg.num_hypergraphs,
@@ -1220,15 +1229,23 @@ function add_hyperedge(
         v2he_head[k][ix] = vertices_head[k]
     end
 
-    return HGNNHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
-        Hypergraph(v2he_head, he2v_head, nothing, nothing),
-        he.num_vertices,
+    hg_tail = Hypergraph{T, D}(hg.num_vertices, ix)
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, D}(hg.num_vertices, ix)
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
+    return HGNNDiHypergraph(
+        hg_tail,
+        hg_head,
+        hg.num_vertices,
         ix,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
         hg.vdata,
-        data,
+        DataStore(data),
         hg.hgdata
     )
 
@@ -1255,7 +1272,8 @@ end
 Removes the hyperedge `e` from a given undirected HGNNDiHypergraph `hg`. Note that this function creates a new
 HGNNDiHypergraph.
 """
-function remove_hyperedge(hg::HGNNDiHypergraph, e::Int)
+function remove_hyperedge(hg::HGNNDiHypergraph{T, D}, e::Int
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
     ne = nhe(hg)
 	@assert(e <= ne)
 
@@ -1308,15 +1326,23 @@ function remove_hyperedge(hg::HGNNDiHypergraph, e::Int)
         hypergraph_ids = hg.hypergraph_ids[Not(e)]
     end
     
+    hg_tail = Hypergraph{T, D}(hg.num_vertices, ne - 1)
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, D}(hg.num_vertices, ne - 1)
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
     return HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, nothing, nothing),
-        Hypergraph(v2he_head, he2v_head, nothing, nothing),
-        he.num_vertices,
+        hg_tail,
+        hg_head,
+        hg.num_vertices,
         ne - 1,
         hg.num_hypergraphs,
-        hypergraph_ids,
+        hg.hypergraph_ids,
         hg.vdata,
-        data,
+        DataStore(data),
         hg.hgdata
     )
 
@@ -1326,20 +1352,43 @@ end
     remove_vertices(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
 
     Removes a set of vertices (`to_remove`) from a directed hypergraph `hg` by index
+    Note that the index of both he2v_tail and he2v_head will be shifted down after 
+    the vertices removal.
 """
-function remove_vertices(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
-    mask_to_keep = trues(nhe(hg))
+function remove_vertices(hg::HGNNDiHypergraph{T, D}, to_remove::AbstractVector{Int}
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
+    mask_to_keep = trues(nhv(hg))
     mask_to_keep[to_remove] .= false
+
+    count = 1
+    vertexMap = Dict{Int, Int}()
+    for i  = 1: nhv(hg)
+        if mask_to_keep[i]
+            vertexMap[i] = count
+            count += 1
+        end
+    end
 
     he2v_tail = deepcopy(hg.hg_tail.he2v)
     he2v_head = deepcopy(hg.hg_head.he2v)
 
-    for i in to_remove
-        for he in keys(hg.hg_tail.v2he[i])
-            delete!(he2v_tail[he], i)
+    newhe2v_tail = Vector{Dict{Int, Float64}}()
+    newhe2v_head = Vector{Dict{Int, Float64}}()
+    for he_tail in he2v_tail
+        push!(newhe2v_tail, Dict{Int, Float64}())
+        for key in keys(he_tail)
+            if !(key in to_remove)
+                newhe2v_tail[end][vertexMap[key]] = he_tail[key]
+            end
         end
-        for he in keys(hg.hg_head.v2he[i])
-            delete!(he2v_head[he], i)
+    end
+
+    for he_head in he2v_head
+        push!(newhe2v_head, Dict{Int, Float64}())
+        for key in keys(he_head)
+            if !(key in to_remove)
+                newhe2v_head[end][vertexMap[key]] = he_head[key]
+            end
         end
     end
 
@@ -1348,10 +1397,20 @@ function remove_vertices(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
 
     vdata = getobs(hg.vdata, mask_to_keep)
 
+    ix = length(v2he_tail)
+
+    hg_tail = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= newhe2v_tail
+
+    hg_head = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= newhe2v_head
+
     HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(nothing, length(v2he_tail)), Vector{Nothing}(nothing, length(he2v_tail))),
-        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(nothing, length(v2he_head)), Vector{Nothing}(nothing, length(he2v_head))),
-        length(v2he_tail),
+        hg_tail,
+        hg_head,
+        ix,
         hg.num_hyperedges,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
@@ -1365,20 +1424,43 @@ end
     remove_hyperedges(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
 
     Removes a set of hyperedges (`to_remove`) from a directed hypergraph `hg` by index
+    Note that the index of both v2he_tail and v2he_head will be shifted down after 
+    the vertices removal.
 """
-function remove_hyperedges(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
+function remove_hyperedges(hg::HGNNDiHypergraph{T, D}, to_remove::AbstractVector{Int}
+    ) where {T <: Real, D <: AbstractDict{Int,T}}
     mask_to_keep = trues(nhe(hg))
     mask_to_keep[to_remove] .= false
+
+    count = 1
+    heMap = Dict{Int, Int}()
+    for i = 1:nhe(hg)
+        if mask_to_keep[i]
+            heMap[i] = count
+            count += 1
+        end
+    end
 
     v2he_tail = deepcopy(hg.hg_tail.v2he)
     v2he_head = deepcopy(hg.hg_head.v2he)
 
-    for i in to_remove
-        for v in keys(hg.hg_tail.he2v[i])
-            delete!(v2he_tail[v], i)
+    newv2he_tail = Vector{Dict{Int, Float64}}()
+    newv2he_head = Vector{Dict{Int, Float64}}()
+    for v_tail in v2he_tail
+        push!(newv2he_tail, Dict{Int, Float64}())
+        for key in keys(v_tail)
+            if !(key in to_remove)
+                newv2he_tail[end][heMap[key]] = v_tail[key]
+            end
         end
-        for v in keys(hg.hg_head.he2v[i])
-            delete!(v2he_head[v], i)
+    end
+
+    for v_head in v2he_head
+        push!(newv2he_head, Dict{Int, Float64}())
+        for key in keys(v_head)
+            if !(key in to_remove)
+                newv2he_head[end][heMap[key]] = v_head[key]
+            end
         end
     end
 
@@ -1387,11 +1469,22 @@ function remove_hyperedges(hg::HGNNDiHypergraph, to_remove::AbstractVector{Int})
 
     hedata = getobs(hg.hedata, mask_to_keep)
 
+    ne = length(he2v_tail)
+
+    hg_tail = Hypergraph{T, D}(hg.num_vertices, ne)
+    hg_tail.v2he .= newv2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, D}(hg.num_vertices, ne)
+    hg_head.v2he .= newv2he_head
+    hg_head.he2v .= he2v_head
+
+
     HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(nothing, length(v2he_tail)), Vector{Nothing}(nothing, length(he2v_tail))),
-        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(nothing, length(v2he_head)), Vector{Nothing}(nothing, length(he2v_head))),
+        hg_tail,
+        hg_head,
         hg.num_vertices,
-        length(he2v_tail),
+        ne,
         hg.num_hypergraphs,
         hg.hypergraph_ids,
         hg.vdata,
