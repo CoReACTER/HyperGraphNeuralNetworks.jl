@@ -113,25 +113,25 @@ end
     h[5, 3] = 1.0
     h[6, 3] = 1.0
     h[7, 4] = 1.0
-    HGNN5 = HGNNHypergraph(h)
-    HGNN6 = remove_vertices(HGNN5, [2, 5, 6, 7])
-    @test HGNN6.num_vertices == 3
-    @test HGNN6.num_hyperedges == 4
-    @test HGNN6.v2he == [Dict(1 => 1.0), 
+    HGNN6 = HGNNHypergraph(h)
+    HGNN7 = remove_vertices(HGNN6, [2, 5, 6, 7])
+    @test HGNN7.num_vertices == 3
+    @test HGNN7.num_hyperedges == 4
+    @test HGNN7.v2he == [Dict(1 => 1.0), 
                         Dict(1 => 1.0, 2 => 1.0),  
                         Dict(2 => 1.0, 3 => 1.0)]
-    @test HGNN6.he2v == [Dict(1 => 1.0, 2 => 1.0)
+    @test HGNN7.he2v == [Dict(1 => 1.0, 2 => 1.0)
                         Dict(2 => 1.0, 3 => 1.0)
                         Dict(3 => 1.0)
                         Dict{Int64, Float64}()]
     
-    HGNN7 = remove_hyperedges(HGNN6, [2, 4])
-    @test HGNN7.num_vertices == 3
-    @test HGNN7.num_hyperedges == 2
-    @test HGNN7.v2he == [Dict(1 => 1.0),
+    HGNN8 = remove_hyperedges(HGNN7, [2, 4])
+    @test HGNN8.num_vertices == 3
+    @test HGNN8.num_hyperedges == 2
+    @test HGNN8.v2he == [Dict(1 => 1.0),
                         Dict(1 => 1.0),  
                         Dict(2 => 1.0)]
-    @test HGNN7.he2v == [Dict(1 => 1.0, 2 => 1.0)
+    @test HGNN8.he2v == [Dict(1 => 1.0, 2 => 1.0)
                         Dict(3 => 1.0)]
 
     @test_throws "Not implemented! Number of vertices in HGNNHypergraph is fixed." SimpleHypergraphs.add_vertex!(HGNN1)
@@ -176,7 +176,6 @@ end
         b = 1-element Vector{Int64}, 
     hypergraph features: DataStore() with 1 element: 
     u = 1-element Vector{Int64} data")
-    show(IOContext(stdout, :compact => false), "text/plain", rand(2, 2))
     @test normalize_str(
         sprint(show, MIME("text/plain"), HGNN; context=IOContext(stdout, :compact=>true))
         ) == normalize_str("HGNNHypergraph(2, 1, 1) with 
@@ -196,12 +195,13 @@ end
                             b = 2-element Vector{Int64} 
         hedata (hyperedge data): b = 1-element Vector{Int64}
         hgdata (hypergraph data): u = 1-element Vector{Int64}")
-    
+
     #MLUtils.numobs
     @test numobs(HGNN) == HGNN.num_hypergraphs 
 
     #Bese.hash
     newHGNN = add_vertex(HGNN, DataStore(a = [[1, 2]], b = [3]))
+    @test newHGNN.vdata == DataStore(a = [[1,2],[3,4], [1,2]], b = [1, -1, 3])
     @test hash(HGNN) == hash(copyHGNN)
     @test hash(HGNN) != hash(zeroHGNN)
 
@@ -303,14 +303,80 @@ end
                   nothing 1.0
                   1.0     1.0
                   nothing nothing]
-    hedata1 = [2.0, 4.0]
-    HGNN1 = HGNNDiHypergraph(tailMatrix, headMatrix; hedata = hedata1)
+    vdata1 = (a = [1, 2, 3, 4], b = [1, -1, 1, -1])
+    hedata1 = (c = [2.0, 4.0],)
+    HGNN1 = HGNNDiHypergraph(tailMatrix, headMatrix; vdata = vdata1, hedata = hedata1)
     
     @test HGNN1.num_vertices == 4
-    features1 = DataStore(1)
+    features1 = DataStore(a = [5], b = [1])
     hyperedges_tail1 = Dict(2 => 4.0) #connect the new vertex to hyperedge_tail 2
     HGNN2 = add_vertex(HGNN1, features1; hyperedges_tail = hyperedges_tail1)
-    @test HGNN2.num_vertices == 5 ## error
+    @test HGNN2.num_vertices == 5 
+    @test HGNN2.hg_tail.v2he[5] == Dict(2 => 4.0)
+    @test HGNN2.hg_head.v2he[5] == Dict()
+    @test HGNN2.vdata == DataStore(a = [1, 2, 3, 4, 5], b = [1, -1, 1, -1, 1])
+    @test HGNN2 != HGNN1
+
+    HGNN3 = remove_vertex(HGNN2, 5)
+    @test HGNN3.num_vertices == 4
+    @test HGNN3 == HGNN1
+
+    features4 = DataStore(c = [1.0])
+    vertices_tail4 = Dict(4 => 5.0) 
+    vertices_head4 = Dict(1 => 3.0) 
+    HGNN4 = add_hyperedge(HGNN3, features4; vertices_tail = vertices_tail4, vertices_head = vertices_head4)
+    @test HGNN4.num_hyperedges == 3
+    @test HGNN4.hg_tail.he2v[3] == Dict(4 => 5.0)
+    @test HGNN4.hg_head.he2v[3] == Dict(1 => 3.0)
+    @test HGNN4.hedata == DataStore(c = [2.0, 4.0, 1.0])
+    @test HGNN4 != HGNN3
+    
+    HGNN5 = remove_hyperedge(HGNN4, 3)
+    @test HGNN5.num_hyperedges == 2
+    @test HGNN5 == HGNN3
+
+    h = DirectedHypergraph{Float64, Int, String}(7,4)
+    h[1, 1, 1] = 1.0
+    h[2, 2, 1] = 1.0
+    h[2, 3, 1] = 1.0
+    h[1, 3, 2] = 1.0
+    h[2, 4, 2] = 1.0
+    h[1, 4, 3] = 1.0
+    h[1, 5, 3] = 1.0
+    h[2, 6, 3] = 1.0
+    h[1, 7, 4] = 1.0
+    HGNN6 = HGNNDiHypergraph(h)
+    HGNN7 = remove_vertices(HGNN6, [2, 5, 6, 7])
+    @test HGNN7.num_vertices == 3
+    @test HGNN7.num_hyperedges == 4
+    @test HGNN7.hg_tail.v2he == [Dict(1 => 1.0), 
+                                Dict(2 => 1.0),
+                                Dict(3 => 1.0)]
+    @test HGNN7.hg_head.v2he == [Dict{Int64, Float64}(),
+                                Dict(1 => 1.0),
+                                Dict(2 => 1.0)]
+    @test HGNN7.hg_tail.he2v == [Dict(1 => 1.0),
+                                Dict(2 => 1.0),
+                                Dict(3 => 1.0),
+                                Dict{Int64, Float64}()]
+    @test HGNN7.hg_head.he2v == [Dict(2 => 1.0),
+                                Dict(3 => 1.0),
+                                Dict{Int64, Float64}(),
+                                Dict{Int64, Float64}()]
+
+    HGNN8 = remove_hyperedges(HGNN7, [2, 4])
+    @test HGNN8.num_vertices == 3
+    @test HGNN8.num_hyperedges == 2
+    @test HGNN8.hg_tail.v2he == [Dict(1 => 1.0),
+                                Dict{Int64, Float64}(),
+                                Dict(2 => 1.0)]
+    @test HGNN8.hg_head.v2he == [Dict{Int64, Float64}(),
+                                Dict(1 => 1.0),
+                                Dict{Int64, Float64}()]
+    @test HGNN8.hg_tail.he2v == [Dict(1 => 1.0),
+                                Dict(3 => 1.0)]
+    @test HGNN8.hg_head.he2v == [Dict(2 => 1.0),
+                                Dict{Int64, Float64}()]
    
     @test_throws "Not implemented! Number of vertices in HGNNDiHypergraph is fixed." SimpleHypergraphs.add_vertex!(HGNN1)
     @test_throws "Not implemented! Number of vertices in HGNNDiHypergraph is fixed." SimpleHypergraphs.remove_vertex!(HGNN1, 1)
