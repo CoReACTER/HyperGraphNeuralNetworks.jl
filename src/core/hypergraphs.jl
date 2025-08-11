@@ -1124,7 +1124,7 @@ function add_vertex(
         hg.num_hyperedges,
         hg.num_hypergraphs,
         hypergraph_ids,
-        DataStore(data),
+        data,
         hg.hedata,
         hg.hgdata
     )
