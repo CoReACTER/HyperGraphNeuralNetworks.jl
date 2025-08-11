@@ -500,7 +500,7 @@ function add_hyperedge(
         hg.num_hypergraphs,
         hg.hypergraph_ids,
         hg.vdata,
-        DataStore(data),
+        data,
         hg.hgdata
     )
 
@@ -1056,7 +1056,7 @@ function add_vertex(
         hg.num_hyperedges,
         hg.num_hypergraphs,
         hypergraph_ids,
-        DataStore(data),
+        data,
         hg.hedata,
         hg.hgdata
     )
@@ -1245,7 +1245,7 @@ function add_hyperedge(
         hg.num_hypergraphs,
         hg.hypergraph_ids,
         hg.vdata,
-        DataStore(data),
+        data,
         hg.hgdata
     )
 
@@ -1498,11 +1498,11 @@ function add_vertices(
     n::Int,
     features::DataStore;
     hyperedges::AbstractVector{D} = Vector{D}(D(), n),
-    hypergraph_ids::AbstractVector{Int} = ones(n)
+    hypergraph_ids::AbstractVector{Int} = ones(Int, n)
 ) where {T <: Real, D <: AbstractDict{Int, T}}
 
     for i in 1:n
-        hg = add_vertex(hg, getobs(features, i); hyperedges=hyperedges, hypergraph_id=hypergraph_ids[i])
+        hg = add_vertex(hg, getobs(features, i); hyperedges=hyperedges[i], hypergraph_id=hypergraph_ids[i])
     end
 
     hg
@@ -1515,7 +1515,7 @@ function add_vertices(
     features::DataStore;
     hyperedges_tail::AbstractVector{D} = Vector{D}(D(), n),
     hyperedges_head::AbstractVector{D} = Vector{D}(D(), n),
-    hypergraph_ids::AbstractVector{Int} = ones(n)
+    hypergraph_ids::AbstractVector{Int} = ones(Int, n)
 ) where {T <: Real, D <: AbstractDict{Int, T}}
 
     for i in 1:n
