@@ -1185,7 +1185,7 @@ function random_split_vertices(
 
         push!(
             res,
-            HGNNHypergraph(
+            HGNNHypergraph{T,D}(
                 v2he,
                 he2v,
                 length(v2he),
@@ -1216,6 +1216,70 @@ function random_split_hyperedges(
     fracs::AbstractVector{<:Real},
     rng::AbstractRNG
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    # For all f ∈ fracs, 0 < f <= 1
+    @assert all(fracs .> 0) && all(fracs .<= 1)
+    # Fractions must sum to 1
+    @assert abs(sum(fracs) - 1) <= 1e-5
+
+    num_choices = round.(fracs .* hg.num_hyperedges)
+    rand_inds = shuffle(rng, Vector(1:hg.num_hyperedges))
+    
+    partitions = Vector{Int}[]
+    start_point = 1
+
+    # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
+    for i in 1:(length(num_choices) - 1)
+        part = rand_inds[start_point:start_point + num_choices[i] - 1]
+        start_point += num_choices
+        push!(partitions, sort(part))
+    end
+    push!(partitions, sort(rand_inds[start_point:end]))
+
+    res = HGNNHypergraph{T,D}[]
+
+    # Partition v2he and he2v, being careful of indices
+    for part in partitions
+        he2v = hg.he2v[part]
+        v2he = D[]
+
+        hemap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
+        vmap = Dict{Int, Int}()
+
+        for (i, v) in enumerate(hg.v2he)
+            newv = filter(((key,val), ) -> key in part, v)
+            if length(newv) > 0
+                newv = D(hemap[key] => val for (key, val) in newv)
+                push!(v2he, newv)
+                vmap[i] = length(v2he)
+            end
+        end
+
+        for i in eachindex(he2v)
+            he2v[i] = D(vmap[key] => val for (key, val) in he2v[i])
+        end
+
+        rel_vs = collect(keys(vmap))
+
+        hypergraph_ids = hg.hypergraph_ids[rel_vs]
+        unique_hgids = collect(Set(hypergraph_ids))
+
+        push!(
+            res,
+            HGNNHypergraph{T,D}(
+                v2he,
+                he2v,
+                length(v2he),
+                length(he2v),
+                length(unique_hgids),
+                hypergraph_ids,
+                getobs(hg.vdata, rel_vs),
+                getobs(hg.hedata, part),
+                getobs(hg.hgdata, unique_hgids)
+            )
+        )
+    end
+
+    return res
 end
 
 function random_split_hyperedges(
