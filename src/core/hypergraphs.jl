@@ -820,8 +820,8 @@ A directed hypergraph type for use in hypergraph neural networks
 """
 
 struct HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
-    hg_tail::Hypergraph{T, D}
-    hg_head::Hypergraph{T, D}
+    hg_tail::Hypergraph{T, Nothing, Nothing, D}
+    hg_head::Hypergraph{T, Nothing, Nothing, D}
     num_vertices::Int
     num_hyperedges::Int
     num_hypergraphs::Int
@@ -832,12 +832,12 @@ struct HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHyperg
 end
 
 function HGNNDiHypergraph{T,D}(
-    h::DirectedHypergraph{T,D};
+    h::DirectedHypergraph{T,V,E,D};
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
     vdata = nothing,
     hedata = nothing,
     hgdata = nothing
-) where {T<:Real, D<:AbstractDict{Int,T}}
+) where {T<:Real, V, E, D<:AbstractDict{Int,T}}
     nhg = !isnothing(hypergraph_ids) ? maximum(hypergraph_ids) : 1
 
     # From GNNGraphs.jl
@@ -860,8 +860,8 @@ function HGNNDiHypergraph{T,D}(
     )
 
     HGNNDiHypergraph{T,D}(
-        deepcopy(h.hg_tail),
-        deepcopy(h.hg_head),
+        Hypergraph{T,Nothing,Nothing,D}(Matrix(h.hg_tail)),
+        Hypergraph{T,Nothing,Nothing,D}(Matrix(h.hg_head)),
         nhv(h),
         nhe(h),
         nhg,
@@ -873,14 +873,13 @@ function HGNNDiHypergraph{T,D}(
 end
 
 function HGNNDiHypergraph{T}(
-    h::DirectedHypergraph{T};
+    h::DirectedHypergraph;
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
     vdata = nothing,
     hedata = nothing,
     hgdata = nothing
 ) where {T<:Real}
-    D = valtype(h.hg_tail.v2he)
-    HGNNDiHypergraph{T, D}(
+    HGNNDiHypergraph{T, Dict{Int, T}}(
         h;
         hypergraph_ids=hypergraph_ids,
         vdata=vdata,
@@ -909,14 +908,14 @@ function HGNNDiHypergraph(
 end
 
 function HGNNDiHypergraph{T, D}(
-    hg_tail::Hypergraph{T, D},
-    hg_head::Hypergraph{T, D};
+    hg_tail::Hypergraph{T,V,E,D},
+    hg_head::Hypergraph{T,V,E,D};
     hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
     vdata = nothing,
     hedata = nothing,
     hgdata = nothing
-) where {T<:Real, D<:AbstractDict{Int, T}}
-    base_hg = DirectedHypergraph{T,D}(hg_tail, hg_head)
+) where {T<:Real, V, E, D<:AbstractDict{Int, T}}
+    base_hg = DirectedHypergraph{T,Nothing,Nothing,D}(hg_tail, hg_head)
 
     HGNNDiHypergraph{T,D}(
         base_hg;
@@ -1109,11 +1108,11 @@ function add_vertex(
         )
     end
 
-    hg_tail = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_tail = Hypergraph{T, Nothing, Nothing, D}(ix, hg.num_hyperedges)
     hg_tail.v2he .= v2he_tail
     hg_tail.he2v .= he2v_tail
 
-    hg_head = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_head = Hypergraph{T, Nothing, Nothing, D}(ix, hg.num_hyperedges)
     hg_head.v2he .= v2he_head
     hg_head.he2v .= he2v_head
 
@@ -1204,11 +1203,11 @@ function remove_vertex(hg::HGNNDiHypergraph{T, D}, v::Int
         hypergraph_ids = hg.hypergraph_ids[Not(v)]
     end
 
-    hg_tail = Hypergraph{T, D}(n-1, hg.num_hyperedges)
+    hg_tail = Hypergraph{T,Nothing,Nothing,D}(n-1, hg.num_hyperedges)
     hg_tail.v2he .= v2he_tail
     hg_tail.he2v .= he2v_tail
 
-    hg_head = Hypergraph{T, D}(n-1, hg.num_hyperedges)
+    hg_head = Hypergraph{T,Nothing,Nothing,D}(n-1, hg.num_hyperedges)
     hg_head.v2he .= v2he_head
     hg_head.he2v .= he2v_head
 
@@ -1297,11 +1296,11 @@ function add_hyperedge(
         v2he_head[k][ix] = vertices_head[k]
     end
 
-    hg_tail = Hypergraph{T, D}(hg.num_vertices, ix)
+    hg_tail = Hypergraph{T,Nothing,Nothing,D}(hg.num_vertices, ix)
     hg_tail.v2he .= v2he_tail
     hg_tail.he2v .= he2v_tail
 
-    hg_head = Hypergraph{T, D}(hg.num_vertices, ix)
+    hg_head = Hypergraph{T,Nothing,Nothing,D}(hg.num_vertices, ix)
     hg_head.v2he .= v2he_head
     hg_head.he2v .= he2v_head
 
@@ -1394,11 +1393,11 @@ function remove_hyperedge(hg::HGNNDiHypergraph{T, D}, e::Int
         hypergraph_ids = hg.hypergraph_ids[Not(e)]
     end
     
-    hg_tail = Hypergraph{T, D}(hg.num_vertices, ne - 1)
+    hg_tail = Hypergraph{T,Nothing,Nothing,D}(hg.num_vertices, ne - 1)
     hg_tail.v2he .= v2he_tail
     hg_tail.he2v .= he2v_tail
 
-    hg_head = Hypergraph{T, D}(hg.num_vertices, ne - 1)
+    hg_head = Hypergraph{T,Nothing,Nothing,D}(hg.num_vertices, ne - 1)
     hg_head.v2he .= v2he_head
     hg_head.he2v .= he2v_head
 
@@ -1467,11 +1466,11 @@ function remove_vertices(hg::HGNNDiHypergraph{T, D}, to_remove::AbstractVector{I
 
     ix = length(v2he_tail)
 
-    hg_tail = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_tail = Hypergraph{T,Nothing,Nothing,D}(ix, hg.num_hyperedges)
     hg_tail.v2he .= v2he_tail
     hg_tail.he2v .= newhe2v_tail
 
-    hg_head = Hypergraph{T, D}(ix, hg.num_hyperedges)
+    hg_head = Hypergraph{T,Nothing,Nothing,D}(ix, hg.num_hyperedges)
     hg_head.v2he .= v2he_head
     hg_head.he2v .= newhe2v_head
 
@@ -1539,11 +1538,11 @@ function remove_hyperedges(hg::HGNNDiHypergraph{T, D}, to_remove::AbstractVector
 
     ne = length(he2v_tail)
 
-    hg_tail = Hypergraph{T, D}(hg.num_vertices, ne)
+    hg_tail = Hypergraph{T,Nothing,Nothing,D}(hg.num_vertices, ne)
     hg_tail.v2he .= newv2he_tail
     hg_tail.he2v .= he2v_tail
 
-    hg_head = Hypergraph{T, D}(hg.num_vertices, ne)
+    hg_head = Hypergraph{T,Nothing,Nothing,D}(hg.num_vertices, ne)
     hg_head.v2he .= newv2he_head
     hg_head.he2v .= he2v_head
 
