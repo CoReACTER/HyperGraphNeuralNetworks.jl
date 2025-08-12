@@ -1166,6 +1166,7 @@ function random_split_vertices(
 
         vmap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
         hemap = Dict{Int, Int}()
+        hgmap = Dict{Int, Int}()
 
         for (i, he) in enumerate(hg.he2v)
             newhe = filter(((k,v), ) -> k in part, he)
@@ -1180,8 +1181,11 @@ function random_split_vertices(
             v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
         end
 
-        hypergraph_ids = hg.hypergraph_ids[part]
-        unique_hgids = collect(Set(hypergraph_ids))
+        unique_hgids = sort(collect(Set(hg.hypergraph_ids[part])))
+        for (i, e) in enumerate(unique_hgids)
+            hgmap[e] = i
+
+        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[part]]
 
         push!(
             res,
@@ -1244,6 +1248,7 @@ function random_split_hyperedges(
 
         hemap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
         vmap = Dict{Int, Int}()
+        hgmap = Dict{Int, Int}()
 
         for (i, v) in enumerate(hg.v2he)
             newv = filter(((key,val), ) -> key in part, v)
@@ -1260,8 +1265,11 @@ function random_split_hyperedges(
 
         rel_vs = collect(keys(vmap))
 
-        hypergraph_ids = hg.hypergraph_ids[rel_vs]
-        unique_hgids = collect(Set(hypergraph_ids))
+        unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
+        for (i, e) in enumerate(unique_hgids)
+            hgmap[e] = i
+
+        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
 
         push!(
             res,
@@ -1294,6 +1302,70 @@ function random_split_hypergraphs(
     fracs::AbstractVector{<:Real},
     rng::AbstractRNG
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    # For all f ∈ fracs, 0 < f <= 1
+    @assert all(fracs .> 0) && all(fracs .<= 1)
+    # Fractions must sum to 1
+    @assert abs(sum(fracs) - 1) <= 1e-5
+
+    num_choices = round.(fracs .* hg.num_hypergraphs)
+    rand_inds = shuffle(rng, Vector(1:hg.num_hypergraphs))
+    
+    partitions = Vector{Int}[]
+    start_point = 1
+
+    # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
+    for i in 1:(length(num_choices) - 1)
+        part = rand_inds[start_point:start_point + num_choices[i] - 1]
+        start_point += num_choices
+        push!(partitions, sort(part))
+    end
+    push!(partitions, sort(rand_inds[start_point:end]))
+
+    res = HGNNHypergraph{T,D}[]
+
+    # Partition v2he and he2v, being careful of indices
+    for part in partitions
+        rel_vs = [i for (i, e) in enumerate(hg.hypergraph_ids) if e in part]
+        
+        v2he = hg.v2he[rel_vs]
+        he2v = D[]
+        
+        vmap = Dict{Int, Int}(x => i for (i, x) in enumerate(rel_vs))
+        hemap = Dict{Int, Int}()
+        hgmap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
+
+        for (i, he) in enumerate(hg.he2v)
+            newhe = filter(((k,v), ) -> k in rel_vs, he)
+            if length(newhe) > 0
+                newhe = D(vmap[k] => v for (k, v) in newhe)
+                push!(he2v, newhe)
+                hemap[i] = length(he2v)
+            end
+        end
+
+        for i in eachindex(v2he)
+            v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
+        end
+
+        hypergraph_ids = [hgmap[hg.hypergraph_ids[v]] for v in rel_vs]
+
+        push!(
+            res,
+            HGNNHypergraph{T,D}(
+                v2he,
+                he2v,
+                length(v2he),
+                length(he2v),
+                length(part),
+                hypergraph_ids,
+                getobs(hg.vdata, rel_vs),
+                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hgdata, part)
+            )
+        )
+    end
+
+    return res
 end
 
 function random_split_hypergraphs(
