@@ -576,59 +576,11 @@ function MLUtils.batch(hgs::AbstractVector{HGNNDiHypergraph{T,D}}) where {T <: R
     combine_hypergraphs(hgs)
 end
 
-# if g.graph_indicator === nothing
-#     @assert i == [1]
-#     if nmap
-#         return g, 1:(g.num_nodes)
-#     else
-#         return g
-#     end
-# end
+get_hypergraph(hg::HGNNHypergraph, i::Int; kws...) = getgraph(hg, [i]; kws...)
 
-# node_mask = g.graph_indicator .∈ Ref(i)
-
-# nodes = (1:(g.num_nodes))[node_mask]
-# nodemap = Dict(v => vnew for (vnew, v) in enumerate(nodes))
-
-# graphmap = Dict(i => inew for (inew, i) in enumerate(i))
-# graph_indicator = [graphmap[i] for i in g.graph_indicator[node_mask]]
-
-# s, t = edge_index(g)
-# w = get_edge_weight(g)
-# edge_mask = s .∈ Ref(nodes)
-
-# if g.graph isa COO_T
-#     s = [nodemap[i] for i in s[edge_mask]]
-#     t = [nodemap[i] for i in t[edge_mask]]
-#     w = isnothing(w) ? nothing : w[edge_mask]
-#     graph = (s, t, w)
-# elseif g.graph isa ADJMAT_T
-#     graph = g.graph[nodes, nodes]
-# end
-
-# ndata = getobs(g.ndata, node_mask)
-# edata = getobs(g.edata, edge_mask)
-# gdata = getobs(g.gdata, i)
-
-# num_edges = sum(edge_mask)
-# num_nodes = length(graph_indicator)
-# num_graphs = length(i)
-
-# gnew = GNNGraph(graph,
-#                 num_nodes, num_edges, num_graphs,
-#                 graph_indicator,
-#                 ndata, edata, gdata)
-
-# if nmap
-#     return gnew, nodes
-# else
-#     return gnew
-# end
-
-# TODO: you are here
-function get_hypergraph(hg::HGNNHypergraph, i::Int; map_vertices::Bool=false)
+function get_hypergraph(hg::HGNNHypergraph, i::AbstractVector{Int}; map_vertices::Bool = false)
     if hg.hypergraph_ids === nothing
-        @assert i == 1
+        @assert i == [1]
 
         if map_vertices
             return hg, 1:(hg.num_vertices)
@@ -637,26 +589,879 @@ function get_hypergraph(hg::HGNNHypergraph, i::Int; map_vertices::Bool=false)
         end
     end
 
-end
+    vertex_mask = hg.hypergraph_ids .∈ Ref(i)
+    vertices = (1:(hg.num_vertices))[vertex_mask]
+    vertex_map = Dict(v => vnew for (vnew, v) in enumerate(vertices))
 
-function get_hypergraph(hg::HGNNHypergraph, i::AbstractVector{Int})
+    hgmap = Dict(i => inew for (inew, i) in enumerate(i))
+    hypergraph_ids = [hgmap[i] for i in hg.hypergraph_ids[vertex_mask]]
 
+    he_mask = all.(keys.(hg.he2v) .∈ Ref(vertices))
+    hyperedges = (1:(hg.num_hyperedges))[he_mask]
+    hyperedge_map = Dict(he => henew for (henew, he) in enumerate(hyperedges))
+
+    he2v = hg.he2v[he_mask]
+    for (i, he) in enumerate(he2v)
+        new_he = D()
+        for (v, val) in he
+            new_he[vertex_map[v]] = val
+        end
+        he2v[i] = new_he
+    end
+
+    v2he = hg.v2he[vertex_mask]
+    for (i, v) in enumerate(v2he)
+        new_v = D()
+        for (he, val) in v
+            if he_mask[he]
+                new_v[hyperedge_map[he]] = val
+            end
+        end
+        v2he[i] = new_v
+    end
+
+    vdata = getobs(hg.vdata, vertex_mask)
+    hedata = getobs(hg.hedata, he_mask)
+    hgdata = getobs(hg.hgdata, i)
+
+    num_vertices = length(vertices)
+    num_hyperedges = length(hyperedges)
+    num_hypergraphs = length(i)
+
+    HGNNHypergraph(
+        v2he, he2v,
+        num_vertices, num_hyperedges, num_hypergraphs,
+        hypergraph_ids,
+        vdata, hedata, hgdata
+    )
+
+    if map_vertices
+        return hg_new, vertices
+    else
+        return hg_new
+    end
 end
 
 function MLUtils.unbatch(hg::HGNNHypergraph)
     return [get_hypergraph(hg, i) for i in 1:(hg.num_hypergraphs)]
 end
 
-function negative_sample()
+get_hypergraph(hg::HGNNDiHypergraph, i::Int; kws...) = getgraph(hg, [i]; kws...)
+
+function get_hypergraph(hg::HGNNDiHypergraph, i::AbstractVector{Int}; map_vertices::Bool = false)
+    if hg.hypergraph_ids === nothing
+        @assert i == [1]
+
+        if map_vertices
+            return hg, 1:(hg.num_vertices)
+        else
+            return hg
+        end
+    end
+
+    vertex_mask = hg.hypergraph_ids .∈ Ref(i)
+    vertices = (1:(hg.num_vertices))[vertex_mask]
+    vertex_map = Dict(v => vnew for (vnew, v) in enumerate(vertices))
+
+    hgmap = Dict(i => inew for (inew, i) in enumerate(i))
+    hypergraph_ids = [hgmap[i] for i in hg.hypergraph_ids[vertex_mask]]
+
+    he_mask = all.(keys.(hg.hg_tail.he2v) .∈ Ref(vertices)) .* all.(keys.(hg.hg_head.he2v) .∈ Ref(vertices))
+    hyperedges = (1:(hg.num_hyperedges))[he_mask]
+    hyperedge_map = Dict(he => henew for (henew, he) in enumerate(hyperedges))
+
+    he2v_tail = hg.hg_tail.he2v[he_mask]
+    for (i, he) in enumerate(he2v_tail)
+        new_he = D()
+        for (v, val) in he
+            new_he[vertex_map[v]] = val
+        end
+        he2v_tail[i] = new_he
+    end
+
+    he2v_head = hg.hg_head.he2v[he_mask]
+    for (i, he) in enumerate(he2v_head)
+        new_he = D()
+        for (v, val) in he
+            new_he[vertex_map[v]] = val
+        end
+        he2v_head[i] = new_he
+    end
+
+    v2he_tail = hg.hg_tail.v2he[vertex_mask]
+    for (i, v) in enumerate(v2he_tail)
+        new_v = D()
+        for (he, val) in v
+            if he_mask[he]
+                new_v[hyperedge_map[he]] = val
+            end
+        end
+        v2he_tail[i] = new_v
+    end
+
+    v2he_head = hg.hg_head.v2he[vertex_mask]
+    for (i, v) in enumerate(v2he_head)
+        new_v = D()
+        for (he, val) in v
+            if he_mask[he]
+                new_v[hyperedge_map[he]] = val
+            end
+        end
+        v2he_head[i] = new_v
+    end
+
+    vdata = getobs(hg.vdata, vertex_mask)
+    hedata = getobs(hg.hedata, he_mask)
+    hgdata = getobs(hg.hgdata, i)
+
+    num_vertices = length(vertices)
+    num_hyperedges = length(hyperedges)
+    num_hypergraphs = length(i)
+
+    HGNNDiHypergraph(
+        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(undef, num_vertices), Vector{Nothing}(undef, num_hyperedges)),
+        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(undef, num_vertices), Vector{Nothing}(undef, num_hyperedges)),
+        num_vertices, num_hyperedges, num_hypergraphs,
+        hypergraph_ids,
+        vdata, hedata, hgdata
+    )
+
+    if map_vertices
+        return hg_new, vertices
+    else
+        return hg_new
+    end
 end
 
-function random_split_vertices()
+function MLUtils.unbatch(hg::HGNNDiHypergraph)
+    return [get_hypergraph(hg, i) for i in 1:(hg.num_hypergraphs)]
 end
 
-function random_split_hyperedges()
+
+abstract type AbstractNegativeSamplingStrategy end
+struct UniformSample <: AbstractNegativeSamplingStrategy end
+struct SizedSample <: AbstractNegativeSamplingStrategy end
+struct MotifSample <: AbstractNegativeSamplingStrategy end
+struct CliqueSample <: AbstractNegativeSamplingStrategy end
+
+function uniform_negative_sample(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    vertices = 1:hg.num_vertices
+    he2v = Set.(keys.(hg.he2v))
+
+    choices = Set{Set{Int}}()
+
+    # Multiple attempts to generate n negative hyperedges
+    for _ in 1:max_trials
+        for _ in 1:(n - length(choices))
+            size = rand(rng, vertices)
+            verts = Set(sample(rng, vertices, size; replace=false))
+            if !((verts in he2v) || (verts in choices))
+                push!(choices, verts)
+            end
+        end
+
+        if length(choices) >= n
+            break
+        end
+    end
+
+    base_h = Hypergraph{T, D}(hg.num_vertices, length(choices))
+    for (i, choice) in enumerate(choices)
+        base_h[collect(choice), i] .= convert(T, 1)
+    end
+
+    return HGNNHypergraph(base_h)
+
 end
 
-function random_split_hypergraphs()
+function uniform_negative_sample(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    vertices = 1:hg.num_vertices
+
+    he2v_tail = Set.(keys.(hg.hg_tail.he2v))
+    he2v_head = Set.(keys.(hg.hg_head.he2v))
+
+    he2v = collect(zip(he2v_tail, he2v_head))
+
+    choices = Tuple{Set{Int}, Set{Int}}[]
+
+    for _ in 1:max_trials
+        for _ in 1:(n - length(choices))
+            total_size = rand(rng, vertices)
+            size_tail = rand(rng, 1:total_size)
+            size_head = total_size - size_tail
+            
+            verts_tail = Set(sample(rng, vertices, size_tail; replace=false))
+            verts_head = Set(sample(rng, setdiff(collect(vertices), collect(verts_tail)), size_head; replace=false))
+            verts = (verts_tail, verts_head)
+            if !(verts in he2v || verts in choices)
+                push!(choices, verts)
+            end
+        end
+
+        if length(choices) >= n
+            break
+        end
+    end
+
+    hg_tail = Hypergraph{T, D}(hg.num_vertices, length(choices))
+    hg_head = Hypergraph{T, D}(hg.num_vertices, length(choices))
+
+    for (i, choice) in enumerate(choices)
+        hg_tail[collect(choice[1]), i] .= convert(T, 1)
+        hg_head[collect(choice[2]), i] .= convert(T, 1)
+    end
+
+    return HGNNDiHypergraph(DirectedHypergraph(hg_tail, hg_head))
 end
 
-# TODO: PageRank diffusion?
+
+function sized_negative_sample(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    vertices = 1:hg.num_vertices
+
+    # Likelihood of hyperedge of size s is based on how often s-sized hyperedges appear in hg
+    he2v = Set.(keys.(hg.he2v))
+    c = counter(length.(he2v))
+    size_dist = FrequencyWeights([c[i] for i in vertices])
+
+    choices = Set{Set{Int}}()
+
+    for _ in 1:max_trials
+        for _ in 1:(n - length(choices))
+            size = sample(rng, vertices, size_dist)
+            verts = Set(sample(rng, vertices, size; replace=false))
+            if !((verts in he2v) || (verts in choices))
+                push!(choices, verts)
+            end
+        end
+
+        if length(choices) >= n
+            break
+        end
+    end
+
+    base_h = Hypergraph{T, D}(hg.num_vertices, length(choices))
+    for (i, choice) in enumerate(choices)
+        base_h[collect(choice), i] .= convert(T, 1)
+    end
+
+    return HGNNHypergraph(base_h)
+
+end
+
+function sized_negative_sample(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    vertices = 1:hg.num_vertices
+
+    he2v_tail = Set.(keys.(hg.hg_tail.he2v))
+    he2v_head = Set.(keys.(hg.hg_head.he2v))
+
+    # Likelihood of hyperedge of size s is based on how often s-sized hyperedges appear in hg
+    c_total = counter(length.(he2v_tail) .+ length.(he2v_head))
+    size_dist = FrequencyWeights([c_total[i] for i in vertices])
+
+    # Tail size distribution follows similar logic
+    c_tail = counter(length.(he2v_tail))
+    size_dist_tail = FrequencyWeights([c_tail[i] for i in vertices])
+
+    he2v = collect(zip(he2v_tail, he2v_head))
+
+    choices = Tuple{Set{Int}, Set{Int}}[]
+
+    for _ in 1:max_trials
+        for _ in 1:(n - length(choices))
+            total_size = sample(rng, vertices, size_dist)
+            size_tail = sample(rng, 1:total_size, size_dist_tail)
+            size_head = total_size - size_tail
+            
+            verts_tail = Set(sample(rng, vertices, size_tail; replace=false))
+            verts_head = Set(sample(rng, setdiff(collect(vertices), collect(verts_tail)), size_head; replace=false))
+            verts = (verts_tail, verts_head)
+            if !(verts in he2v || verts in choices)
+                push!(choices, verts)
+            end
+        end
+
+        if length(choices) >= n
+            break
+        end
+    end
+
+    hg_tail = Hypergraph{T, D}(hg.num_vertices, length(choices))
+    hg_head = Hypergraph{T, D}(hg.num_vertices, length(choices))
+
+    for (i, choice) in enumerate(choices)
+        hg_tail[collect(choice[1]), i] .= convert(T, 1)
+        hg_head[collect(choice[2]), i] .= convert(T, 1)
+    end
+
+    return HGNNDiHypergraph(DirectedHypergraph(hg_tail, hg_head))
+
+end
+
+function motif_negative_sample(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    vertices = 1:hg.num_vertices
+
+    # Likelihood of hyperedge of size s is based on how often s-sized hyperedges appear in hg
+    he2v = Set.(keys.(hg.he2v))
+    c = counter(length.(he2v))
+    size_dist = FrequencyWeights([c[i] for i in vertices])
+
+    choices = Set{Set{Int}}()
+
+    adjmat = get_twosection_adjacency_mx(hg)
+    g = SimpleGraph(adjmat)
+    edges = [Set([src(e), dst(e)]) for e in edges(g)]
+
+    for _ in 1:max_trials
+        for _ in 1:(n - length(choices))
+            size = sample(rng, vertices, size_dist)
+            e0 = rand(rng, edges)
+            he = deepcopy(e0)
+            while length(he) < size
+                e_options = [e for e in edges if length(intersect(he, e)) == 1]
+                if length(e_options) == 0
+                    break
+                end
+
+                e = rand(rng, e_options)
+                union!(he, e)
+            end
+            if length(he) >= size
+                push!(choices, he)
+            end
+        end
+
+        if length(choices) >= n
+            break
+        end
+    end
+
+    base_h = Hypergraph{T, D}(hg.num_vertices, length(choices))
+    for (i, choice) in enumerate(choices)
+        base_h[collect(choice), i] .= convert(T, 1)
+    end
+
+    return HGNNHypergraph(base_h)
+end
+
+# TODO: does this have the same nice properties re: edge distribution as the undirected case?
+function motif_negative_sample(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    vertices = 1:hg.num_vertices
+
+    he2v_tail = Set.(keys.(hg.hg_tail.he2v))
+    he2v_head = Set.(keys.(hg.hg_head.he2v))
+
+    # Likelihood of hyperedge of size s is based on how often s-sized hyperedges appear in hg
+    c_total = counter(length.(he2v_tail) .+ length.(he2v_head))
+    size_dist = FrequencyWeights([c_total[i] for i in vertices])
+
+    adjmat = get_twosection_adjacency_mx(hg; replace_weights=1)
+    g = SimpleDiGraph(adjmat)
+
+    sources = [src(e) for e in edges(g)]
+    destinations = [dst(e) for e in edges(g)]
+
+    choices = Tuple{Set{Int}, Set{Int}}[]
+
+    for _ in 1:max_trials
+        for _ in 1:(n - length(choices))
+            total_size = sample(rng, vertices, size_dist)
+
+            i = rand(rng, 1:ne(g))
+            he_tail = Set{Int}(sources[i])
+            he_head = Set{Int}(destinations[i])
+
+            while length(he) < total_size
+                e_options = [
+                    i for i in 1:ne(g) if 
+                    (sources[i] ∈ he_tail && destinations[i] ∉ he_head) || (destinations[i] ∈ he_head&& sources[i] ∉ he_tail)
+                ]
+
+                if length(e_options) == 0
+                    break
+                end
+
+                e = rand(rng, e_options)
+                push!(he_tail, sources[e])
+                push!(he_head, destinations[e])
+            end
+
+            if length(he_tail) + length(he_head) >= total_size
+                push!(choices, (he_tail, he_head))
+            end
+
+        end
+
+        if length(choices) >= n
+            break
+        end
+    end
+
+    hg_tail = Hypergraph{T, D}(hg.num_vertices, length(choices))
+    hg_head = Hypergraph{T, D}(hg.num_vertices, length(choices))
+
+    for (i, choice) in enumerate(choices)
+        hg_tail[collect(choice[1]), i] .= convert(T, 1)
+        hg_head[collect(choice[2]), i] .= convert(T, 1)
+    end
+
+    return HGNNDiHypergraph(DirectedHypergraph(hg_tail, hg_head))
+end
+
+# TODO: you are here
+function clique_negative_sample(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    rng::AbstractRNG;
+    max_trials::Int = 10
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    vertices = 1:hg.num_vertices
+
+    # Likelihood of hyperedge of size s is based on how often s-sized hyperedges appear in hg
+    he2v = Set.(keys.(hg.he2v))
+
+    choices = Set{Set{Int}}()
+
+    for _ in 1:max_trials
+        for _ in 1:(n - length(choices))
+            he = rand(rng, he2v)
+
+            elim = rand(rng, he)
+
+            heminus = setdiff(he, elim)
+
+            # TODO: I'm sure there's a more efficient way to implement this
+            neighbors = Set{Int}()
+            for i in setdiff(Set(vertices), he)
+                for j in heminus
+                    if any(map(x -> i in x && j in x, he2v))
+                        push!(neighbors, i)
+                    end
+                end
+            end
+
+            if length(neighbors) == 0
+                continue
+            end
+
+            incl = rand(rng, neighbors)
+
+            push!(choices, union(heminus, incl))
+        end
+
+        if length(choices) >= n
+            break
+        end
+    end
+
+    base_h = Hypergraph{T, D}(hg.num_vertices, length(choices))
+    for (i, choice) in enumerate(choices)
+        base_h[collect(choice), i] .= convert(T, 1)
+    end
+
+    return HGNNHypergraph(base_h)
+
+end
+
+# TODO: clique only defined for undirected graph
+# Is there a way to adapt this for dihypergraphs?
+# function clique_negative_sample(
+#     hg::HGNNDiHypergraph{T, D},
+#     n::Int,
+#     rng::AbstractRNG;
+#     max_trials::Int = 10
+# ) where {T <: Real, D <: AbstractDict{Int, T}}
+# end
+
+
+function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_trials::Int = 10) where {H <: AbstractSimpleHypergraph, S <: AbstractNegativeSamplingStrategy}
+    if S <: UniformSample
+        return uniform_negative_sample(hg, n, rng; max_trials=max_trials)
+    elseif S <: SizedSample
+        return sized_negative_sample(hg, n, rng; max_trials=max_trials)
+    elseif S <: MotifSample
+        return motif_negative_sample(hg, n, rng; max_trials=max_trials)
+    elseif S <: CliqueSample
+        return clique_negative_sample(hg, n, rng; max_trials=max_trials)
+    else
+        throw("negative_sample not implemented for strategy of type $S; please call a sampling function directly.")
+    end
+end
+
+function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_trials::Int = 10) where {H <: AbstractDirectedHypergraph, S <: AbstractNegativeSamplingStrategy}
+    if S <: UniformSample
+        return uniform_negative_sample(hg, n, rng; max_trials=max_trials)
+    elseif S <: SizedSample
+        return sized_negative_sample(hg, n, rng; max_trials=max_trials)
+    elseif S <: MotifSample
+        return motif_negative_sample(hg, n, rng; max_trials=max_trials)
+    else
+        throw("negative_sample not implemented for strategy of type $S; please call a sampling function directly.")
+    end
+end
+
+function random_split_vertices(
+    hg::HGNNHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    # For all f ∈ fracs, 0 < f <= 1
+    @assert all(fracs .> 0) && all(fracs .<= 1)
+    # Fractions must sum to 1
+    @assert abs(sum(fracs) - 1) <= 1e-5
+
+    num_choices = round.(fracs .* hg.num_vertices)
+    rand_inds = shuffle(rng, Vector(1:hg.num_vertices))
+    
+    partitions = Vector{Int}[]
+    start_point = 1
+
+    # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
+    for i in 1:(length(num_choices) - 1)
+        part = rand_inds[start_point:start_point + num_choices[i] - 1]
+        start_point += num_choices
+        push!(partitions, sort(part))
+    end
+    push!(partitions, sort(rand_inds[start_point:end]))
+
+    res = HGNNHypergraph{T,D}[]
+
+    # Partition v2he and he2v, being careful of indices
+    for part in partitions
+        v2he = hg.v2he[part]
+        he2v = D[]
+
+        vmap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
+        hemap = Dict{Int, Int}()
+        hgmap = Dict{Int, Int}()
+
+        for (i, he) in enumerate(hg.he2v)
+            newhe = filter(((k,v), ) -> k in part, he)
+            if length(newhe) > 0
+                newhe = D(vmap[k] => v for (k, v) in newhe)
+                push!(he2v, newhe)
+                hemap[i] = length(he2v)
+            end
+        end
+
+        for i in eachindex(v2he)
+            v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
+        end
+
+        unique_hgids = sort(collect(Set(hg.hypergraph_ids[part])))
+        for (i, e) in enumerate(unique_hgids)
+            hgmap[e] = i
+        end
+        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[part]]
+
+        push!(
+            res,
+            HGNNHypergraph{T,D}(
+                v2he,
+                he2v,
+                length(v2he),
+                length(he2v),
+                length(unique_hgids),
+                hypergraph_ids,
+                getobs(hg.vdata, part),
+                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hgdata, unique_hgids)
+            )
+        )
+    end
+
+    return res
+end
+
+function random_split_vertices(
+    hg::HGNNDiHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    # For all f ∈ fracs, 0 < f <= 1
+    @assert all(fracs .> 0) && all(fracs .<= 1)
+    # Fractions must sum to 1
+    @assert abs(sum(fracs) - 1) <= 1e-5
+
+    num_choices = round.(fracs .* hg.num_vertices)
+    rand_inds = shuffle(rng, Vector(1:hg.num_vertices))
+    
+    partitions = Vector{Int}[]
+    start_point = 1
+
+    # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
+    for i in 1:(length(num_choices) - 1)
+        part = rand_inds[start_point:start_point + num_choices[i] - 1]
+        start_point += num_choices
+        push!(partitions, sort(part))
+    end
+    push!(partitions, sort(rand_inds[start_point:end]))
+
+    res = HGNNDiHypergraph{T,D}[]
+
+    # Partition v2he and he2v, being careful of indices
+    for part in partitions
+        v2he_tail = hg.hg_tail.v2he[part]
+        v2he_head = hg.hg_head.v2he[part]
+
+        # TODO: you are here
+        he2v_tail = D[]
+        he2v_head = D[]
+
+        vmap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
+        hemap = Dict{Int, Int}()
+        hgmap = Dict{Int, Int}()
+
+        for i in 1:hg.num_hyperedges
+            he_tail = hg.hg_tail.he2v[i]
+            hg_head = hg.hg_head.he2v[i]
+            
+            newhe_tail = filter(((k,v), ) -> k in part, he_tail)
+            newhe_head = filter(((k,v), ) -> k in part, he_head)
+            if length(newhe_tail) > 0 || length(newhe_head) > 0
+                newhe_tail = D(vmap[k] => v for (k, v) in newhe_tail)
+                newhe_head = D(vmap[k] => v for (k, v) in newhe_head)
+                push!(he2v_tail, newhe_tail)
+                push!(he2v_head, newhe_head)
+                hemap[i] = length(he2v)
+            end
+        end
+
+        for i in eachindex(v2he_tail)
+            v2he_tail[i] = D(hemap[k] => v for (k, v) in v2he_tail[i])
+            v2he_head[i] = D(hemap[k] => v for (k, v) in v2he_head[i])
+        end
+
+        unique_hgids = sort(collect(Set(hg.hypergraph_ids[part])))
+        for (i, e) in enumerate(unique_hgids)
+            hgmap[e] = i
+        end
+
+        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[part]]
+
+        push!(
+            res,
+            HGNNHypergraph{T,D}(
+                Hypergraph{T, Nothing, Nothing, D}(
+                    v2he_tail,
+                    he2v_tail,
+                    Vector{Nothing}(undef, length(part)),
+                    Vector{Nothing}(undef, length(newhe_tail))
+                    ),
+                Hypergraph{T, Nothing, Nothing, D}(
+                    v2he_head,
+                    he2v_head,
+                    Vector{Nothing}(undef, length(part)),
+                    Vector{Nothing}(undef, length(newhe_head))
+                    ),
+                length(part),
+                length(he2v_tail),
+                length(unique_hgids),
+                hypergraph_ids,
+                getobs(hg.vdata, part),
+                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hgdata, unique_hgids)
+            )
+        )
+    end
+
+    return res
+
+end
+
+function random_split_hyperedges(
+    hg::HGNNHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    # For all f ∈ fracs, 0 < f <= 1
+    @assert all(fracs .> 0) && all(fracs .<= 1)
+    # Fractions must sum to 1
+    @assert abs(sum(fracs) - 1) <= 1e-5
+
+    num_choices = round.(fracs .* hg.num_hyperedges)
+    rand_inds = shuffle(rng, Vector(1:hg.num_hyperedges))
+    
+    partitions = Vector{Int}[]
+    start_point = 1
+
+    # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
+    for i in 1:(length(num_choices) - 1)
+        part = rand_inds[start_point:start_point + num_choices[i] - 1]
+        start_point += num_choices
+        push!(partitions, sort(part))
+    end
+    push!(partitions, sort(rand_inds[start_point:end]))
+
+    res = HGNNHypergraph{T,D}[]
+
+    # Partition v2he and he2v, being careful of indices
+    for part in partitions
+        he2v = hg.he2v[part]
+        v2he = D[]
+
+        hemap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
+        vmap = Dict{Int, Int}()
+        hgmap = Dict{Int, Int}()
+
+        for (i, v) in enumerate(hg.v2he)
+            newv = filter(((key,val), ) -> key in part, v)
+            if length(newv) > 0
+                newv = D(hemap[key] => val for (key, val) in newv)
+                push!(v2he, newv)
+                vmap[i] = length(v2he)
+            end
+        end
+
+        for i in eachindex(he2v)
+            he2v[i] = D(vmap[key] => val for (key, val) in he2v[i])
+        end
+
+        rel_vs = collect(keys(vmap))
+
+        unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
+        for (i, e) in enumerate(unique_hgids)
+            hgmap[e] = i
+        end
+
+        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
+
+        push!(
+            res,
+            HGNNHypergraph{T,D}(
+                v2he,
+                he2v,
+                length(v2he),
+                length(he2v),
+                length(unique_hgids),
+                hypergraph_ids,
+                getobs(hg.vdata, rel_vs),
+                getobs(hg.hedata, part),
+                getobs(hg.hgdata, unique_hgids)
+            )
+        )
+    end
+
+    return res
+end
+
+# TODO: you are here
+function random_split_hyperedges(
+    hg::HGNNDiHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
+end
+
+function random_split_hypergraphs(
+    hg::HGNNHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    # For all f ∈ fracs, 0 < f <= 1
+    @assert all(fracs .> 0) && all(fracs .<= 1)
+    # Fractions must sum to 1
+    @assert abs(sum(fracs) - 1) <= 1e-5
+
+    num_choices = round.(fracs .* hg.num_hypergraphs)
+    rand_inds = shuffle(rng, Vector(1:hg.num_hypergraphs))
+    
+    partitions = Vector{Int}[]
+    start_point = 1
+
+    # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
+    for i in 1:(length(num_choices) - 1)
+        part = rand_inds[start_point:start_point + num_choices[i] - 1]
+        start_point += num_choices
+        push!(partitions, sort(part))
+    end
+    push!(partitions, sort(rand_inds[start_point:end]))
+
+    res = HGNNHypergraph{T,D}[]
+
+    # Partition v2he and he2v, being careful of indices
+    for part in partitions
+        rel_vs = [i for (i, e) in enumerate(hg.hypergraph_ids) if e in part]
+        
+        v2he = hg.v2he[rel_vs]
+        he2v = D[]
+        
+        vmap = Dict{Int, Int}(x => i for (i, x) in enumerate(rel_vs))
+        hemap = Dict{Int, Int}()
+        hgmap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
+
+        for (i, he) in enumerate(hg.he2v)
+            newhe = filter(((k,v), ) -> k in rel_vs, he)
+            if length(newhe) > 0
+                newhe = D(vmap[k] => v for (k, v) in newhe)
+                push!(he2v, newhe)
+                hemap[i] = length(he2v)
+            end
+        end
+
+        for i in eachindex(v2he)
+            v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
+        end
+
+        hypergraph_ids = [hgmap[hg.hypergraph_ids[v]] for v in rel_vs]
+
+        push!(
+            res,
+            HGNNHypergraph{T,D}(
+                v2he,
+                he2v,
+                length(v2he),
+                length(he2v),
+                length(part),
+                hypergraph_ids,
+                getobs(hg.vdata, rel_vs),
+                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hgdata, part)
+            )
+        )
+    end
+
+    return res
+end
+
+function random_split_hypergraphs(
+    hg::HGNNDiHypergraph{T,D},
+    fracs::AbstractVector{<:Real},
+    rng::AbstractRNG
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+
+end
