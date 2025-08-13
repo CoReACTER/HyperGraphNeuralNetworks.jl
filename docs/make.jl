@@ -1,3 +1,5 @@
+using SimpleHypergraphs
+using SimpleDirectedHypergraphs
 using HyperGraphNeuralNetworks
 using Documenter
 
