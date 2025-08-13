@@ -18,6 +18,7 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/CoReACTER/HyperGraphNeuralNetworks.jl",
+    repo="https://github.com/CoReACTER/HyperGraphNeuralNetworks.jl",
+    branch="gh-pages",
     devbranch="main",
 )
