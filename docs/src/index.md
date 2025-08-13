@@ -4,7 +4,7 @@ CurrentModule = HyperGraphNeuralNetworks
 
 # HyperGraphNeuralNetworks
 
-Documentation for [HyperGraphNeuralNetworks](https://github.com/espottesmith/HyperGraphNeuralNetworks.jl).
+Documentation for [HyperGraphNeuralNetworks](https://github.com/CoReACTER/HyperGraphNeuralNetworks.jl).
 
 ```@index
 ```
