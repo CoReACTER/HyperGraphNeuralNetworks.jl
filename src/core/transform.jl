@@ -1378,6 +1378,17 @@ function negative_sample_hyperedge(
     end
 end
 
+"""
+    random_split_vertices(
+        hg::HGNNHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Randomly decompose an undirected hypergraph `hg` into multiple hypergraphs by randomly splitting vertices using the
+    random number generator `rng`. Vertices will be split according to the vector of fractions `fracs`. Note that the
+    sum of the fractions in `fracs` must be equal to 1, and all fractions must be between 0 and 1 (inclusive).
+"""
 function random_split_vertices(
     hg::HGNNHypergraph{T,D},
     fracs::AbstractVector{<:Real},
@@ -1451,6 +1462,17 @@ function random_split_vertices(
     return res
 end
 
+"""
+    random_split_vertices(
+        hg::HGNNDiHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Randomly decompose a directed hypergraph `hg` into multiple hypergraphs by randomly splitting vertices using the
+    random number generator `rng`. Vertices will be split according to the vector of fractions `fracs`. Note that the
+    sum of the fractions in `fracs` must be equal to 1, and all fractions must be between 0 and 1 (inclusive).
+"""
 function random_split_vertices(
     hg::HGNNDiHypergraph{T,D},
     fracs::AbstractVector{<:Real},
@@ -1546,6 +1568,17 @@ function random_split_vertices(
 
 end
 
+"""
+    random_split_hyperedges(
+        hg::HGNNHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Randomly decompose an undirected hypergraph `hg` into multiple hypergraphs by randomly splitting hyperedges using
+    the random number generator `rng`. Hyperedges will be split according to the vector of fractions `fracs`. Note that
+    the sum of the fractions in `fracs` must be equal to 1, and all fractions must be between 0 and 1 (inclusive).
+"""
 function random_split_hyperedges(
     hg::HGNNHypergraph{T,D},
     fracs::AbstractVector{<:Real},
@@ -1622,6 +1655,17 @@ function random_split_hyperedges(
     return res
 end
 
+"""
+    random_split_hyperedges(
+        hg::HGNNDiHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Randomly decompose a directed hypergraph `hg` into multiple hypergraphs by randomly splitting hyperedges using
+    the random number generator `rng`. Hyperedges will be split according to the vector of fractions `fracs`. Note that
+    the sum of the fractions in `fracs` must be equal to 1, and all fractions must be between 0 and 1 (inclusive).
+"""
 function random_split_hyperedges(
     hg::HGNNDiHypergraph{T,D},
     fracs::AbstractVector{<:Real},
@@ -1722,6 +1766,17 @@ function random_split_hyperedges(
     return res
 end
 
+"""
+    random_split_hypergraphs(
+        hg::HGNNHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Randomly decompose an undirected hypergraph `hg` into multiple hypergraphs by randomly splitting hypergraphs using
+    the random number generator `rng`. Hyperedges will be split according to the vector of fractions `fracs`. Note that
+    the sum of the fractions in `fracs` must be equal to 1, and all fractions must be between 0 and 1 (inclusive).
+"""
 function random_split_hypergraphs(
     hg::HGNNHypergraph{T,D},
     fracs::AbstractVector{<:Real},
@@ -1793,6 +1848,17 @@ function random_split_hypergraphs(
     return res
 end
 
+"""
+    random_split_hypergraphs(
+        hg::HGNNDiHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Randomly decompose a directed hypergraph `hg` into multiple hypergraphs by randomly splitting hypergraphs using
+    the random number generator `rng`. Hyperedges will be split according to the vector of fractions `fracs`. Note that
+    the sum of the fractions in `fracs` must be equal to 1, and all fractions must be between 0 and 1 (inclusive).
+"""
 function random_split_hypergraphs(
     hg::HGNNDiHypergraph{T,D},
     fracs::AbstractVector{<:Real},
