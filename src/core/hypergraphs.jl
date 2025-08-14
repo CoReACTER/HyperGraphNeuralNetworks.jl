@@ -708,8 +708,6 @@ function Base.show(io::IO, ::MIME"text/plain", hg::HGNNHypergraph)
 end
 
 MLUtils.numobs(hg::HGNNHypergraph) = hg.num_hypergraphs
-# TODO: implement gethypergraph function
-# MLUtils.getobs(hg::HGNNHypergraph, i) = gethypergraph(hg, i)
 
 function Base.:(==)(hg1::HGNNHypergraph, hg2::HGNNHypergraph)
     hg1 === hg2 && return true
@@ -745,7 +743,6 @@ end
 
 
 # TODO: update docstring
-# ALSO: test new constructors
 """
    HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
 
@@ -753,37 +750,80 @@ A directed hypergraph type for use in hypergraph neural networks
 
 **Constructors**
 
-    HGNNDiHypergraph(
-        h::AbstractDirectedHypergraph{T};
+    HGNNDiHypergraph{T,D}(
+        h::DirectedHypergraph{T,V,E,D};
         hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-        vdata::Union{DataStore, Nothing} = nothing,
-        hedata::Union{DataStore, Nothing} = nothing,
-        hgdata::Union{DataStore, Nothing} = nothing
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real, V, E, D<:AbstractDict{Int,T}}
+
+    function HGNNDiHypergraph{T}(
+        h::DirectedHypergraph;
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
     ) where {T<:Real}
+
+    HGNNDiHypergraph(
+        h::DirectedHypergraph;
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    )
 
     Construct a `HGNNDiHypergraph` from a previously constructed directed hypergraph. Optionally, the user can specify
     what hypergraph each vertex belongs to (if multiple distinct hypergraphs are included), as well as vertex,
     hyperedge, and hypergraph features.
 
     HGNNDiHypergraph{T, D}(
-        hg_tail::Hypergraph{T, D},
-        hg_head::Hypergraph{T, D};
+        hg_tail::Hypergraph{T,V,E,D},
+        hg_head::Hypergraph{T,V,E,D};
         hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
         vdata = nothing,
         hedata = nothing,
         hgdata = nothing
-    ) where {T<:Real, D<:AbstractDict{Int, T}}
+    ) where {T<:Real, V, E, D<:AbstractDict{Int, T}}
+
+    HGNNDiHypergraph{T}(
+        hg_tail::Hypergraph{T},
+        hg_head::Hypergraph{T};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real}
+
+    HGNNDiHypergraph(
+        hg_tail::Hypergraph{T},
+        hg_head::Hypergraph{T};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real}
 
     Construct a `HGNNDiHypergraph` from two undirected hypergraphs representing the tails and the heads of hyperedges
     in a directed hypergraph.
+
+    HGNNDiHypergraph{T}(
+        incidence_tail::AbstractMatrix{Union{T, Nothing}},
+        incidence_head::AbstractMatrix{Union{T, Nothing}};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real}
 
     HGNNDiHypergraph(
         incidence_tail::AbstractMatrix{Union{T, Nothing}},
         incidence_head::AbstractMatrix{Union{T, Nothing}};
         hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-        vdata::Union{DataStore, Nothing} = nothing,
-        hedata::Union{DataStore, Nothing} = nothing,
-        hgdata::Union{DataStore, Nothing} = nothing
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
     ) where {T<:Real}
 
     Construct a `HGNNDiHypergraph` from incidence matrices `incidence_tail` (containing information regarding which 
@@ -791,11 +831,11 @@ A directed hypergraph type for use in hypergraph neural networks
     about the heads). The incidence matrices have dimensions `M`x`N`, where `M` is the
     number of vertices and `N` is the number of hyperedges.
 
-    function HGNNDiHypergraph(num_nodes::T; vdata=nothing, kws...) where {T<:Integer}
+    HGNNDiHypergraph(num_nodes::T; vdata=nothing, kws...) where {T<:Integer}
 
     Construct a `HGNNDiHypergraph` with no hyperedges and `num_nodes` vertices.
 
-    function HGNNDiHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
+    HGNNDiHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
 
     Construct a `HGNNDiHypergraph` with minimal (perhaps no) information.
 
@@ -1690,8 +1730,6 @@ function Base.copy(hg::HGNNDiHypergraph; deep = false)
 end
 
 MLUtils.numobs(hg::HGNNDiHypergraph) = hg.num_hypergraphs
-# TODO: implement gethypergraph function
-# MLUtils.getobs(hg::HGNNDiHypergraph, i) = gethypergraph(hg, i)
 
 function Base.:(==)(hg1::HGNNDiHypergraph, hg2::HGNNDiHypergraph)
     hg1 === hg2 && return true
