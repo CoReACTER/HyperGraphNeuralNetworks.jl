@@ -8,7 +8,7 @@ using HyperGraphNeuralNetworks
 using SimpleHypergraphs
 using SimpleDirectedHypergraphs
 
-@testset "HGNN Undirected Hypergraph Construction and Traits" begin
+@testset "HyperGraphNeuralNetworks HGNNHypergraph" begin
     h1 = Hypergraph{Float64, Int, String}(11,5)
     #1st graph
     h1[1, 1] = 1.0
@@ -30,7 +30,20 @@ using SimpleDirectedHypergraphs
     id1 = [1,1,1,1,1,1,2,2,2,2,2]
     hedata1 = [10, 20, 30, 40, 50] 
 
-    #construct using exsiting hypergraph
+    # Direct Construction
+    HGNN0 = HGNNHypergraph(h1.v2he, h1.he2v, 11, 5, 2, id1, DataStore(), DataStore(), DataStore())
+    @test size(HGNN0) == (11, 5)
+    @test nhv(HGNN0) == 11
+    @test nhe(HGNN0) == 5
+    @test HGNN0.hypergraph_ids == id1
+    @test HGNN0.vdata == DataStore()
+    @test HGNN0.hedata == DataStore() 
+    @test HGNN0.hgdata == DataStore()
+
+    # Test type equality
+    @test HGNN0 == HGNNHypergraph{Float64, Dict{Int, Float64}}(h1.v2he, h1.he2v, 11, 5, 2, id1, DataStore(), DataStore(), DataStore())
+
+    # Construct using existing hypergraph
     HGNN1 = HGNNHypergraph(h1; hypergraph_ids = id1, hedata = hedata1)
     @test size(HGNN1) == (11, 5)
     @test nhv(HGNN1) == 11
@@ -39,7 +52,11 @@ using SimpleDirectedHypergraphs
     @test HGNN1.hedata == DataStore(e = hedata1) 
     @test HGNN1.hgdata == DataStore(2)
 
-    #construct using matrix
+    # Test type equality
+    @test HGNN1 == HGNNHypergraph{Float64}(h1; hypergraph_ids = id1, hedata=hedata1)
+    @test HGNN1 == HGNNHypergraph{Float64, Dict{Int, Float64}}(h1; hypergraph_ids = id1, hedata=hedata1)
+
+    # Construct using matrix
     m = Matrix(h1)
     @test m == h1
     @test m == [1.0     nothing nothing nothing nothing
@@ -56,7 +73,11 @@ using SimpleDirectedHypergraphs
     HGNN2 = HGNNHypergraph(m; hypergraph_ids = id1, hedata = hedata1)
     @test HGNN2 == HGNN1
 
-    #construct with no hypergraph and num_nodes vertices
+    # Test type equality
+    @test HGNN2 == HGNNHypergraph{Float64}(m; hypergraph_ids = id1, hedata = hedata1)
+    @test HGNN2 == HGNNHypergraph{Float64, Dict{Int, Float64}}(m; hypergraph_ids = id1, hedata = hedata1)
+
+    # Construct with no hypergraph and num_nodes vertices
     HGNN3 = HGNNHypergraph(3)
     @test HGNN3.num_vertices == 3
     @test HGNN3.num_hyperedges == 0
@@ -72,7 +93,7 @@ using SimpleDirectedHypergraphs
     @test hashyperedgemeta(HGNNHypergraph) == true
 end
 
-@testset "HGNN Undirected Hypergraph modification functions" begin
+@testset "HyperGraphNeuralNetworks HGNNHypergraph modification" begin
     incident = [1.0     2.0
                 1.0     nothing
                 nothing 1.0
@@ -159,7 +180,7 @@ end
 
 end
 
-@testset "Base function of HGNN Undirected Hypergraph" begin
+@testset "HyperGraphNeuralNetworks HGNNHypergraph Base functions" begin
     # Base.zero
     zeroHGNN = zero(HGNNHypergraph)
     @test zeroHGNN.num_vertices == 0
@@ -214,16 +235,17 @@ end
         hedata (hyperedge data): b = 1-element Vector{Int64}
         hgdata (hypergraph data): u = 1-element Vector{Int64}")
 
-    #MLUtils.numobs
+    # MLUtils.numobs
+    #TODO: probably move this elsewhere
     @test numobs(HGNN) == HGNN.num_hypergraphs 
 
-    #Bese.hash
+    # Base.hash
     newHGNN = add_vertex(HGNN, DataStore(a = [[1, 2]], b = [3]))
     @test newHGNN.vdata == DataStore(a = [[1,2],[3,4], [1,2]], b = [1, -1, 3])
     @test hash(HGNN) == hash(copyHGNN)
     @test hash(HGNN) != hash(newHGNN)
 
-    #Base.getproperty
+    # Base.getproperty
     @test getproperty(HGNN, :v2he) == HGNN.v2he
     @test_throws ArgumentError getproperty(HGNN, :b)
     @test getproperty(HGNN, :a) == vdata.a
@@ -231,7 +253,7 @@ end
 
 end
 
-@testset "HGNNDiHypergraph Construction and Traits" begin
+@testset "HyperGraphNeuralNetworks HGNNDiHypergraph" begin
     h1 = DirectedHypergraph{Float64, Int, String}(11,5)
     h1[1,1,1] = 1.0
     h1[1,2,1] = 2.0
