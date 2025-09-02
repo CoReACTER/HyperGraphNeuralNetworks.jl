@@ -263,7 +263,7 @@ end
     h1[2,3,2] = 0.0
     h1[1,4,3] = 1.0
     h1[2,6,3] = 4.0
-    #2nd graph
+    # 2nd hypergraph
     h1[1,7,4] = 3.5
     h1[1,10,4] = 1.0
     h1[2,11,4] = 4.0
@@ -273,7 +273,25 @@ end
     id1 = [1,1,1,1,1,1,2,2,2,2,2]
     hedata1 = [10, 20, 30, 40, 50]
 
-    #construct using exsiting directedhypergraph
+    # Direct construction
+    HGNN0 = HGNNDiHypergraph(
+        h1.hg_tail,
+        h1.hg_head,
+        11, 5, 2,
+        id1,
+        DataStore(),
+        DataStore(),
+        DataStore()
+    )
+    @test size(HGNN0) == (11, 5)
+    @test nhv(HGNN0) == 11
+    @test nhe(HGNN0) == 5
+    @test HGNN0.hypergraph_ids == id1
+    @test HGNN0.vdata == DataStore()
+    @test HGNN0.hedata == DataStore() 
+    @test HGNN0.hgdata == DataStore()
+
+    # Construct using exsiting directedhypergraph
     HGNN1 = HGNNDiHypergraph(h1, hypergraph_ids = id1, hedata = hedata1)
     @test size(HGNN1) == (11, 5)
     @test nhv(HGNN1) == 11

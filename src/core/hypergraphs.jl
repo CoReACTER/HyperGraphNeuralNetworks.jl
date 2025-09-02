@@ -742,7 +742,6 @@ function Base.getproperty(hg::HGNNHypergraph, s::Symbol)
 end
 
 
-# TODO: update docstring
 """
    HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
 
