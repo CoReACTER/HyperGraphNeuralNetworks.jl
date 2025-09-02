@@ -1293,13 +1293,6 @@ end
 
 # TODO: clique only defined for undirected graph
 # Is there a way to adapt this for dihypergraphs?
-# function clique_negative_sample(
-#     hg::HGNNDiHypergraph{T, D},
-#     n::Int,
-#     rng::AbstractRNG;
-#     max_trials::Int = 10
-# ) where {T <: Real, D <: AbstractDict{Int, T}}
-# end
 
 """
     negative_sample_hyperedge(
