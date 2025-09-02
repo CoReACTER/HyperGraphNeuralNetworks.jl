@@ -320,7 +320,7 @@ function add_vertex(
         )
     end
 
-    return HGNNHypergraph(
+    return HGNNHypergraph{T,D}(
         v2he,
         he2v,
         ix,
@@ -331,6 +331,61 @@ function add_vertex(
         hg.hedata,
         hg.hgdata
     )
+end
+
+
+"""
+    add_vertices(
+        hg::HGNNHypergraph{T, D},
+        n::Int,
+        features::DataStore;
+        hyperedges::AbstractVector{D} = Vector{D}(D(), n),
+        hypergraph_ids::AbstractVector{Int} = ones(Int, n)
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Adds a set of vertices to an undirected hypergraph `hg`. Optionally, the user can specify the hyperedges on which
+    these vertices are incident.
+"""
+function add_vertices(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    features::DataStore;
+    hyperedges::AbstractVector{D} = Vector{D}(D(), n),
+    hypergraph_ids::AbstractVector{Int} = ones(Int, n)
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_vertex(hg, getobs(features, i); hyperedges=hyperedges[i], hypergraph_id=hypergraph_ids[i])
+    end
+
+    hg
+
+end
+
+
+"""
+    add_hyperedges(
+        hg::HGNNHypergraph{T, D},
+        n::Int,
+        features::DataStore;
+        vertices::AbstractVector{D} = Vector{D}(D(), n)    
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Adds a set of hyperedges to an undirected hypergraph `hg`. Optionally, the user can specify the vertices that are
+    incident on these hyperedges.
+"""
+function add_hyperedges(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    features::DataStore;
+    vertices::AbstractVector{D} = Vector{D}(D(), n)    
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_hyperedge(hg, getobs(features, i); vertices=vertices[i])
+    end
+
+    hg
 end
 
 
@@ -665,6 +720,11 @@ function Base.copy(hg::HGNNHypergraph; deep = false)
     end
 end
 
+"""
+    print_all_features(io::IO, vdata, hedata, hgdata)\
+
+    Helper function that reports the vertex, hyperedge, and hypergraph features of a hypergraph.
+"""
 function print_all_features(io::IO, vdata, hedata, hgdata)
     print(io, "vertex features: $(vdata), 
                 hyperedge features: $(hedata), 
@@ -1357,6 +1417,72 @@ function add_hyperedge(
 
 end
 
+
+"""
+    add_vertices(
+        hg::HGNNDiHypergraph{T, D},
+        n::Int,
+        features::DataStore;
+        hyperedges_tail::AbstractVector{D} = Vector{D}(D(), n),
+        hyperedges_head::AbstractVector{D} = Vector{D}(D(), n),
+        hypergraph_ids::AbstractVector{Int} = ones(Int, n)
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Adds a set of vertices to an directed hypergraph `hg`. Optionally, the user can specify the hyperedges on which
+    these vertices are incident.
+"""
+function add_vertices(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    features::DataStore;
+    hyperedges_tail::AbstractVector{D} = Vector{D}(D(), n),
+    hyperedges_head::AbstractVector{D} = Vector{D}(D(), n),
+    hypergraph_ids::AbstractVector{Int} = ones(Int, n)
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_vertex(
+            hg,
+            getobs(features, i);
+            hyperedges_tail = hyperedges_tail[i],
+            hyperedges_head = hyperedges_head[i],
+            hypergraph_id = hypergraph_ids[i]
+        )
+    end
+
+    hg
+
+end
+
+
+"""
+    add_hyperedges(
+        hg::HGNNDiHypergraph{T, D},
+        n::Int,
+        features::DataStore;
+        vertices_tail::AbstractVector{D} = Vector{D}(D(), n),
+        vertices_head::AbstractVector{D} = Vector{D}(D(), n)
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Adds a set of hyperedges to a directed hypergraph `hg`. Optionally, the user can specify the vertices that are
+    incident on these hyperedges.
+"""
+function add_hyperedges(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    features::DataStore;
+    vertices_tail::AbstractVector{D} = Vector{D}(D(), n),
+    vertices_head::AbstractVector{D} = Vector{D}(D(), n)
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_hyperedge(hg, getobs(features, i); vertices_tail=vertices_tail[i], vertices_head=vertices_head[i])
+    end
+
+    hg
+end
+
+
 """
     remove_hyperedge!(::HGNNHypergraph, ::Int)
     
@@ -1597,74 +1723,6 @@ function remove_hyperedges(hg::HGNNDiHypergraph{T, D}, to_remove::AbstractVector
         hedata,
         hg.hgdata
     )
-end
-
-function add_vertices(
-    hg::HGNNHypergraph{T, D},
-    n::Int,
-    features::DataStore;
-    hyperedges::AbstractVector{D} = Vector{D}(D(), n),
-    hypergraph_ids::AbstractVector{Int} = ones(Int, n)
-) where {T <: Real, D <: AbstractDict{Int, T}}
-
-    for i in 1:n
-        hg = add_vertex(hg, getobs(features, i); hyperedges=hyperedges[i], hypergraph_id=hypergraph_ids[i])
-    end
-
-    hg
-
-end
-
-function add_vertices(
-    hg::HGNNDiHypergraph{T, D},
-    n::Int,
-    features::DataStore;
-    hyperedges_tail::AbstractVector{D} = Vector{D}(D(), n),
-    hyperedges_head::AbstractVector{D} = Vector{D}(D(), n),
-    hypergraph_ids::AbstractVector{Int} = ones(Int, n)
-) where {T <: Real, D <: AbstractDict{Int, T}}
-
-    for i in 1:n
-        hg = add_vertex(
-            hg,
-            getobs(features, i);
-            hyperedges_tail = hyperedges_tail[i],
-            hyperedges_head = hyperedges_head[i],
-            hypergraph_id = hypergraph_ids[i]
-        )
-    end
-
-    hg
-
-end
-
-function add_hyperedges(
-    hg::HGNNHypergraph{T, D},
-    n::Int,
-    features::DataStore;
-    vertices::AbstractVector{D} = Vector{D}(D(), n)    
-) where {T <: Real, D <: AbstractDict{Int, T}}
-
-    for i in 1:n
-        hg = add_hyperedge(hg, getobs(features, i); vertices=vertices[i])
-    end
-
-    hg
-end
-
-function add_hyperedges(
-    hg::HGNNDiHypergraph{T, D},
-    n::Int,
-    features::DataStore;
-    vertices_tail::AbstractVector{D} = Vector{D}(D(), n),
-    vertices_head::AbstractVector{D} = Vector{D}(D(), n)
-) where {T <: Real, D <: AbstractDict{Int, T}}
-
-    for i in 1:n
-        hg = add_hyperedge(hg, getobs(features, i); vertices_tail=vertices_tail[i], vertices_head=vertices_head[i])
-    end
-
-    hg
 end
 
 
