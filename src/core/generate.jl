@@ -17,7 +17,7 @@
         kws...
     ) where {H <: AbstractHGNNDiHypergraph}
 
-    Generate a *random* undirected hypergraph (in the style of Erdős–Rényi random graphs) without any structural
+    Generate a *random* hypergraph (in the style of Erdős–Rényi random graphs) without any structural
     constraints. See `SimpleHypergraphs.random_model`. The user can optionally seed the random number
     generator with kwarg `seed`. The default value is -1; if the value is greater than or equal to 0, then `seed` will
     be used.
@@ -30,7 +30,7 @@ function erdos_renyi_hypergraph(
     kws...
 ) where {H <: AbstractHGNNHypergraph}
     if seed >= 0
-        seed!(seed)
+        Random.seed!(seed)
     end
     
     basic = random_model(nVertices, nEdges, Hypergraph)
@@ -47,7 +47,7 @@ function erdos_renyi_hypergraph(
     kws...
 ) where {H <: AbstractHGNNDiHypergraph}
     if seed >= 0
-        seed!(seed)
+        Random.seed!(seed)
     end
     
     basic = random_model(
@@ -94,7 +94,7 @@ function random_kuniform_hypergraph(
     kws...
 ) where {H <: AbstractHGNNHypergraph}
     if seed >= 0
-        seed!(seed)
+        Random.seed!(seed)
     end
 
     kuniform = random_kuniform_model(nVertices, nEdges, k, Hypergraph)
@@ -112,7 +112,7 @@ function random_kuniform_hypergraph(
     kws...
 ) where {H <: AbstractHGNNDiHypergraph}
     if seed >= 0
-        seed!(seed)
+        Random.seed!(seed)
     end
 
     kuniform = random_kuniform_model(
@@ -159,7 +159,7 @@ function random_dregular_hypergraph(
     kws...
 ) where {H <: AbstractHGNNHypergraph}
     if seed >= 0
-        seed!(seed)
+        Random.seed!(seed)
     end
 
     dregular = random_dregular_model(nVertices, nEdges, d, Hypergraph)
@@ -177,7 +177,7 @@ function random_dregular_hypergraph(
     kws...
 ) where {H <: AbstractHGNNDiHypergraph}
     if seed >= 0
-        seed!(seed)
+        Random.seed!(seed)
     end
 
     dregular = random_dregular_model(
@@ -218,7 +218,7 @@ function random_preferential_hypergraph(
     kws...
 ) where {HI<:AbstractSimpleHypergraph, HO<:AbstractHGNNHypergraph}
     if seed >= 0
-        seed!(seed)
+        Random.seed!(seed)
     end
 
     pref_hg = random_preferential_model(
