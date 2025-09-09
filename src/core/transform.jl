@@ -1259,6 +1259,8 @@ function split_vertices(
     hg::HGNNDiHypergraph{T,D},
     masks::AbstractVector{BitVector}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    res = HGNNDiHypergraph{T,D}[]
+
     # Partition v2he and he2v, being careful of indices
     for mask in masks
         v2he_tail = hg.hg_tail.v2he[mask]
@@ -1458,7 +1460,6 @@ function split_hyperedges(
     end
 
     return res
-
 end
 
 function split_hyperedges(
@@ -1522,7 +1523,38 @@ function split_hyperedges(
 end
 
 # TODO: directed hypergraphs
-function split_hyperedges() end
+# TODO: you are here
+function split_hyperedges(
+    hg::HGNNDiHypergraph{T,D},
+    masks::AbstractVector{BitVector}
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+end
+
+function split_hyperedges(
+    hg::Hypergraph{T, D},
+    train_mask::BitVector,
+    test_mask::BitVector;
+    val_mask::Union{BitVector, Nothing} = nothing,
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+end
+
+function split_hyperedges(
+    hg::HGNNHypergraph{T,D},
+    index_groups::AbstractVector{AbstractVector{Int}}
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+end
+
+function split_hyperedges(
+    hg::HGNNHypergraph{T,D},
+    train_inds::AbstractVector{Int},
+    test_inds::AbstractVector{Int};
+    val_inds::Union{AbstractVector{Int}, Nothing} = nothing
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+end
 
 # TODO: undireced hypergraphs
 function split_hypergraphs(
@@ -1687,21 +1719,20 @@ function random_split_vertices(
 
     num_choices = round.(fracs .* hg.num_vertices)
     rand_inds = shuffle(rng, Vector(1:hg.num_vertices))
-    
-    partitions = Vector{Int}[]
+
+    masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
         part = rand_inds[start_point:start_point + num_choices[i] - 1]
         start_point += num_choices
-        push!(partitions, sort(part))
+        push!(masks, BitArray(i in part for i in 1:hg.num_vertices(hg)))
     end
-    push!(partitions, sort(rand_inds[start_point:end]))
+    remainder = rand_inds[start_point:end]
+    push!(masks, BitArray(i in remainder for i in 1:hg.num_vertices(hg)))
 
-    res = HGNNDiHypergraph{T,D}[]
-
-    # TODO: you are here
+    split_vertices(hg, masks)
 end
 
 function random_split_hyperedges(
@@ -1732,12 +1763,32 @@ function random_split_hyperedges(
     split_hyperedges(hg, masks)
 end
 
-# TODO: directed hypergraphs
 function random_split_hyperedges(
     hg::HGNNDiHypergraph{T,D},
     fracs::AbstractVector{<:Real},
     rng::AbstractRNG
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    # For all f ∈ fracs, 0 < f <= 1
+    @assert all(fracs .> 0) && all(fracs .<= 1)
+    # Fractions must sum to 1
+    @assert abs(sum(fracs) - 1) <= 1e-5
+
+    num_choices = round.(fracs .* hg.num_hyperedges)
+    rand_inds = shuffle(rng, Vector(1:hg.num_hyperedges))
+    
+    masks = BitVector[]
+    start_point = 1
+
+    # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
+    for i in 1:(length(num_choices) - 1)
+        part = rand_inds[start_point:start_point + num_choices[i] - 1]
+        start_point += num_choices
+        push!(masks, BitArray(i in part for i in 1:hg.num_hyperedges))
+    end
+    remainder = rand_inds[start_point:end]
+    push!(masks, BitArray(i in remainder for i in 1:hg.num_hyperedges))
+
+    split_hyperedges(hg, masks)
 end
 
 function random_split_hypergraphs(
@@ -1768,12 +1819,30 @@ function random_split_hypergraphs(
     split_hypergraphs(hg, masks)
 end
 
-# TODO
 function random_split_hypergraphs(
     hg::HGNNDiHypergraph{T,D},
     fracs::AbstractVector{<:Real},
     rng::AbstractRNG
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    # For all f ∈ fracs, 0 < f <= 1
+    @assert all(fracs .> 0) && all(fracs .<= 1)
+    # Fractions must sum to 1
+    @assert abs(sum(fracs) - 1) <= 1e-5
 
+    num_choices = round.(fracs .* hg.num_hypergraphs)
+    rand_inds = shuffle(rng, Vector(1:hg.num_hypergraphs))
+    
+    masks = BitVector[]
+    start_point = 1
 
+    # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
+    for i in 1:(length(num_choices) - 1)
+        part = rand_inds[start_point:start_point + num_choices[i] - 1]
+        start_point += num_choices
+        push!(masks, BitArray(i in part for i in 1:hg.num_hypergraphs))
+    end
+    remainder = rand_inds[start_point:end]
+    push!(masks, BitArray(i in remainder for i in 1:hg.num_hypergraphs))
+
+    split_hypergraphs(hg, masks)
 end
