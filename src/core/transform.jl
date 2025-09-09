@@ -1137,7 +1137,62 @@ function split_vertices(
     hg::HGNNHypergraph{T,D},
     masks::AbstractVector{BitVector}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
-    # TODO: this
+
+    res = HGNNHypergraph{T,D}[]
+
+    # Partition v2he and he2v, being careful of indices
+    for mask in masks
+        v2he = hg.v2he[mask]
+        he2v = D[]
+
+        vmap = Dict{Int, Int}()
+        index = 1
+        for (i, x) in enumerate(mask)
+            if x
+                vmap[i] = index
+                index += 1
+            end
+        end
+
+        hemap = Dict{Int, Int}()
+        hgmap = Dict{Int, Int}()
+
+        for (i, he) in enumerate(hg.he2v)
+            newhe = filter(((k,v), ) -> mask[k], he)
+            if length(newhe) > 0
+                newhe = D(vmap[k] => v for (k, v) in newhe)
+                push!(he2v, newhe)
+                hemap[i] = length(he2v)
+            end
+        end
+
+        for i in eachindex(v2he)
+            v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
+        end
+
+        unique_hgids = sort(collect(Set(hg.hypergraph_ids[mask])))
+        for (i, e) in enumerate(unique_hgids)
+            hgmap[e] = i
+        end
+        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[mask]]
+
+        push!(
+            res,
+            HGNNHypergraph{T,D}(
+                v2he,
+                he2v,
+                length(v2he),
+                length(he2v),
+                length(unique_hgids),
+                hypergraph_ids,
+                getobs(hg.vdata, mask),
+                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hgdata, unique_hgids)
+            )
+        )
+    end
+
+    return res
 end
 
 function split_vertices(
@@ -1167,8 +1222,10 @@ function split_vertices(
     masks = BitVector[]
 
     for indgroup in index_groups
-        
+        push!(masks, BitArray(i in indgroup for i in 1:nhv(hg)))
     end
+
+    split_vertices(hg, masks)
 end
 
 function split_vertices(
@@ -1177,7 +1234,24 @@ function split_vertices(
     test_inds::AbstractVector{Int};
     val_inds::Union{AbstractVector{Int}, Nothing} = nothing
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    if !isnothing(val_inds)
+        masks = [
+            BitArray(i in train_inds for i in 1:nhv(hg)),
+            BitArray(i in val_inds for i in 1:nhv(hg)),
+            BitArray(i in test_inds for i in 1:nhv(hg))
+        ]
+    else
+        masks = [
+            BitArray(i in train_inds for i in 1:nhv(hg)),
+            BitArray(i in test_inds for i in 1:nhv(hg))
+        ]
+    end
 
+    hgs = split_vertices(hg, masks)
+
+    val_data = isnothing(val_inds) ? nothing : hgs[2]
+
+    return (train=hgs[1], val=val_data, test=hgs[end])
 end
 
 function split_vertices() end
@@ -1203,64 +1277,19 @@ function random_split_vertices(
     num_choices = round.(fracs .* hg.num_vertices)
     rand_inds = shuffle(rng, Vector(1:hg.num_vertices))
     
-    partitions = Vector{Int}[]
+    masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
         part = rand_inds[start_point:start_point + num_choices[i] - 1]
         start_point += num_choices
-        push!(partitions, sort(part))
+        push!(masks, BitArray(i in part for i in 1:nhv(hg)))
     end
-    push!(partitions, sort(rand_inds[start_point:end]))
+    remainder = rand_inds[start_point:end]
+    push!(masks, BitArray(i in remainder for i in 1:nhv(hg)))
 
-    res = HGNNHypergraph{T,D}[]
-
-    # Partition v2he and he2v, being careful of indices
-    for part in partitions
-        v2he = hg.v2he[part]
-        he2v = D[]
-
-        vmap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
-        hemap = Dict{Int, Int}()
-        hgmap = Dict{Int, Int}()
-
-        for (i, he) in enumerate(hg.he2v)
-            newhe = filter(((k,v), ) -> k in part, he)
-            if length(newhe) > 0
-                newhe = D(vmap[k] => v for (k, v) in newhe)
-                push!(he2v, newhe)
-                hemap[i] = length(he2v)
-            end
-        end
-
-        for i in eachindex(v2he)
-            v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
-        end
-
-        unique_hgids = sort(collect(Set(hg.hypergraph_ids[part])))
-        for (i, e) in enumerate(unique_hgids)
-            hgmap[e] = i
-        end
-        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[part]]
-
-        push!(
-            res,
-            HGNNHypergraph{T,D}(
-                v2he,
-                he2v,
-                length(v2he),
-                length(he2v),
-                length(unique_hgids),
-                hypergraph_ids,
-                getobs(hg.vdata, part),
-                getobs(hg.hedata, collect(keys(hemap))),
-                getobs(hg.hgdata, unique_hgids)
-            )
-        )
-    end
-
-    return res
+    split_vertices(hg, masks)
 end
 
 function random_split_vertices(
