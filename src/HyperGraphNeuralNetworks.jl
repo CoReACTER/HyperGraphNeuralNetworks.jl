@@ -3,11 +3,12 @@ module HyperGraphNeuralNetworks
 using Random
 using DataStructures: counter
 using StatsBase: FrequencyWeights, sample
+using InvertedIndices
 using Graphs
 using GNNGraphs
 import GNNGraphs: getn, getdata, normalize_graphdata, cat_features, shortsummary
 using MLUtils
-using InvertedIndices
+import MLDatasets
 using SimpleHypergraphs
 using SimpleDirectedHypergraphs
 
@@ -44,5 +45,9 @@ include("core/utils.jl")
 
 export check_num_vertices, check_num_hyperedges
 export normalize_graphdata
+
+include("datasets/datasets.jl")
+
+export getHyperCora, getHyperCiteSeer
 
 end

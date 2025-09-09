@@ -1133,6 +1133,63 @@ function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_tri
     end
 end
 
+function split_vertices(
+    hg::HGNNHypergraph{T,D},
+    masks::AbstractVector{BitVector}
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    # TODO: this
+end
+
+function split_vertices(
+    hg::HGNNHypergraph{T,D},
+    train_mask::BitVector,
+    test_mask::BitVector;
+    val_mask::Union{BitVector, Nothing} = nothing,
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    if !isnothing(val_mask)
+        masks = [train_mask, val_mask, test_mask]
+    else
+        masks = [train_mask, test_mask]
+    end
+
+    hgs = split_vertices(hg, masks)
+
+    val_data = isnothing(val_mask) ? nothing : hgs[2]
+
+    return (train=hgs[1], val=val_data, test=hgs[end])
+end
+
+function split_vertices(
+    hg::HGNNHypergraph{T,D},
+    index_groups::AbstractVector{AbstractVector{Int}}
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    masks = BitVector[]
+
+    for indgroup in index_groups
+        
+    end
+end
+
+function split_vertices(
+    hg::HGNNHypergraph{T,D},
+    train_inds::AbstractVector{Int},
+    test_inds::AbstractVector{Int};
+    val_inds::Union{AbstractVector{Int}, Nothing} = nothing
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+end
+
+function split_vertices() end
+
+function split_hyperedges() end
+
+function split_hyperedges() end
+
+function split_hypergraphs() end
+
+function split_hypergraphs() end
+
 function random_split_vertices(
     hg::HGNNHypergraph{T,D},
     fracs::AbstractVector{<:Real},
