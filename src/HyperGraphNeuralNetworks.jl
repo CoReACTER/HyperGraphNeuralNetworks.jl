@@ -38,8 +38,13 @@ include("core/transform.jl")
 
 export add_self_loops, remove_self_loops, remove_multi_hyperedges
 export rewire_hyperedges, to_undirected
-export combine_hypergraphs, get_hypergraph, negative_sample
-export random_split_vertices, random_split_hyperedges
+export combine_hypergraphs, get_hypergraph
+export AbstractNegativeSamplingStrategy, UniformSample, SizedSample, MotifSample, CliqueSample, negative_sample_hyperedge
+
+include("core/split.jl")
+
+export split_vertices, split_hyperedges, split_hypergraphs
+export random_split_vertices, random_split_hyperedges, random_split_hypergraphs
 
 include("core/utils.jl")
 
