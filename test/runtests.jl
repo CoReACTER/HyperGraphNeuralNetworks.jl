@@ -505,3 +505,10 @@ end
 
 end
 
+@testset "HyperGraphNeuralNetworks split" begin
+
+end
+
+@testset "HyperGraphNeuralNetworks undirected hypergraph datasets" begin
+
+end
