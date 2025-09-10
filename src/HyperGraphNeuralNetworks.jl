@@ -3,11 +3,12 @@ module HyperGraphNeuralNetworks
 using Random
 using DataStructures: counter
 using StatsBase: FrequencyWeights, sample
+using InvertedIndices
 using Graphs
 using GNNGraphs
 import GNNGraphs: getn, getdata, normalize_graphdata, cat_features, shortsummary
 using MLUtils
-using InvertedIndices
+import MLDatasets
 using SimpleHypergraphs
 using SimpleDirectedHypergraphs
 
@@ -37,12 +38,21 @@ include("core/transform.jl")
 
 export add_self_loops, remove_self_loops, remove_multi_hyperedges
 export rewire_hyperedges, to_undirected
-export combine_hypergraphs, get_hypergraph, negative_sample
-export random_split_vertices, random_split_hyperedges
+export combine_hypergraphs, get_hypergraph
+export AbstractNegativeSamplingStrategy, UniformSample, SizedSample, MotifSample, CliqueSample, negative_sample_hyperedge
+
+include("core/split.jl")
+
+export split_vertices, split_hyperedges, split_hypergraphs
+export random_split_vertices, random_split_hyperedges, random_split_hypergraphs
 
 include("core/utils.jl")
 
 export check_num_vertices, check_num_hyperedges
 export normalize_graphdata
+
+include("datasets/datasets.jl")
+
+export getHyperCora, getHyperCiteSeer
 
 end

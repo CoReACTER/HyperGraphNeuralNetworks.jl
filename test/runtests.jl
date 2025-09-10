@@ -254,7 +254,7 @@ end
 end
 
 @testset "HyperGraphNeuralNetworks HGNNDiHypergraph" begin
-    h1 = DirectedHypergraph{Float64, Int, String}(11,5)
+    h1 = DirectedHypergraph{Float64, Nothing, Nothing}(11,5)
     h1[1,1,1] = 1.0
     h1[1,2,1] = 2.0
     h1[2,4,1] = 4.0
@@ -263,7 +263,7 @@ end
     h1[2,3,2] = 0.0
     h1[1,4,3] = 1.0
     h1[2,6,3] = 4.0
-    #2nd graph
+    # 2nd hypergraph
     h1[1,7,4] = 3.5
     h1[1,10,4] = 1.0
     h1[2,11,4] = 4.0
@@ -273,7 +273,25 @@ end
     id1 = [1,1,1,1,1,1,2,2,2,2,2]
     hedata1 = [10, 20, 30, 40, 50]
 
-    #construct using exsiting directedhypergraph
+    # Direct construction
+    HGNN0 = HGNNDiHypergraph(
+        h1.hg_tail,
+        h1.hg_head,
+        11, 5, 2,
+        id1,
+        DataStore(),
+        DataStore(),
+        DataStore()
+    )
+    @test size(HGNN0) == (11, 5)
+    @test nhv(HGNN0) == 11
+    @test nhe(HGNN0) == 5
+    @test HGNN0.hypergraph_ids == id1
+    @test HGNN0.vdata == DataStore()
+    @test HGNN0.hedata == DataStore() 
+    @test HGNN0.hgdata == DataStore()
+
+    # Construct using exsiting directedhypergraph
     HGNN1 = HGNNDiHypergraph(h1, hypergraph_ids = id1, hedata = hedata1)
     @test size(HGNN1) == (11, 5)
     @test nhv(HGNN1) == 11
@@ -437,7 +455,7 @@ end
     @test_throws "Not implemented! Number of hyperedges in HGNNDiHypergraph is fixed." SimpleHypergraphs.remove_hyperedge!(HGNN1, 1)
 end
 
-@testset "Base function of HGNN Undirected Hypergraph" begin
+@testset "HyperGraphNeuralNetworks HGNNDiHypergraph Base functions" begin
     h = DirectedHypergraph{Float64, Int, String}(2,1)
     h[1, 1, 1] = 1.0
     h[2, 2, 1] = 2.0
@@ -505,3 +523,59 @@ end
 
 end
 
+<<<<<<< HEAD
+@testset "HyperGraphNeuralNetworks random generation" begin
+    # Erdos-Renyi random hypergraphs
+    
+    # Undirected
+    Her_un = erdos_renyi_hypergraph(5, 5, HGNNHypergraph)
+    @test nhv(Her_un) == 5
+    @test nhe(Her_un) == 5
+    @test  all(length.(Her_un.v2he) .> 0)
+    @test  all(length.(Her_un.v2he) .<= 5)
+
+    # With specified seed
+    Her_un = erdos_renyi_hypergraph(5, 5, HGNNHypergraph; seed=1)
+    @test Matrix(Her_un) == [
+        nothing   nothing  1         1         1
+        1         1         1          nothing  1
+        nothing  1         1         1         1
+        nothing  1         1          nothing  1
+        nothing  1          nothing   nothing   nothing
+    ]
+
+    # Directed
+    Her_di = erdos_renyi_hypergraph(5, 5, HGNNDiHypergraph)
+    @test nhv(Her_un) == 5
+    @test nhe(Her_un) == 5
+    @test  all(length.(Her_di.hg_tail.v2he) .> 0)
+    @test  all(length.(Her_di.hg_head.v2he) .> 0)
+    @test  all(length.(Her_di.hg_tail.v2he) .<= 5)
+    @test  all(length.(Her_di.hg_head.v2he) .<= 5)
+
+    # With specified seed
+    Her_di = erdos_renyi_hypergraph(5, 5, HGNNDiHypergraph; seed=42)
+    @test Matrix(Her_di) == [
+        (1, 1)              (nothing, 1)  (nothing, 1)        (1, 1)  (1, 1)
+        (nothing, nothing)  (1, 1)        (nothing, nothing)  (1, 1)  (1, 1)
+        (nothing, 1)        (1, 1)        (1, nothing)        (1, 1)  (1, nothing)
+        (nothing, 1)        (nothing, 1)  (nothing, nothing)  (1, 1)  (1, 1)
+        (1, 1)              (1, 1)        (1, 1)              (1, 1)  (1, 1)
+    ]
+end
+
+@testset "HyperGraphNeuralNetworks query" begin
+
+end
+
+@testset "HyperGraphNeuralNetworks transforms" begin
+
+end
+
+@testset "HyperGraphNeuralNetworks split" begin
+
+end
+
+@testset "HyperGraphNeuralNetworks undirected hypergraph datasets" begin
+
+end

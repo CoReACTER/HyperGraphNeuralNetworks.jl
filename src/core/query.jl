@@ -812,8 +812,6 @@ function has_self_loops(hg::H) where {H <: AbstractHGNNDiHypergraph}
     any([length(intersect(vs_tail[i], vs_head[i])) for i in eachindex(vs_tail)])
 end
 
-# has_multi_hyperedges
-#TODO: docstring
 function has_multi_hyperedges(hg::H) where {H <: AbstractHGNNHypergraph}
     vs = sort!.(collect.(keys.(hg.he2v)))
 
