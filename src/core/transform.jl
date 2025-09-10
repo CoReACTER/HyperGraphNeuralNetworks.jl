@@ -2136,6 +2136,23 @@ function split_hypergraphs(
     return (train=hgs[1], val=val_data, test=hgs[end])
 end
 
+"""
+    random_split_vertices(
+        hg::HGNNHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    random_split_vertices(
+        hg::HGNNDiHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Randomly partition a hypergraph `hg` by dividing the vertices (see `split_vertices`). Users provide the (relative)
+    sizes of the partitions via `fracs`, a vector of real numbers. The sum of the fractions must equal 1, and all
+    fractions must be between 0 and 1. Users must additionally provide a random number generator (`rng`).
+"""
 function random_split_vertices(
     hg::HGNNHypergraph{T,D},
     fracs::AbstractVector{<:Real},
@@ -2192,6 +2209,23 @@ function random_split_vertices(
     split_vertices(hg, masks)
 end
 
+"""
+    random_split_hyperedges(
+        hg::HGNNHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    random_split_hyperedges(
+        hg::HGNNDiHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+    
+    Randomly partition a hypergraph `hg` by dividing the hyperedges (see `split_hyperedges`). Users provide the
+    (relative) sizes of the partitions via `fracs`, a vector of real numbers. The sum of the fractions must equal 1,
+    and all fractions must be between 0 and 1. Users must additionally provide a random number generator (`rng`).
+"""
 function random_split_hyperedges(
     hg::HGNNHypergraph{T,D},
     fracs::AbstractVector{<:Real},
@@ -2248,6 +2282,23 @@ function random_split_hyperedges(
     split_hyperedges(hg, masks)
 end
 
+"""
+    random_split_hypergraphs(
+        hg::HGNNHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    random_split_hypergraphs(
+        hg::HGNNDiHypergraph{T,D},
+        fracs::AbstractVector{<:Real},
+        rng::AbstractRNG
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+    
+    Randomly partition a hypergraph `hg` by dividing the (sub)-hypergraphs (see `split_hypergraphs`). Users provide the
+    (relative) sizes of the partitions via `fracs`, a vector of real numbers. The sum of the fractions must equal 1,
+    and all fractions must be between 0 and 1. Users must additionally provide a random number generator (`rng`).
+"""
 function random_split_hypergraphs(
     hg::HGNNHypergraph{T,D},
     fracs::AbstractVector{<:Real},
