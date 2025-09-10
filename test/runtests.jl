@@ -523,6 +523,7 @@ end
 
 end
 
+<<<<<<< HEAD
 @testset "HyperGraphNeuralNetworks random generation" begin
     # Erdos-Renyi random hypergraphs
     
@@ -568,5 +569,13 @@ end
 end
 
 @testset "HyperGraphNeuralNetworks transforms" begin
+
+end
+
+@testset "HyperGraphNeuralNetworks split" begin
+
+end
+
+@testset "HyperGraphNeuralNetworks undirected hypergraph datasets" begin
 
 end

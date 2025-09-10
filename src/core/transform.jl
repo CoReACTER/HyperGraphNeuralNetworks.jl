@@ -1218,6 +1218,7 @@ function motif_negative_sample(
     return HGNNDiHypergraph(DirectedHypergraph(hg_tail, hg_head))
 end
 
+<<<<<<< HEAD
 """
     clique_negative_sample(
         hg::HGNNHypergraph{T, D},
@@ -1236,6 +1237,9 @@ end
     will attempt to generate negative hyperedges `max_trials` number of times (default: 10). However, it is still
     possible that less than `n` unique negative hyperedges will be produced.
 """
+=======
+
+>>>>>>> datasets
 function clique_negative_sample(
     hg::HGNNHypergraph{T, D},
     n::Int,
@@ -1294,6 +1298,7 @@ end
 # TODO: clique only defined for undirected graph
 # Is there a way to adapt this for dihypergraphs?
 
+<<<<<<< HEAD
 """
     negative_sample_hyperedge(
         hg::H,
@@ -1320,6 +1325,9 @@ function negative_sample_hyperedge(
     ::S;
     max_trials::Int = 10
 ) where {H <: AbstractSimpleHypergraph, S <: AbstractNegativeSamplingStrategy}
+=======
+function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_trials::Int = 10) where {H <: AbstractSimpleHypergraph, S <: AbstractNegativeSamplingStrategy}
+>>>>>>> datasets
     if S <: UniformSample
         return uniform_negative_sample(hg, n, rng; max_trials=max_trials)
     elseif S <: SizedSample
@@ -1369,6 +1377,7 @@ function negative_sample_hyperedge(
     else
         throw("negative_sample not implemented for strategy of type $S; please call a sampling function directly.")
     end
+<<<<<<< HEAD
 end
 
 """
@@ -1938,4 +1947,6 @@ function random_split_hypergraphs(
     end
 
     return res
+=======
+>>>>>>> datasets
 end
