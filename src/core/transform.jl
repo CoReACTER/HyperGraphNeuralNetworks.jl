@@ -1293,7 +1293,7 @@ function split_vertices(
                 newhe_head = D(vmap[k] => v for (k, v) in newhe_head)
                 push!(he2v_tail, newhe_tail)
                 push!(he2v_head, newhe_head)
-                hemap[i] = length(he2v)
+                hemap[i] = length(he2v_tail)
             end
         end
 
@@ -1463,7 +1463,7 @@ function split_hyperedges(
 end
 
 function split_hyperedges(
-    hg::Hypergraph{T, D},
+    hg::HGNNHypergraph{T, D},
     train_mask::BitVector,
     test_mask::BitVector;
     val_mask::Union{BitVector, Nothing} = nothing,
@@ -1522,41 +1522,148 @@ function split_hyperedges(
     return (train=hgs[1], val=val_data, test=hgs[end])
 end
 
-# TODO: directed hypergraphs
-# TODO: you are here
 function split_hyperedges(
     hg::HGNNDiHypergraph{T,D},
     masks::AbstractVector{BitVector}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    res = HGNNDiHypergraph{T,D}[]
 
+    # Partition v2he and he2v, being careful of indices
+    for mask in masks
+        he2v_tail = hg.hg_tail.he2v[mask]
+        he2v_head = hg.hg_head.he2v[mask]
+
+        v2he_tail = D[]
+        v2he_head = D[]
+
+        hemap = Dict{Int, Int}()
+        index = 1
+        for (i, x) in enumerate(mask)
+            if x
+                hemap[i] = index
+                index += 1
+            end
+        end
+
+        vmap = Dict{Int, Int}()
+        hgmap = Dict{Int, Int}()
+
+        for i in 1:hg.num_vertices
+            v_tail = hg.hg_tail.v2he[i]
+            v_head = hg.hg_head.v2he[i]
+            
+            newv_tail = filter(((k,v), ) -> mask[k], v_tail)
+            newv_head = filter(((k,v), ) -> mask[k], v_head)
+            if length(newv_tail) > 0 || length(newv_head) > 0
+                newv_tail = D(hemap[k] => v for (k, v) in newv_tail)
+                newv_head = D(hemap[k] => v for (k, v) in newv_head)
+                push!(v2he_tail, newv_tail)
+                push!(v2he_head, newv_head)
+                vmap[i] = length(v2he_tail)
+            end
+        end
+
+        for i in eachindex(he2v_tail)
+            he2v_tail[i] = D(vmap[k] => v for (k, v) in he2v_tail[i])
+            he2v_head[i] = D(vmap[k] => v for (k, v) in he2v_head[i])
+        end
+
+        rel_vs = collect(keys(vmap))
+
+        unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
+        for (i, e) in enumerate(unique_hgids)
+            hgmap[e] = i
+        end
+
+        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
+
+        push!(
+            res,
+            HGNNDiHypergraph{T,D}(
+                Hypergraph{T, Nothing, Nothing, D}(
+                    v2he_tail,
+                    he2v_tail,
+                    Vector{Nothing}(undef, length(part)),
+                    Vector{Nothing}(undef, length(newhe_tail))
+                    ),
+                Hypergraph{T, Nothing, Nothing, D}(
+                    v2he_head,
+                    he2v_head,
+                    Vector{Nothing}(undef, length(part)),
+                    Vector{Nothing}(undef, length(newhe_head))
+                    ),
+                length(v2he_tail),
+                length(he2v_tail),
+                length(unique_hgids),
+                hypergraph_ids,
+                getobs(hg.vdata, collect(keys(vmap))),
+                getobs(hg.hedata, mask),
+                getobs(hg.hgdata, unique_hgids)
+            )
+        )
+    end
+
+    return res
 end
 
 function split_hyperedges(
-    hg::Hypergraph{T, D},
+    hg::HGNNDiHypergraph{T, D},
     train_mask::BitVector,
     test_mask::BitVector;
     val_mask::Union{BitVector, Nothing} = nothing,
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    if !isnothing(val_mask)
+        masks = [train_mask, val_mask, test_mask]
+    else
+        masks = [train_mask, test_mask]
+    end
 
+    hgs = split_hyperedges(hg, masks)
+
+    val_data = isnothing(val_mask) ? nothing : hgs[2]
+
+    return (train=hgs[1], val=val_data, test=hgs[end])
 end
 
 function split_hyperedges(
-    hg::HGNNHypergraph{T,D},
+    hg::HGNNDiHypergraph{T,D},
     index_groups::AbstractVector{AbstractVector{Int}}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    masks = BitVector[]
 
+    for indgroup in index_groups
+        push!(masks, BitArray(i in indgroup for i in 1:hg.num_hyperedges))
+    end
+
+    split_hyperedges(hg, masks)
 end
 
 function split_hyperedges(
-    hg::HGNNHypergraph{T,D},
+    hg::HGNNDiHypergraph{T,D},
     train_inds::AbstractVector{Int},
     test_inds::AbstractVector{Int};
     val_inds::Union{AbstractVector{Int}, Nothing} = nothing
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    if !isnothing(val_inds)
+        masks = [
+            BitArray(i in train_inds for i in 1:hg.num_hyperedges),
+            BitArray(i in val_inds for i in 1:hg.num_hyperedges),
+            BitArray(i in test_inds for i in 1:hg.num_hyperedges)
+        ]
+    else
+        masks = [
+            BitArray(i in train_inds for i in 1:hg.num_hyperedges),
+            BitArray(i in test_inds for i in 1:hg.num_hyperedges)
+        ]
+    end
 
+    hgs = split_hyperedges(hg, masks)
+
+    val_data = isnothing(val_inds) ? nothing : hgs[2]
+
+    return (train=hgs[1], val=val_data, test=hgs[end])
 end
 
-# TODO: undireced hypergraphs
 function split_hypergraphs(
     hg::HGNNHypergraph{T,D},
     masks::AbstractVector{BitVector}
