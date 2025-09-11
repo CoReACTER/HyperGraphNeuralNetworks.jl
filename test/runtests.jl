@@ -505,7 +505,99 @@ end
 
 end
 
-@testset "HyperGraphNeuralNetworks split" begin
+@testset "HyperGraphNeuralNetworks split vertices" begin
+    uh1 = Hypergraph{Float64, Int, String}(11,5)
+    #1st graph
+    uh1[1, 1] = 1.0
+    uh1[2, 1] = 2.0
+    uh1[4, 1] = 4.0
+    uh1[2, 2] = 3.0
+    uh1[5, 2] = 12.0
+    uh1[3, 2] = 0.0
+    uh1[4, 3] = 1.0
+    uh1[6, 3] = 4.0
+    #2nd graph
+    uh1[7, 4] = 3.5
+    uh1[10, 4] = 1.0
+    uh1[11, 4] = 4.0
+    uh1[8, 5] = 1.0
+    uh1[9, 5] = 5.0
+    uh1[10, 5] = 7.0
+
+    uid1 = [1,1,1,1,1,1,2,2,2,2,2]
+    
+    hgnn1 = HGNNHypergraph(
+        uh1;
+        hypergraph_ids = uid1,
+        vdata = rand(Float64, 5, 11),
+        hedata = rand(Float64, 5, 5),
+        hgdata = rand(Float64, 5, 2)
+    )
+
+    vmasks = [
+        BitVector((false, true, true, false, true, false, true, false, false, false, true)),
+        BitVector((false, false, false, true, false, true, false, true, false, true, false)),
+        BitVector((true, false, false, false, false, false, false, false, true, false, false))
+    ]
+
+    # Split vertices using masks
+    hgnns = split_vertices(hgnn1, vmasks)
+    @test length(hgnns) == 3
+    @test hgnns[1].num_vertices == 5
+    @test hgnns[1].num_hyperedges == 3
+    @test hgnns[1].num_hypergraphs == 2
+    @test getobs(hgnns[1].vdata, 1) == getobs(hgnn1.vdata, 2)
+    @test getobs(hgnns[1].hedata, 1).e == getobs(hgnn1.hedata, 1).e
+    @test getobs(hgnns[1].hgdata, 1).u == getobs(hgnn1.hgdata, 1).u
+    @test hgnns[2].num_vertices == 4
+    @test hgnns[2].num_hyperedges == 4
+    @test hgnns[2].num_hypergraphs == 2
+    @test getobs(hgnns[2].vdata, 1) == getobs(hgnn1.vdata, 4)
+    @test getobs(hgnns[2].hedata, 2).e == getobs(hgnn1.hedata, 3).e
+    @test getobs(hgnns[2].hgdata, 2).u == getobs(hgnn1.hgdata, 2).u
+    @test hgnns[3].num_vertices == 2
+    @test hgnns[3].num_hyperedges == 2
+    @test hgnns[3].num_hypergraphs == 2
+    @test getobs(hgnns[3].vdata, 2) == getobs(hgnn1.vdata, 9)
+    @test getobs(hgnns[3].hedata, 2).e == getobs(hgnn1.hedata, 5).e
+    @test getobs(hgnns[3].hgdata, 1).u == getobs(hgnn1.hgdata, 1).u
+
+    # Split vertices by train-val-test labeled masks
+    hgnns_tvt = split_vertices(hgnn1, vmasks[1], vmasks[3]; val_mask=vmasks[2])
+    @test hgnns_tvt.train == hgnns[1]
+    @test hgnns_tvt.val == hgnns[2]
+    @test hgnns_tvt.test == hgnns[3]
+
+    # Split without validation set
+    hgnns_tvt_noval = split_vertices(hgnn1, vmasks[1], vmasks[3])
+    @test hgnns_tvt_noval.train == hgnns[1]
+    @test hgnns_tvt_noval.val === nothing
+    @test hgnns_tvt_noval.test == hgnns[3]
+
+    vinds = [
+        [2, 3, 5, 7, 11],
+        [4, 6, 8, 10],
+        [1, 9]
+    ]
+
+    # Split vertices using vertex indices
+    hgnns_ind = split_vertices(hgnn1, vinds)
+    @test length(hgnns_ind) == 3
+    @test hgnns_ind[1] == hgnns[1]
+    @test hgnns_ind[2] == hgnns[2]
+    @test hgnns_ind[3] == hgnns[3]
+
+    # Split vertices by train-val-test labeled indices
+    hgnns_ind_tvt = split_vertices(hgnn1, vinds[1], vinds[3]; val_inds=vinds[2])
+    @test hgnns_ind_tvt.train == hgnns[1]
+    @test hgnns_ind_tvt.val == hgnns[2]
+    @test hgnns_ind_tvt.test == hgnns[3]
+
+    # Split without validation set
+    hgnns_ind_tvt_noval = split_vertices(hgnn1, vinds[1], vinds[3])
+    @test hgnns_ind_tvt_noval.train == hgnns[1]
+    @test hgnns_ind_tvt_noval.val === nothing
+    @test hgnns_ind_tvt_noval.test == hgnns[3]
 
 end
 

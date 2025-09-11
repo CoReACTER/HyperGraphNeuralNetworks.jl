@@ -13,8 +13,8 @@
 
     split_vertices(
         hg::HGNNHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     split_vertices(
         hg::HGNNHypergraph{T,D},
@@ -90,7 +90,7 @@ function split_vertices(
                 length(unique_hgids),
                 hypergraph_ids,
                 getobs(hg.vdata, mask),
-                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hedata, sort(collect(keys(hemap)))),
                 getobs(hg.hgdata, unique_hgids)
             )
         )
@@ -121,8 +121,8 @@ end
 
 function split_vertices(
     hg::HGNNHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}}
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
     masks = BitVector[]
 
     for indgroup in index_groups
@@ -173,8 +173,8 @@ end
 
     split_vertices(
         hg::HGNNDiHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     split_vertices(
         hg::HGNNDiHypergraph{T,D},
@@ -268,7 +268,7 @@ function split_vertices(
                 length(unique_hgids),
                 hypergraph_ids,
                 getobs(hg.vdata, mask),
-                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hedata, sort(collect(keys(hemap)))),
                 getobs(hg.hgdata, unique_hgids)
             )
         )
@@ -297,9 +297,9 @@ function split_vertices(
 end
 
 function split_vertices(
-    hg::HGNNHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}}
+    hg::HGNNDiHypergraph{T,D},
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
     masks = BitVector[]
 
     for indgroup in index_groups
@@ -310,7 +310,7 @@ function split_vertices(
 end
 
 function split_vertices(
-    hg::HGNNHypergraph{T,D},
+    hg::HGNNDiHypergraph{T,D},
     train_inds::AbstractVector{Int},
     test_inds::AbstractVector{Int};
     val_inds::Union{AbstractVector{Int}, Nothing} = nothing
@@ -350,8 +350,8 @@ end
 
     split_hyperedges(
         hg::HGNNHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     split_hyperedges(
         hg::HGNNHypergraph{T,D},
@@ -410,7 +410,7 @@ function split_hyperedges(
             he2v[i] = D(vmap[key] => val for (key, val) in he2v[i])
         end
 
-        rel_vs = collect(keys(vmap))
+        rel_vs = sort(collect(keys(vmap)))
 
         unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
         for (i, e) in enumerate(unique_hgids)
@@ -460,8 +460,8 @@ end
 
 function split_hyperedges(
     hg::HGNNHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}}
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     masks = BitVector[]
 
@@ -513,8 +513,8 @@ end
 
     split_hyperedges(
         hg::HGNNDiHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     split_hyperedges(
         hg::HGNNDiHypergraph{T,D},
@@ -582,7 +582,7 @@ function split_hyperedges(
             he2v_head[i] = D(vmap[k] => v for (k, v) in he2v_head[i])
         end
 
-        rel_vs = collect(keys(vmap))
+        rel_vs = sort(collect(keys(vmap)))
 
         unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
         for (i, e) in enumerate(unique_hgids)
@@ -641,8 +641,8 @@ end
 
 function split_hyperedges(
     hg::HGNNDiHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}}
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
     masks = BitVector[]
 
     for indgroup in index_groups
@@ -693,8 +693,8 @@ end
 
     split_hyperedges(
         hg::HGNNHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     split_hyperedges(
         hg::HGNNHypergraph{T,D},
@@ -766,7 +766,7 @@ function split_hypergraphs(
                 length(keys(hgmap)),
                 hypergraph_ids,
                 getobs(hg.vdata, rel_vs),
-                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hedata, sort(collect(keys(hemap)))),
                 getobs(hg.hgdata, mask)
             )
         )
@@ -796,8 +796,8 @@ end
 
 function split_hypergraphs(
     hg::HGNNHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}} 
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}} 
     masks = BitVector[]
 
     for indgroup in index_groups
@@ -848,8 +848,8 @@ end
 
     split_hypergraphs(
         hg::HGNNDiHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     split_hypergraphs(
         hg::HGNNDiHypergraph{T,D},
@@ -935,7 +935,7 @@ function split_hypergraphs(
                 length(keys(hgmap)),
                 hypergraph_ids,
                 getobs(hg.vdata, rel_vs),
-                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hedata, sort(collect(keys(hemap)))),
                 getobs(hg.hgdata, mask)
             )
         )
@@ -965,8 +965,8 @@ end
 
 function split_hypergraphs(
     hg::HGNNDiHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}} 
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}} 
     masks = BitVector[]
 
     for indgroup in index_groups

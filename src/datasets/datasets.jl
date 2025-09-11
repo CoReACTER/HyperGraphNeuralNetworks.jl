@@ -1,8 +1,8 @@
 function _convert_citation_graphdata(
-    dset::AbstractDataset,
+    dset::MLDatasets.AbstractDataset,
     T::Type{R};
     split::Bool = false
-)
+) where {R <: Real}
     nv = dset[1].num_nodes
 
     # Hypergraph vertices are graph vertices
@@ -38,13 +38,13 @@ end
 function getHyperCora(
     T::Type{R};
     split::Bool = false
-) where {R<:Real}
+) where {R <: Real}
     _convert_citation_graphdata(MLDatasets.Cora(), T; split=split)
 end
 
 function getHyperCiteSeer(
     T::Type{R};
     split::Bool = false
-)
+) where {R <: Real}
     _convert_citation_graphdata(MLDatasets.CiteSeer(), T; split=split)
 end
