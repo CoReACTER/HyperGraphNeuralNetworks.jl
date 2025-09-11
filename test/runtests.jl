@@ -8,57 +8,80 @@ using HyperGraphNeuralNetworks
 using SimpleHypergraphs
 using SimpleDirectedHypergraphs
 
-@testset "HyperGraphNeuralNetworks HGNNHypergraph" begin
-    h1 = Hypergraph{Float64, Int, String}(11,5)
-    #1st graph
-    h1[1, 1] = 1.0
-    h1[2, 1] = 2.0
-    h1[4, 1] = 4.0
-    h1[2, 2] = 3.0
-    h1[5, 2] = 12.0
-    h1[3, 2] = 0.0
-    h1[4, 3] = 1.0
-    h1[6, 3] = 4.0
-    #2nd graph
-    h1[7, 4] = 3.5
-    h1[10, 4] = 1.0
-    h1[11, 4] = 4.0
-    h1[8, 5] = 1.0
-    h1[9, 5] = 5.0
-    h1[10, 5] = 7.0
+# Example undirected hypergraph
+uh1 = Hypergraph{Float64, Int, String}(11,5)
+#1st graph
+uh1[1, 1] = 1.0
+uh1[2, 1] = 2.0
+uh1[4, 1] = 4.0
+uh1[2, 2] = 3.0
+uh1[5, 2] = 12.0
+uh1[3, 2] = 0.0
+uh1[4, 3] = 1.0
+uh1[6, 3] = 4.0
+#2nd graph
+uh1[7, 4] = 3.5
+uh1[10, 4] = 1.0
+uh1[11, 4] = 4.0
+uh1[8, 5] = 1.0
+uh1[9, 5] = 5.0
+uh1[10, 5] = 7.0
 
-    id1 = [1,1,1,1,1,1,2,2,2,2,2]
-    hedata1 = [10, 20, 30, 40, 50] 
+uid1 = [1,1,1,1,1,1,2,2,2,2,2]
+uhedata1 = [10, 20, 30, 40, 50]
+
+# Example directed hypergraph
+dh1 = DirectedHypergraph{Float64, Int, String}(11,5)
+dh1[1,1,1] = 1.0
+dh1[1,2,1] = 2.0
+dh1[2,4,1] = 4.0
+dh1[1,2,2] = 3.0
+dh1[1,5,2] = 12.0
+dh1[2,3,2] = 0.0
+dh1[1,4,3] = 1.0
+dh1[2,6,3] = 4.0
+#2nd graph
+dh1[1,7,4] = 3.5
+dh1[1,10,4] = 1.0
+dh1[2,11,4] = 4.0
+dh1[2,8,5] = 1.0
+dh1[2,9,5] = 5.0
+dh1[1,10,5] = 7.0
+did1 = [1,1,1,1,1,1,2,2,2,2,2]
+dhedata1 = [10, 20, 30, 40, 50]
+
+
+@testset "HyperGraphNeuralNetworks HGNNHypergraph" begin
 
     # Direct Construction
-    HGNN0 = HGNNHypergraph(h1.v2he, h1.he2v, 11, 5, 2, id1, DataStore(), DataStore(), DataStore())
+    HGNN0 = HGNNHypergraph(uh1.v2he, uh1.he2v, 11, 5, 2, uid1, DataStore(), DataStore(), DataStore())
     @test size(HGNN0) == (11, 5)
     @test nhv(HGNN0) == 11
     @test nhe(HGNN0) == 5
-    @test HGNN0.hypergraph_ids == id1
+    @test HGNN0.hypergraph_ids == uid1
     @test HGNN0.vdata == DataStore()
     @test HGNN0.hedata == DataStore() 
     @test HGNN0.hgdata == DataStore()
 
     # Test type equality
-    @test HGNN0 == HGNNHypergraph{Float64, Dict{Int, Float64}}(h1.v2he, h1.he2v, 11, 5, 2, id1, DataStore(), DataStore(), DataStore())
+    @test HGNN0 == HGNNHypergraph{Float64, Dict{Int, Float64}}(uh1.v2he, uh1.he2v, 11, 5, 2, uid1, DataStore(), DataStore(), DataStore())
 
     # Construct using existing hypergraph
-    HGNN1 = HGNNHypergraph(h1; hypergraph_ids = id1, hedata = hedata1)
+    HGNN1 = HGNNHypergraph(uh1; hypergraph_ids = uid1, hedata = uhedata1)
     @test size(HGNN1) == (11, 5)
     @test nhv(HGNN1) == 11
     @test nhe(HGNN1) == 5
-    @test HGNN1.hypergraph_ids == id1
-    @test HGNN1.hedata == DataStore(e = hedata1) 
+    @test HGNN1.hypergraph_ids == uid1
+    @test HGNN1.hedata == DataStore(e = uhedata1) 
     @test HGNN1.hgdata == DataStore(2)
 
     # Test type equality
-    @test HGNN1 == HGNNHypergraph{Float64}(h1; hypergraph_ids = id1, hedata=hedata1)
-    @test HGNN1 == HGNNHypergraph{Float64, Dict{Int, Float64}}(h1; hypergraph_ids = id1, hedata=hedata1)
+    @test HGNN1 == HGNNHypergraph{Float64}(uh1; hypergraph_ids = uid1, hedata=uhedata1)
+    @test HGNN1 == HGNNHypergraph{Float64, Dict{Int, Float64}}(uh1; hypergraph_ids = uid1, hedata=uhedata1)
 
     # Construct using matrix
-    m = Matrix(h1)
-    @test m == h1
+    m = Matrix(uh1)
+    @test m == uh1
     @test m == [1.0     nothing nothing nothing nothing
                 2.0     3.0     nothing nothing nothing
                 nothing 0.0     nothing nothing nothing
@@ -70,12 +93,12 @@ using SimpleDirectedHypergraphs
                 nothing nothing nothing nothing 5.0
                 nothing nothing nothing 1.0     7.0
                 nothing nothing nothing 4.0     nothing]
-    HGNN2 = HGNNHypergraph(m; hypergraph_ids = id1, hedata = hedata1)
+    HGNN2 = HGNNHypergraph(m; hypergraph_ids = uid1, hedata = uhedata1)
     @test HGNN2 == HGNN1
 
     # Test type equality
-    @test HGNN2 == HGNNHypergraph{Float64}(m; hypergraph_ids = id1, hedata = hedata1)
-    @test HGNN2 == HGNNHypergraph{Float64, Dict{Int, Float64}}(m; hypergraph_ids = id1, hedata = hedata1)
+    @test HGNN2 == HGNNHypergraph{Float64}(m; hypergraph_ids = uid1, hedata = uhedata1)
+    @test HGNN2 == HGNNHypergraph{Float64, Dict{Int, Float64}}(m; hypergraph_ids = uid1, hedata = uhedata1)
 
     # Construct with no hypergraph and num_nodes vertices
     HGNN3 = HGNNHypergraph(3)
@@ -254,37 +277,18 @@ end
 end
 
 @testset "HyperGraphNeuralNetworks HGNNDiHypergraph" begin
-    h1 = DirectedHypergraph{Float64, Int, String}(11,5)
-    h1[1,1,1] = 1.0
-    h1[1,2,1] = 2.0
-    h1[2,4,1] = 4.0
-    h1[1,2,2] = 3.0
-    h1[1,5,2] = 12.0
-    h1[2,3,2] = 0.0
-    h1[1,4,3] = 1.0
-    h1[2,6,3] = 4.0
-    #2nd graph
-    h1[1,7,4] = 3.5
-    h1[1,10,4] = 1.0
-    h1[2,11,4] = 4.0
-    h1[2,8,5] = 1.0
-    h1[2,9,5] = 5.0
-    h1[1,10,5] = 7.0
-    id1 = [1,1,1,1,1,1,2,2,2,2,2]
-    hedata1 = [10, 20, 30, 40, 50]
-
     #construct using exsiting directedhypergraph
-    HGNN1 = HGNNDiHypergraph(h1, hypergraph_ids = id1, hedata = hedata1)
+    HGNN1 = HGNNDiHypergraph(dh1, hypergraph_ids = did1, hedata = dhedata1)
     @test size(HGNN1) == (11, 5)
     @test nhv(HGNN1) == 11
     @test nhe(HGNN1) == 5
-    @test HGNN1.hypergraph_ids == id1
-    @test HGNN1.hedata == DataStore(e = hedata1) 
+    @test HGNN1.hypergraph_ids == did1
+    @test HGNN1.hedata == DataStore(e = dhedata1) 
     @test HGNN1.hgdata == DataStore(2)
 
     #construct using matrix
-    m = Matrix(h1)
-    @test m == h1
+    m = Matrix(dh1)
+    @test m == dh1
     tailMatrix = getindex.(m, 1)
     headMatrix = getindex.(m, 2)
     @test tailMatrix == [1.0     nothing nothing nothing nothing 
@@ -309,7 +313,7 @@ end
                          nothing nothing nothing nothing 5.0
                          nothing nothing nothing nothing nothing
                          nothing nothing nothing 4.0     nothing]
-    HGNN2 = HGNNDiHypergraph(tailMatrix, headMatrix; hypergraph_ids = id1, hedata = hedata1)
+    HGNN2 = HGNNDiHypergraph(tailMatrix, headMatrix; hypergraph_ids = did1, hedata = dhedata1)
     @test HGNN2 == HGNN1
 
     #construct with no hypergraph and num_nodes vertices
@@ -505,27 +509,7 @@ end
 
 end
 
-@testset "HyperGraphNeuralNetworks split vertices" begin
-    uh1 = Hypergraph{Float64, Int, String}(11,5)
-    #1st graph
-    uh1[1, 1] = 1.0
-    uh1[2, 1] = 2.0
-    uh1[4, 1] = 4.0
-    uh1[2, 2] = 3.0
-    uh1[5, 2] = 12.0
-    uh1[3, 2] = 0.0
-    uh1[4, 3] = 1.0
-    uh1[6, 3] = 4.0
-    #2nd graph
-    uh1[7, 4] = 3.5
-    uh1[10, 4] = 1.0
-    uh1[11, 4] = 4.0
-    uh1[8, 5] = 1.0
-    uh1[9, 5] = 5.0
-    uh1[10, 5] = 7.0
-
-    uid1 = [1,1,1,1,1,1,2,2,2,2,2]
-    
+@testset "HyperGraphNeuralNetworks split vertices" begin    
     hgnn1 = HGNNHypergraph(
         uh1;
         hypergraph_ids = uid1,
