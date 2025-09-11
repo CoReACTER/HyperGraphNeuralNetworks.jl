@@ -1029,20 +1029,20 @@ function random_split_vertices(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_vertices)
-    rand_inds = shuffle(rng, Vector(1:hg.num_vertices))
+    num_choices = convert.(Int, round.(fracs .* hg.num_vertices))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_vertices))
     
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
-        push!(masks, BitArray(i in part for i in 1:hg.num_vertices(hg)))
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[i]
+        push!(masks, BitArray(i in part for i in 1:hg.num_vertices))
     end
     remainder = rand_inds[start_point:end]
-    push!(masks, BitArray(i in remainder for i in 1:hg.num_vertices(hg)))
+    push!(masks, BitArray(i in remainder for i in 1:hg.num_vertices))
 
     split_vertices(hg, masks)
 end
@@ -1057,20 +1057,20 @@ function random_split_vertices(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_vertices)
-    rand_inds = shuffle(rng, Vector(1:hg.num_vertices))
+    num_choices = convert.(Int, round.(fracs .* hg.num_vertices))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_vertices))
 
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
-        push!(masks, BitArray(i in part for i in 1:hg.num_vertices(hg)))
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[1]
+        push!(masks, BitArray(i in part for i in 1:hg.num_vertices))
     end
     remainder = rand_inds[start_point:end]
-    push!(masks, BitArray(i in remainder for i in 1:hg.num_vertices(hg)))
+    push!(masks, BitArray(i in remainder for i in 1:hg.num_vertices))
 
     split_vertices(hg, masks)
 end
@@ -1102,16 +1102,16 @@ function random_split_hyperedges(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_hyperedges)
-    rand_inds = shuffle(rng, Vector(1:hg.num_hyperedges))
+    num_choices = convert.(Int, round.(fracs .* hg.num_hyperedges))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_hyperedges))
     
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[i]
         push!(masks, BitArray(i in part for i in 1:hg.num_hyperedges))
     end
     remainder = rand_inds[start_point:end]
@@ -1130,16 +1130,16 @@ function random_split_hyperedges(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_hyperedges)
-    rand_inds = shuffle(rng, Vector(1:hg.num_hyperedges))
+    num_choices = convert.(Int, round.(fracs .* hg.num_hyperedges))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_hyperedges))
     
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[i]
         push!(masks, BitArray(i in part for i in 1:hg.num_hyperedges))
     end
     remainder = rand_inds[start_point:end]
@@ -1175,16 +1175,16 @@ function random_split_hypergraphs(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_hypergraphs)
-    rand_inds = shuffle(rng, Vector(1:hg.num_hypergraphs))
+    num_choices = convert.(Int, round.(fracs .* hg.num_hypergraphs))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_hypergraphs))
     
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[i]
         push!(masks, BitArray(i in part for i in 1:hg.num_hypergraphs))
     end
     remainder = rand_inds[start_point:end]
@@ -1203,16 +1203,16 @@ function random_split_hypergraphs(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_hypergraphs)
-    rand_inds = shuffle(rng, Vector(1:hg.num_hypergraphs))
+    num_choices = convert.(Int, round.(fracs .* hg.num_hypergraphs))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_hypergraphs))
     
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[i]
         push!(masks, BitArray(i in part for i in 1:hg.num_hypergraphs))
     end
     remainder = rand_inds[start_point:end]

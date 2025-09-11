@@ -510,6 +510,7 @@ end
 end
 
 @testset "HyperGraphNeuralNetworks split vertices" begin    
+    # Split vertices of undirected hypergraphs
     hgnn1 = HGNNHypergraph(
         uh1;
         hypergraph_ids = uid1,
@@ -583,6 +584,19 @@ end
     @test hgnns_ind_tvt_noval.val === nothing
     @test hgnns_ind_tvt_noval.test == hgnns[3]
 
+    # "Random" split
+    rng = Xoshiro(42)
+    hgnns_rand = random_split_vertices(hgnn1, [0.7, 0.1, 0.2], rng)
+    @test length(hgnns_rand) == 3
+    @test hgnns_rand[1].num_vertices == 8
+    @test hgnns_rand[1].num_hyperedges == 5
+    @test hgnns_rand[1].num_hypergraphs == 2
+    @test hgnns_rand[2].num_vertices == 1
+    @test hgnns_rand[2].num_hyperedges == 1
+    @test hgnns_rand[2].num_hypergraphs == 1
+    @test hgnns_rand[3].num_vertices == 2
+    @test hgnns_rand[3].num_hyperedges == 2
+    @test hgnns_rand[3].num_hypergraphs == 1
 end
 
 @testset "HyperGraphNeuralNetworks undirected hypergraph datasets" begin
