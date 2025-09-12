@@ -74,11 +74,16 @@ function split_vertices(
             v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
         end
 
-        unique_hgids = sort(collect(Set(hg.hypergraph_ids[mask])))
-        for (i, e) in enumerate(unique_hgids)
-            hgmap[e] = i
+        if isnothing(hg.hypergraph_ids)
+            hypergraph_ids = nothing
+            unique_hgids = [1]
+        else
+            unique_hgids = sort(collect(Set(hg.hypergraph_ids[mask])))
+            for (i, e) in enumerate(unique_hgids)
+                hgmap[e] = i
+            end
+            hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[mask]]
         end
-        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[mask]]
 
         push!(
             res,
@@ -241,9 +246,15 @@ function split_vertices(
             v2he_head[i] = D(hemap[k] => v for (k, v) in v2he_head[i])
         end
 
-        unique_hgids = sort(collect(Set(hg.hypergraph_ids[mask])))
-        for (i, e) in enumerate(unique_hgids)
-            hgmap[e] = i
+        if isnothing(hg.hypergraph_ids)
+            hypergraph_ids = nothing
+            unique_hgids = [1]
+        else
+            unique_hgids = sort(collect(Set(hg.hypergraph_ids[mask])))
+            for (i, e) in enumerate(unique_hgids)
+                hgmap[e] = i
+            end
+            hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[mask]]
         end
 
         hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[mask]]
@@ -412,12 +423,17 @@ function split_hyperedges(
 
         rel_vs = sort(collect(keys(vmap)))
 
-        unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
-        for (i, e) in enumerate(unique_hgids)
-            hgmap[e] = i
-        end
+        if isnothing(hg.hypergraph_ids)
+            unique_hgids = [1]
+            hypergraph_ids = nothing
+        else
+            unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
+            for (i, e) in enumerate(unique_hgids)
+                hgmap[e] = i
+            end
 
-        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
+            hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
+        end
 
         push!(
             res,
@@ -540,6 +556,8 @@ function split_hyperedges(
     hg::HGNNDiHypergraph{T,D},
     masks::AbstractVector{BitVector}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    @assert all(length.(masks) .== hg.num_hyperedges)
+
     res = HGNNDiHypergraph{T,D}[]
 
     # Partition v2he and he2v, being careful of indices
@@ -584,12 +602,17 @@ function split_hyperedges(
 
         rel_vs = sort(collect(keys(vmap)))
 
-        unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
-        for (i, e) in enumerate(unique_hgids)
-            hgmap[e] = i
-        end
+        if isnothing(hg.hypergraph_ids)
+            unique_hgids = [1]
+            hypergraph_ids = nothing
+        else
+            unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
+            for (i, e) in enumerate(unique_hgids)
+                hgmap[e] = i
+            end
 
-        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
+            hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
+        end
 
         push!(
             res,
@@ -719,6 +742,8 @@ function split_hypergraphs(
     hg::HGNNHypergraph{T,D},
     masks::AbstractVector{BitVector}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    @assert !isnothing(hg.hypergraph_ids)
+
     @assert all(length.(masks) .== hg.num_hypergraphs)
 
     res = HGNNHypergraph{T,D}[]
@@ -874,6 +899,10 @@ function split_hypergraphs(
     hg::HGNNDiHypergraph{T,D},
     masks::AbstractVector{BitVector}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    @assert !isnothing(hg.hypergraph_ids)
+
+    @assert all(length.(masks) .== hg.num_hypergraphs)
+
     res = HGNNDiHypergraph{T,D}[]
 
     for mask in masks
