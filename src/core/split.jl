@@ -804,7 +804,7 @@ function split_hypergraphs(
         push!(masks, BitArray(i in indgroup for i in 1:hg.num_hypergraphs))
     end
 
-    split_hyperedges(hg, masks)
+    split_hypergraphs(hg, masks)
 end
 
 function split_hypergraphs(
@@ -826,7 +826,7 @@ function split_hypergraphs(
         ]
     end
 
-    hgs = split_hyperedges(hg, masks)
+    hgs = split_hypergraphs(hg, masks)
 
     val_data = isnothing(val_inds) ? nothing : hgs[2]
 
@@ -973,7 +973,7 @@ function split_hypergraphs(
         push!(masks, BitArray(i in indgroup for i in 1:hg.num_hypergraphs))
     end
 
-    split_hyperedges(hg, masks)
+    split_hypergraphs(hg, masks)
 end
 
 function split_hypergraphs(
@@ -995,7 +995,7 @@ function split_hypergraphs(
         ]
     end
 
-    hgs = split_hyperedges(hg, masks)
+    hgs = split_hypergraphs(hg, masks)
 
     val_data = isnothing(val_inds) ? nothing : hgs[2]
 
