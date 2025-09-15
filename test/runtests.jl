@@ -6,7 +6,10 @@ using GNNGraphs
 using MLUtils
 using HyperGraphNeuralNetworks
 using SimpleHypergraphs
-using SimpleDirectedHypergraphs
+using SimpleDirectedHypergraph
+
+# Necessary for MLDatasets
+ENV["DATADEPS_ALWAYS_ACCEPT"] = true
 
 # Example undirected hypergraph
 uh1 = Hypergraph{Float64, Int, String}(11,5)
