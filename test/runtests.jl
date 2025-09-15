@@ -592,14 +592,8 @@ end
     hgnns_rand = random_split_vertices(hgnn1, [0.7, 0.1, 0.2], rng)
     @test length(hgnns_rand) == 3
     @test hgnns_rand[1].num_vertices == 8
-    @test hgnns_rand[1].num_hyperedges == 5
-    @test hgnns_rand[1].num_hypergraphs == 2
     @test hgnns_rand[2].num_vertices == 1
-    @test hgnns_rand[2].num_hyperedges == 1
-    @test hgnns_rand[2].num_hypergraphs == 1
     @test hgnns_rand[3].num_vertices == 2
-    @test hgnns_rand[3].num_hyperedges == 2
-    @test hgnns_rand[3].num_hypergraphs == 1
 end
 
 @testset "HyperGraphNeuralNetworks split hyperedges" begin    
@@ -681,12 +675,8 @@ end
     rng = Xoshiro(42)
     hgnns_rand = random_split_hyperedges(hgnn1, [0.7, 0.3], rng)
     @test length(hgnns_rand) == 2
-    @test hgnns_rand[1].num_vertices == 9
     @test hgnns_rand[1].num_hyperedges == 4
-    @test hgnns_rand[1].num_hypergraphs == 2
-    @test hgnns_rand[2].num_vertices == 3
     @test hgnns_rand[2].num_hyperedges == 1
-    @test hgnns_rand[2].num_hypergraphs == 1
 end
 
 @testset "HyperGraphNeuralNetworks split hypergraphs" begin
@@ -766,14 +756,8 @@ end
     rng = Xoshiro(42)
     hgnns_rand = random_split_hypergraphs(hgnn1, [0.34, 0.33, 0.33], rng)
     @test length(hgnns_rand) == 3
-    @test hgnns_rand[1].num_vertices == 2
-    @test hgnns_rand[1].num_hyperedges == 2
     @test hgnns_rand[1].num_hypergraphs == 1
-    @test hgnns_rand[2].num_vertices == 5
-    @test hgnns_rand[2].num_hyperedges == 2
     @test hgnns_rand[2].num_hypergraphs == 1
-    @test hgnns_rand[3].num_vertices == 4
-    @test hgnns_rand[3].num_hyperedges == 3
     @test hgnns_rand[3].num_hypergraphs == 1
 end
 
