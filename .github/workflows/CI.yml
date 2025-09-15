@@ -34,7 +34,7 @@ jobs:
         run: if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get install -y python3-matplotlib; fi
         shell: bash
       - name: Setup shell
-        run: export DATADEPS_ALWAYS_ACCEPT = true
+        run: export DATADEPS_ALWAYS_ACCEPT=true
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
