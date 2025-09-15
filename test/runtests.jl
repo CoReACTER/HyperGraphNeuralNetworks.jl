@@ -1009,8 +1009,8 @@ end
 
     @test nhv(cora) == 2708
     @test nhe(cora) == 2708
-    @test cora.vdata.features.size == (1433, 2708)
-    @test cora.vdata.targets.size == (2708,)
+    @test size(cora.vdata.features) == (1433, 2708)
+    @test size(cora.vdata.targets) == (2708,)
     @test cora.hedata == DataStore()
     @test cora.hgdata == DataStore()
 
@@ -1027,8 +1027,8 @@ end
     cs = getHyperCiteSeer(Int)
     @test nhv(cs) == 3327
     @test nhe(cs) == 3327
-    @test cs.vdata.features.size == (3703, 3327)
-    @test cs.vdata.targets.size == (3327,)
+    @test size(cs.vdata.features) == (3703, 3327)
+    @test size(cs.vdata.targets) == (3327,)
     @test cs.hedata == DataStore()
     @test cs.hgdata == DataStore()
 
