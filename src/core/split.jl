@@ -259,21 +259,19 @@ function split_vertices(
 
         hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[mask]]
 
+        hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
+        hg_tail.v2he .= v2he_tail
+        hg_tail.he2v .= he2v_tail
+
+        hg_head = Hypergraph{T, Nothing, Nothing, D}(length(v2he_head), length(he2v_head))
+        hg_head.v2he .= v2he_head
+        hg_head.he2v .= he2v_head
+
         push!(
             res,
             HGNNDiHypergraph{T,D}(
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_tail,
-                    he2v_tail,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_tail))
-                    ),
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_head,
-                    he2v_head,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_head))
-                    ),
+                hg_tail,
+                hg_head,
                 length(v2he_tail),
                 length(he2v_tail),
                 length(unique_hgids),
@@ -614,26 +612,24 @@ function split_hyperedges(
             hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
         end
 
+        hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
+        hg_tail.v2he .= v2he_tail
+        hg_tail.he2v .= he2v_tail
+
+        hg_head = Hypergraph{T, Nothing, Nothing, D}(length(v2he_head), length(he2v_head))
+        hg_head.v2he .= v2he_head
+        hg_head.he2v .= he2v_head
+
         push!(
             res,
             HGNNDiHypergraph{T,D}(
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_tail,
-                    he2v_tail,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_tail))
-                    ),
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_head,
-                    he2v_head,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_head))
-                    ),
+                hg_tail,
+                hg_head,
                 length(v2he_tail),
                 length(he2v_tail),
                 length(unique_hgids),
                 hypergraph_ids,
-                getobs(hg.vdata, collect(keys(vmap))),
+                getobs(hg.vdata, rel_vs),
                 getobs(hg.hedata, mask),
                 getobs(hg.hgdata, unique_hgids)
             )
@@ -714,12 +710,12 @@ end
         val_mask::Union{BitVector, Nothing} = nothing,
     ) where {T <: Real, D <: AbstractDict{Int, T}}
 
-    split_hyperedges(
+    split_hypergraphs(
         hg::HGNNHypergraph{T,D},
         index_groups::AbstractVector{V}
     ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
-    split_hyperedges(
+    split_hypergraphs(
         hg::HGNNHypergraph{T,D},
         train_inds::AbstractVector{Int},
         test_inds::AbstractVector{Int};
@@ -944,21 +940,19 @@ function split_hypergraphs(
 
         hypergraph_ids = [hgmap[hg.hypergraph_ids[v]] for v in rel_vs]
 
+        hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
+        hg_tail.v2he .= v2he_tail
+        hg_tail.he2v .= he2v_tail
+
+        hg_head = Hypergraph{T, Nothing, Nothing, D}(length(v2he_head), length(he2v_head))
+        hg_head.v2he .= v2he_head
+        hg_head.he2v .= he2v_head
+
         push!(
             res,
             HGNNDiHypergraph{T,D}(
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_tail,
-                    he2v_tail,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_tail))
-                    ),
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_head,
-                    he2v_head,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_head))
-                    ),
+                hg_tail,
+                hg_head,
                 length(v2he_tail),
                 length(he2v_tail),
                 length(keys(hgmap)),
@@ -1095,7 +1089,7 @@ function random_split_vertices(
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
         part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
-        start_point += num_choices[1]
+        start_point += num_choices[i]
         push!(masks, BitArray(i in part for i in 1:hg.num_vertices))
     end
     remainder = rand_inds[start_point:end]
