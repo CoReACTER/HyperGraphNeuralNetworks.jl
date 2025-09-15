@@ -6,7 +6,7 @@ using GNNGraphs
 using MLUtils
 using HyperGraphNeuralNetworks
 using SimpleHypergraphs
-using SimpleDirectedHypergraph
+using SimpleDirectedHypergraphs
 
 # Necessary for MLDatasets
 ENV["DATADEPS_ALWAYS_ACCEPT"] = true
