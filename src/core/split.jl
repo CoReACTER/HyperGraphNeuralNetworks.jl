@@ -29,11 +29,11 @@
     vertex in the partition belongs to a particular sub-hypergraph (based on `hypergraph_id`s), then that hypergraph
     and its associated features will not be present in the resulting `HGNNHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNHypergraph`s; otherwise, the output is a vector of
-    `HGNNHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `V`, where `V` is the number of vertices) or vectors of
+    indices (which will be converted into masks). To facilitate train-val-test splits, users can specify which
+    mask/indices correspond to the train set, test set, and (optionally) validation set. In these cases, the output
+    of `split_vertices` will be a `NamedTuple` with keys "train", "test", and (optionally) "val" and values of
+    `HGNNHypergraph`s; otherwise, the output is a vector of `HGNNHypergraph`s.
 """
 function split_vertices(
     hg::HGNNHypergraph{T,D},
@@ -61,6 +61,7 @@ function split_vertices(
         hemap = Dict{Int, Int}()
         hgmap = Dict{Int, Int}()
 
+        # Remove vertices from hyperedges not part of this partition
         for (i, he) in enumerate(hg.he2v)
             newhe = filter(((k,v), ) -> mask[k], he)
             if length(newhe) > 0
@@ -70,10 +71,12 @@ function split_vertices(
             end
         end
 
+        # Re-label hyperedges
         for i in eachindex(v2he)
             v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
         end
 
+        # Grab `hypergraph_id`s for vertices in partition, if relevant
         if isnothing(hg.hypergraph_ids)
             hypergraph_ids = nothing
             unique_hgids = [1]
@@ -194,11 +197,11 @@ end
     if no vertex in the partition belongs to a particular sub-hypergraph (based on `hypergraph_id`s), then that
     hypergraph and its associated features will not be present in the resulting `HGNNDiHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNDiHypergraph`s; otherwise, the output is a vector of
-    `HGNNDiHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `V`, where `V` is the number of vertices) or vectors of
+    indices (which will be converted into masks). To facilitate train-val-test splits, users can specify which
+    mask/indices correspond to the train set, test set, and (optionally) validation set. In these cases, the output of
+    `split_vertices` will be a `NamedTuple` with keys "train", "test", and (optionally) "val" and values of
+    `HGNNDiHypergraph`s; otherwise, the output is a vector of `HGNNDiHypergraph`s.
 """
 function split_vertices(
     hg::HGNNDiHypergraph{T,D},
@@ -226,6 +229,7 @@ function split_vertices(
         hemap = Dict{Int, Int}()
         hgmap = Dict{Int, Int}()
 
+        # Remove vertices from hyperedges not part of this partition
         for i in 1:hg.num_hyperedges
             he_tail = hg.hg_tail.he2v[i]
             he_head = hg.hg_head.he2v[i]
@@ -241,11 +245,13 @@ function split_vertices(
             end
         end
 
+        # Relabel hyperedges in `v2he`
         for i in eachindex(v2he_tail)
             v2he_tail[i] = D(hemap[k] => v for (k, v) in v2he_tail[i])
             v2he_head[i] = D(hemap[k] => v for (k, v) in v2he_head[i])
         end
 
+        # If relevant, grab `hypergraph_id`s for vertices in partition
         if isnothing(hg.hypergraph_ids)
             hypergraph_ids = nothing
             unique_hgids = [1]
@@ -259,6 +265,7 @@ function split_vertices(
 
         hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[mask]]
 
+        # Construct tail and head hypergraphs
         hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
         hg_tail.v2he .= v2he_tail
         hg_tail.he2v .= he2v_tail
@@ -375,11 +382,11 @@ end
     relevant vertices in a partition belong to a particular sub-hypergraph (based on `hypergraph_id`s), then that
     hypergraph and its associated features will not be present in the resulting `HGNNHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNHypergraph`s; otherwise, the output is a vector of
-    `HGNNHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `E`, where `E` is the number of hyperedges) or vectors
+    of indices (which will be converted into masks). To facilitate train-val-test splits, users can specify which
+    mask/indices correspond to the train set, test set, and (optionally) validation set. In these cases, the output
+    of `split_vertices` will be a `NamedTuple` with keys "train", "test", and (optionally) "val" and values of
+    `HGNNHypergraph`s; otherwise, the output is a vector of `HGNNHypergraph`s.
 """
 function split_hyperedges(
     hg::HGNNHypergraph{T,D},
@@ -406,6 +413,7 @@ function split_hyperedges(
         vmap = Dict{Int, Int}()
         hgmap = Dict{Int, Int}()
 
+        # Remove hyperedges not in partition
         for (i, v) in enumerate(hg.v2he)
             newv = filter(((key,val), ) -> mask[key], v)
             if length(newv) > 0
@@ -415,12 +423,15 @@ function split_hyperedges(
             end
         end
 
+        # Remap vertices in hyperedges
         for i in eachindex(he2v)
             he2v[i] = D(vmap[key] => val for (key, val) in he2v[i])
         end
 
+        # What vertices are in any hyperedge in this partition?
         rel_vs = sort(collect(keys(vmap)))
 
+        # If relevant, grab `hypergraph_id`s
         if isnothing(hg.hypergraph_ids)
             unique_hgids = [1]
             hypergraph_ids = nothing
@@ -544,11 +555,11 @@ end
     `hypergraph_id`s), then that hypergraph and its associated features will not be present in the resulting
     `HGNNDiHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNDiHypergraph`s; otherwise, the output is a vector of
-    `HGNNDiHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `E`, where `E` is the number of hyperedges) or vectors of
+    indices (which will be converted into masks). To facilitate train-val-test splits, users can specify which
+    mask/indices correspond to the train set, test set, and (optionally) validation set. In these cases, the output of
+    `split_vertices` will be a `NamedTuple` with keys "train", "test", and (optionally) "val" and values of
+    `HGNNDiHypergraph`s; otherwise, the output is a vector of `HGNNDiHypergraph`s.
 """
 function split_hyperedges(
     hg::HGNNDiHypergraph{T,D},
@@ -578,6 +589,7 @@ function split_hyperedges(
         vmap = Dict{Int, Int}()
         hgmap = Dict{Int, Int}()
 
+        # Remove hyperedges not in partition from vertices
         for i in 1:hg.num_vertices
             v_tail = hg.hg_tail.v2he[i]
             v_head = hg.hg_head.v2he[i]
@@ -593,6 +605,7 @@ function split_hyperedges(
             end
         end
 
+        # Remap vertices in hyperedges
         for i in eachindex(he2v_tail)
             he2v_tail[i] = D(vmap[k] => v for (k, v) in he2v_tail[i])
             he2v_head[i] = D(vmap[k] => v for (k, v) in he2v_head[i])
@@ -600,6 +613,7 @@ function split_hyperedges(
 
         rel_vs = sort(collect(keys(vmap)))
 
+        # If relevant, grab `hypergraph_id`s
         if isnothing(hg.hypergraph_ids)
             unique_hgids = [1]
             hypergraph_ids = nothing
@@ -612,6 +626,7 @@ function split_hyperedges(
             hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
         end
 
+        # Construct tail and head hypergraphs
         hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
         hg_tail.v2he .= v2he_tail
         hg_tail.he2v .= he2v_tail
@@ -728,11 +743,11 @@ end
     `HGNNHypergraph`. If none of the relevant vertices in a partition are incident on a particular hyperedge, then that
     hyperedge and its associated features will not be present in the resulting `HGNNHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNHypergraph`s; otherwise, the output is a vector of
-    `HGNNHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `G`, where `G` is the number of hypergraphs in this
+    `HGNNHypergraph`) or vectors of indices (which will be converted into masks). To facilitate train-val-test
+    splits, users can specify which mask/indices correspond to the train set, test set, and (optionally) validation
+    set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys "train", "test", and
+    (optionally) "val" and values of `HGNNHypergraph`s; otherwise, the output is a vector of `HGNNHypergraph`s.
 """
 function split_hypergraphs(
     hg::HGNNHypergraph{T,D},
@@ -746,6 +761,7 @@ function split_hypergraphs(
 
     # Partition v2he and he2v, being careful of indices
     for mask in masks
+        # Determine which vertices will be part of this partition based on `hypergraph_id`s
         rel_vs = [i for (i, e) in enumerate(hg.hypergraph_ids) if mask[e]]
                 
         v2he = hg.v2he[rel_vs]
@@ -762,6 +778,7 @@ function split_hypergraphs(
             end
         end
 
+        # Remove vertices not in partition from hyperedges
         for (i, he) in enumerate(hg.he2v)
             newhe = filter(((k,v), ) -> k in rel_vs, he)
             if length(newhe) > 0
@@ -771,6 +788,7 @@ function split_hypergraphs(
             end
         end
 
+        # Relabel hyperedges in vertices
         for i in eachindex(v2he)
             v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
         end
@@ -885,11 +903,11 @@ end
     `HGNNDiHypergraph`. If none of the relevant vertices in a partition are incident on a particular hyperedge, then
     that hyperedge and its associated features will not be present in the resulting `HGNNDiHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNDiHypergraph`s; otherwise, the output is a vector of
-    `HGNNDiHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `G`, where `G` is the number of hypergraphs in this
+    `HGNNDiHypergraph`) or vectors of indices (which will be converted into masks). To facilitate train-val-test
+    splits, users can specify which mask/indices correspond to the train set, test set, and (optionally) validation
+    set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys "train", "test", and
+    (optionally) "val" and values of `HGNNDiHypergraph`s; otherwise, the output is a vector of `HGNNDiHypergraph`s.
 """
 function split_hypergraphs(
     hg::HGNNDiHypergraph{T,D},
@@ -902,6 +920,7 @@ function split_hypergraphs(
     res = HGNNDiHypergraph{T,D}[]
 
     for mask in masks
+        # Determine which vertices are part of this partition based on `hypergraph_id`s
         rel_vs = [i for (i, e) in enumerate(hg.hypergraph_ids) if mask[e]]
                     
         v2he_tail = hg.hg_tail.v2he[rel_vs]
@@ -921,6 +940,7 @@ function split_hypergraphs(
             end
         end
 
+        # Remove vertices not in partition from hyperedges
         for (i, _) in enumerate(hg.hg_tail.he2v)
             newhe_tail = filter(((k,v), ) -> k in rel_vs, hg.hg_tail.he2v[i])
             newhe_head = filter(((k,v), ) -> k in rel_vs, hg.hg_head.he2v[i])
@@ -933,6 +953,7 @@ function split_hypergraphs(
             end
         end
 
+        # Relabel hyperedges in vertices
         for i in eachindex(v2he_tail)
             v2he_tail[i] = D(hemap[k] => v for (k, v) in v2he_tail[i])
             v2he_head[i] = D(hemap[k] => v for (k, v) in v2he_head[i])
@@ -940,6 +961,7 @@ function split_hypergraphs(
 
         hypergraph_ids = [hgmap[hg.hypergraph_ids[v]] for v in rel_vs]
 
+        # Construct tail and head hypergraphs
         hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
         hg_tail.v2he .= v2he_tail
         hg_tail.he2v .= he2v_tail
