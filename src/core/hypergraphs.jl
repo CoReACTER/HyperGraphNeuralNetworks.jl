@@ -745,7 +745,7 @@ function Base.show(io::IO, ::MIME"text/plain", hg::HGNNHypergraph)
     else
         print(io,
               "HGNNHypergraph:\n  num_vertices: $(hg.num_vertices)\n  num_hyperedges: $(hg.num_hyperedges)")
-        hg.num_hypergraphs > 1 && print(io, "\n  num_hypergraphs: $(hg.num_graphs)")
+        hg.num_hypergraphs > 1 && print(io, "\n  num_hypergraphs: $(hg.num_hypergraphs)")
         if !isempty(hg.vdata)
             print(io, "\n  vdata (vertex data):")
             for k in keys(hg.vdata)
@@ -1740,7 +1740,7 @@ function Base.show(io::IO, ::MIME"text/plain", hg::HGNNDiHypergraph)
     else
         print(io,
               "HGNNDiHypergraph:\n  num_vertices: $(hg.num_vertices)\n  num_hyperedges: $(hg.num_hyperedges)")
-        hg.num_hypergraphs > 1 && print(io, "\n  num_hypergraphs: $(hg.num_graphs)")
+        hg.num_hypergraphs > 1 && print(io, "\n  num_hypergraphs: $(hg.num_hypergraphs)")
         if !isempty(hg.vdata)
             print(io, "\n  vdata (vertex data):")
             for k in keys(hg.vdata)

@@ -1,8 +1,8 @@
 function _convert_citation_graphdata(
-    dset::AbstractDataset,
+    dset::MLDatasets.AbstractDataset,
     T::Type{R};
     split::Bool = false
-)
+) where {R <: Real}
     nv = dset[1].num_nodes
 
     # Hypergraph vertices are graph vertices
@@ -35,16 +35,36 @@ function _convert_citation_graphdata(
 
 end
 
+"""
+    getHyperCora(
+        T::Type{R};
+        split::Bool = false
+    ) where {R <: Real}
+
+    Represent the Cora dataset (Sen et al., 2008. DOI: 10.1609/aimag.v29i3.2157) as an undirected hypergraph. If
+    `split` is `true` (default `false`), use standard partitions to split the data into train, validation, and test
+    sets.
+"""
 function getHyperCora(
     T::Type{R};
     split::Bool = false
-) where {R<:Real}
+) where {R <: Real}
     _convert_citation_graphdata(MLDatasets.Cora(), T; split=split)
 end
 
+"""
+    getHyperCiteSeer(
+        T::Type{R};
+        split::Bool = false
+    ) where {R <: Real}
+
+    Represent the CiteSeer dataset (Sen et al., 2008. DOI: 10.1609/aimag.v29i3.2157) as an undirected hypergraph. If
+    `split` is `true` (default `false`), use standard partitions to split the data into train, validation, and test
+    sets.
+"""
 function getHyperCiteSeer(
     T::Type{R};
     split::Bool = false
-)
+) where {R <: Real}
     _convert_citation_graphdata(MLDatasets.CiteSeer(), T; split=split)
 end

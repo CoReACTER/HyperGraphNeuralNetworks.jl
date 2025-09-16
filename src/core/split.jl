@@ -13,8 +13,8 @@
 
     split_vertices(
         hg::HGNNHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     split_vertices(
         hg::HGNNHypergraph{T,D},
@@ -29,11 +29,11 @@
     vertex in the partition belongs to a particular sub-hypergraph (based on `hypergraph_id`s), then that hypergraph
     and its associated features will not be present in the resulting `HGNNHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNHypergraph`s; otherwise, the output is a vector of
-    `HGNNHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `V`, where `V` is the number of vertices) or vectors of
+    indices (which will be converted into masks). To facilitate train-val-test splits, users can specify which
+    mask/indices correspond to the train set, test set, and (optionally) validation set. In these cases, the output
+    of `split_vertices` will be a `NamedTuple` with keys "train", "test", and (optionally) "val" and values of
+    `HGNNHypergraph`s; otherwise, the output is a vector of `HGNNHypergraph`s.
 """
 function split_vertices(
     hg::HGNNHypergraph{T,D},
@@ -61,6 +61,7 @@ function split_vertices(
         hemap = Dict{Int, Int}()
         hgmap = Dict{Int, Int}()
 
+        # Remove vertices from hyperedges not part of this partition
         for (i, he) in enumerate(hg.he2v)
             newhe = filter(((k,v), ) -> mask[k], he)
             if length(newhe) > 0
@@ -70,15 +71,22 @@ function split_vertices(
             end
         end
 
+        # Re-label hyperedges
         for i in eachindex(v2he)
             v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
         end
 
-        unique_hgids = sort(collect(Set(hg.hypergraph_ids[mask])))
-        for (i, e) in enumerate(unique_hgids)
-            hgmap[e] = i
+        # Grab `hypergraph_id`s for vertices in partition, if relevant
+        if isnothing(hg.hypergraph_ids)
+            hypergraph_ids = nothing
+            unique_hgids = [1]
+        else
+            unique_hgids = sort(collect(Set(hg.hypergraph_ids[mask])))
+            for (i, e) in enumerate(unique_hgids)
+                hgmap[e] = i
+            end
+            hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[mask]]
         end
-        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[mask]]
 
         push!(
             res,
@@ -90,7 +98,7 @@ function split_vertices(
                 length(unique_hgids),
                 hypergraph_ids,
                 getobs(hg.vdata, mask),
-                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hedata, sort(collect(keys(hemap)))),
                 getobs(hg.hgdata, unique_hgids)
             )
         )
@@ -121,8 +129,8 @@ end
 
 function split_vertices(
     hg::HGNNHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}}
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
     masks = BitVector[]
 
     for indgroup in index_groups
@@ -173,8 +181,8 @@ end
 
     split_vertices(
         hg::HGNNDiHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     split_vertices(
         hg::HGNNDiHypergraph{T,D},
@@ -189,11 +197,11 @@ end
     if no vertex in the partition belongs to a particular sub-hypergraph (based on `hypergraph_id`s), then that
     hypergraph and its associated features will not be present in the resulting `HGNNDiHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNDiHypergraph`s; otherwise, the output is a vector of
-    `HGNNDiHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `V`, where `V` is the number of vertices) or vectors of
+    indices (which will be converted into masks). To facilitate train-val-test splits, users can specify which
+    mask/indices correspond to the train set, test set, and (optionally) validation set. In these cases, the output of
+    `split_vertices` will be a `NamedTuple` with keys "train", "test", and (optionally) "val" and values of
+    `HGNNDiHypergraph`s; otherwise, the output is a vector of `HGNNDiHypergraph`s.
 """
 function split_vertices(
     hg::HGNNDiHypergraph{T,D},
@@ -221,6 +229,7 @@ function split_vertices(
         hemap = Dict{Int, Int}()
         hgmap = Dict{Int, Int}()
 
+        # Remove vertices from hyperedges not part of this partition
         for i in 1:hg.num_hyperedges
             he_tail = hg.hg_tail.he2v[i]
             he_head = hg.hg_head.he2v[i]
@@ -236,39 +245,46 @@ function split_vertices(
             end
         end
 
+        # Relabel hyperedges in `v2he`
         for i in eachindex(v2he_tail)
             v2he_tail[i] = D(hemap[k] => v for (k, v) in v2he_tail[i])
             v2he_head[i] = D(hemap[k] => v for (k, v) in v2he_head[i])
         end
 
-        unique_hgids = sort(collect(Set(hg.hypergraph_ids[mask])))
-        for (i, e) in enumerate(unique_hgids)
-            hgmap[e] = i
+        # If relevant, grab `hypergraph_id`s for vertices in partition
+        if isnothing(hg.hypergraph_ids)
+            hypergraph_ids = nothing
+            unique_hgids = [1]
+        else
+            unique_hgids = sort(collect(Set(hg.hypergraph_ids[mask])))
+            for (i, e) in enumerate(unique_hgids)
+                hgmap[e] = i
+            end
+            hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[mask]]
         end
 
         hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[mask]]
 
+        # Construct tail and head hypergraphs
+        hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
+        hg_tail.v2he .= v2he_tail
+        hg_tail.he2v .= he2v_tail
+
+        hg_head = Hypergraph{T, Nothing, Nothing, D}(length(v2he_head), length(he2v_head))
+        hg_head.v2he .= v2he_head
+        hg_head.he2v .= he2v_head
+
         push!(
             res,
             HGNNDiHypergraph{T,D}(
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_tail,
-                    he2v_tail,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_tail))
-                    ),
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_head,
-                    he2v_head,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_head))
-                    ),
+                hg_tail,
+                hg_head,
                 length(v2he_tail),
                 length(he2v_tail),
                 length(unique_hgids),
                 hypergraph_ids,
                 getobs(hg.vdata, mask),
-                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hedata, sort(collect(keys(hemap)))),
                 getobs(hg.hgdata, unique_hgids)
             )
         )
@@ -297,9 +313,9 @@ function split_vertices(
 end
 
 function split_vertices(
-    hg::HGNNHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}}
+    hg::HGNNDiHypergraph{T,D},
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
     masks = BitVector[]
 
     for indgroup in index_groups
@@ -310,7 +326,7 @@ function split_vertices(
 end
 
 function split_vertices(
-    hg::HGNNHypergraph{T,D},
+    hg::HGNNDiHypergraph{T,D},
     train_inds::AbstractVector{Int},
     test_inds::AbstractVector{Int};
     val_inds::Union{AbstractVector{Int}, Nothing} = nothing
@@ -350,8 +366,8 @@ end
 
     split_hyperedges(
         hg::HGNNHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     split_hyperedges(
         hg::HGNNHypergraph{T,D},
@@ -366,11 +382,11 @@ end
     relevant vertices in a partition belong to a particular sub-hypergraph (based on `hypergraph_id`s), then that
     hypergraph and its associated features will not be present in the resulting `HGNNHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNHypergraph`s; otherwise, the output is a vector of
-    `HGNNHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `E`, where `E` is the number of hyperedges) or vectors
+    of indices (which will be converted into masks). To facilitate train-val-test splits, users can specify which
+    mask/indices correspond to the train set, test set, and (optionally) validation set. In these cases, the output
+    of `split_vertices` will be a `NamedTuple` with keys "train", "test", and (optionally) "val" and values of
+    `HGNNHypergraph`s; otherwise, the output is a vector of `HGNNHypergraph`s.
 """
 function split_hyperedges(
     hg::HGNNHypergraph{T,D},
@@ -397,6 +413,7 @@ function split_hyperedges(
         vmap = Dict{Int, Int}()
         hgmap = Dict{Int, Int}()
 
+        # Remove hyperedges not in partition
         for (i, v) in enumerate(hg.v2he)
             newv = filter(((key,val), ) -> mask[key], v)
             if length(newv) > 0
@@ -406,18 +423,26 @@ function split_hyperedges(
             end
         end
 
+        # Remap vertices in hyperedges
         for i in eachindex(he2v)
             he2v[i] = D(vmap[key] => val for (key, val) in he2v[i])
         end
 
-        rel_vs = collect(keys(vmap))
+        # What vertices are in any hyperedge in this partition?
+        rel_vs = sort(collect(keys(vmap)))
 
-        unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
-        for (i, e) in enumerate(unique_hgids)
-            hgmap[e] = i
+        # If relevant, grab `hypergraph_id`s
+        if isnothing(hg.hypergraph_ids)
+            unique_hgids = [1]
+            hypergraph_ids = nothing
+        else
+            unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
+            for (i, e) in enumerate(unique_hgids)
+                hgmap[e] = i
+            end
+
+            hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
         end
-
-        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
 
         push!(
             res,
@@ -460,8 +485,8 @@ end
 
 function split_hyperedges(
     hg::HGNNHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}}
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     masks = BitVector[]
 
@@ -513,8 +538,8 @@ end
 
     split_hyperedges(
         hg::HGNNDiHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     split_hyperedges(
         hg::HGNNDiHypergraph{T,D},
@@ -530,16 +555,18 @@ end
     `hypergraph_id`s), then that hypergraph and its associated features will not be present in the resulting
     `HGNNDiHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNDiHypergraph`s; otherwise, the output is a vector of
-    `HGNNDiHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `E`, where `E` is the number of hyperedges) or vectors of
+    indices (which will be converted into masks). To facilitate train-val-test splits, users can specify which
+    mask/indices correspond to the train set, test set, and (optionally) validation set. In these cases, the output of
+    `split_vertices` will be a `NamedTuple` with keys "train", "test", and (optionally) "val" and values of
+    `HGNNDiHypergraph`s; otherwise, the output is a vector of `HGNNDiHypergraph`s.
 """
 function split_hyperedges(
     hg::HGNNDiHypergraph{T,D},
     masks::AbstractVector{BitVector}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    @assert all(length.(masks) .== hg.num_hyperedges)
+
     res = HGNNDiHypergraph{T,D}[]
 
     # Partition v2he and he2v, being careful of indices
@@ -562,6 +589,7 @@ function split_hyperedges(
         vmap = Dict{Int, Int}()
         hgmap = Dict{Int, Int}()
 
+        # Remove hyperedges not in partition from vertices
         for i in 1:hg.num_vertices
             v_tail = hg.hg_tail.v2he[i]
             v_head = hg.hg_head.v2he[i]
@@ -577,40 +605,46 @@ function split_hyperedges(
             end
         end
 
+        # Remap vertices in hyperedges
         for i in eachindex(he2v_tail)
             he2v_tail[i] = D(vmap[k] => v for (k, v) in he2v_tail[i])
             he2v_head[i] = D(vmap[k] => v for (k, v) in he2v_head[i])
         end
 
-        rel_vs = collect(keys(vmap))
+        rel_vs = sort(collect(keys(vmap)))
 
-        unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
-        for (i, e) in enumerate(unique_hgids)
-            hgmap[e] = i
+        # If relevant, grab `hypergraph_id`s
+        if isnothing(hg.hypergraph_ids)
+            unique_hgids = [1]
+            hypergraph_ids = nothing
+        else
+            unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
+            for (i, e) in enumerate(unique_hgids)
+                hgmap[e] = i
+            end
+
+            hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
         end
 
-        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
+        # Construct tail and head hypergraphs
+        hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
+        hg_tail.v2he .= v2he_tail
+        hg_tail.he2v .= he2v_tail
+
+        hg_head = Hypergraph{T, Nothing, Nothing, D}(length(v2he_head), length(he2v_head))
+        hg_head.v2he .= v2he_head
+        hg_head.he2v .= he2v_head
 
         push!(
             res,
             HGNNDiHypergraph{T,D}(
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_tail,
-                    he2v_tail,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_tail))
-                    ),
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_head,
-                    he2v_head,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_head))
-                    ),
+                hg_tail,
+                hg_head,
                 length(v2he_tail),
                 length(he2v_tail),
                 length(unique_hgids),
                 hypergraph_ids,
-                getobs(hg.vdata, collect(keys(vmap))),
+                getobs(hg.vdata, rel_vs),
                 getobs(hg.hedata, mask),
                 getobs(hg.hgdata, unique_hgids)
             )
@@ -641,8 +675,8 @@ end
 
 function split_hyperedges(
     hg::HGNNDiHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}}
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
     masks = BitVector[]
 
     for indgroup in index_groups
@@ -691,12 +725,12 @@ end
         val_mask::Union{BitVector, Nothing} = nothing,
     ) where {T <: Real, D <: AbstractDict{Int, T}}
 
-    split_hyperedges(
+    split_hypergraphs(
         hg::HGNNHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
-    split_hyperedges(
+    split_hypergraphs(
         hg::HGNNHypergraph{T,D},
         train_inds::AbstractVector{Int},
         test_inds::AbstractVector{Int};
@@ -709,22 +743,25 @@ end
     `HGNNHypergraph`. If none of the relevant vertices in a partition are incident on a particular hyperedge, then that
     hyperedge and its associated features will not be present in the resulting `HGNNHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNHypergraph`s; otherwise, the output is a vector of
-    `HGNNHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `G`, where `G` is the number of hypergraphs in this
+    `HGNNHypergraph`) or vectors of indices (which will be converted into masks). To facilitate train-val-test
+    splits, users can specify which mask/indices correspond to the train set, test set, and (optionally) validation
+    set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys "train", "test", and
+    (optionally) "val" and values of `HGNNHypergraph`s; otherwise, the output is a vector of `HGNNHypergraph`s.
 """
 function split_hypergraphs(
     hg::HGNNHypergraph{T,D},
     masks::AbstractVector{BitVector}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    @assert !isnothing(hg.hypergraph_ids)
+
     @assert all(length.(masks) .== hg.num_hypergraphs)
 
     res = HGNNHypergraph{T,D}[]
 
     # Partition v2he and he2v, being careful of indices
     for mask in masks
+        # Determine which vertices will be part of this partition based on `hypergraph_id`s
         rel_vs = [i for (i, e) in enumerate(hg.hypergraph_ids) if mask[e]]
                 
         v2he = hg.v2he[rel_vs]
@@ -741,6 +778,7 @@ function split_hypergraphs(
             end
         end
 
+        # Remove vertices not in partition from hyperedges
         for (i, he) in enumerate(hg.he2v)
             newhe = filter(((k,v), ) -> k in rel_vs, he)
             if length(newhe) > 0
@@ -750,6 +788,7 @@ function split_hypergraphs(
             end
         end
 
+        # Relabel hyperedges in vertices
         for i in eachindex(v2he)
             v2he[i] = D(hemap[k] => v for (k, v) in v2he[i])
         end
@@ -766,7 +805,7 @@ function split_hypergraphs(
                 length(keys(hgmap)),
                 hypergraph_ids,
                 getobs(hg.vdata, rel_vs),
-                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hedata, sort(collect(keys(hemap)))),
                 getobs(hg.hgdata, mask)
             )
         )
@@ -796,15 +835,15 @@ end
 
 function split_hypergraphs(
     hg::HGNNHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}} 
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}} 
     masks = BitVector[]
 
     for indgroup in index_groups
         push!(masks, BitArray(i in indgroup for i in 1:hg.num_hypergraphs))
     end
 
-    split_hyperedges(hg, masks)
+    split_hypergraphs(hg, masks)
 end
 
 function split_hypergraphs(
@@ -826,7 +865,7 @@ function split_hypergraphs(
         ]
     end
 
-    hgs = split_hyperedges(hg, masks)
+    hgs = split_hypergraphs(hg, masks)
 
     val_data = isnothing(val_inds) ? nothing : hgs[2]
 
@@ -848,8 +887,8 @@ end
 
     split_hypergraphs(
         hg::HGNNDiHypergraph{T,D},
-        index_groups::AbstractVector{AbstractVector{Int}}
-    ) where {T <: Real, D <: AbstractDict{Int, T}}
+        index_groups::AbstractVector{V}
+    ) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}}
 
     split_hypergraphs(
         hg::HGNNDiHypergraph{T,D},
@@ -864,19 +903,24 @@ end
     `HGNNDiHypergraph`. If none of the relevant vertices in a partition are incident on a particular hyperedge, then
     that hyperedge and its associated features will not be present in the resulting `HGNNDiHypergraph`.
     
-    Users can provide partitions as `BitVector` masks or vectors of indices (which will be converted into masks). To
-    facilitate train-val-test splits, users can specify which mask/indices correspond to the train set, test set, and
-    (optionally) validation set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys
-    "train", "test", and (optionally) "val" and values of `HGNNDiHypergraph`s; otherwise, the output is a vector of
-    `HGNNDiHypergraph`s.
+    Users can provide partitions as `BitVector` masks (length `G`, where `G` is the number of hypergraphs in this
+    `HGNNDiHypergraph`) or vectors of indices (which will be converted into masks). To facilitate train-val-test
+    splits, users can specify which mask/indices correspond to the train set, test set, and (optionally) validation
+    set. In these cases, the output of `split_vertices` will be a `NamedTuple` with keys "train", "test", and
+    (optionally) "val" and values of `HGNNDiHypergraph`s; otherwise, the output is a vector of `HGNNDiHypergraph`s.
 """
 function split_hypergraphs(
     hg::HGNNDiHypergraph{T,D},
     masks::AbstractVector{BitVector}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    @assert !isnothing(hg.hypergraph_ids)
+
+    @assert all(length.(masks) .== hg.num_hypergraphs)
+
     res = HGNNDiHypergraph{T,D}[]
 
     for mask in masks
+        # Determine which vertices are part of this partition based on `hypergraph_id`s
         rel_vs = [i for (i, e) in enumerate(hg.hypergraph_ids) if mask[e]]
                     
         v2he_tail = hg.hg_tail.v2he[rel_vs]
@@ -896,6 +940,7 @@ function split_hypergraphs(
             end
         end
 
+        # Remove vertices not in partition from hyperedges
         for (i, _) in enumerate(hg.hg_tail.he2v)
             newhe_tail = filter(((k,v), ) -> k in rel_vs, hg.hg_tail.he2v[i])
             newhe_head = filter(((k,v), ) -> k in rel_vs, hg.hg_head.he2v[i])
@@ -908,6 +953,7 @@ function split_hypergraphs(
             end
         end
 
+        # Relabel hyperedges in vertices
         for i in eachindex(v2he_tail)
             v2he_tail[i] = D(hemap[k] => v for (k, v) in v2he_tail[i])
             v2he_head[i] = D(hemap[k] => v for (k, v) in v2he_head[i])
@@ -915,27 +961,26 @@ function split_hypergraphs(
 
         hypergraph_ids = [hgmap[hg.hypergraph_ids[v]] for v in rel_vs]
 
+        # Construct tail and head hypergraphs
+        hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
+        hg_tail.v2he .= v2he_tail
+        hg_tail.he2v .= he2v_tail
+
+        hg_head = Hypergraph{T, Nothing, Nothing, D}(length(v2he_head), length(he2v_head))
+        hg_head.v2he .= v2he_head
+        hg_head.he2v .= he2v_head
+
         push!(
             res,
             HGNNDiHypergraph{T,D}(
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_tail,
-                    he2v_tail,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_tail))
-                    ),
-                Hypergraph{T, Nothing, Nothing, D}(
-                    v2he_head,
-                    he2v_head,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_head))
-                    ),
+                hg_tail,
+                hg_head,
                 length(v2he_tail),
                 length(he2v_tail),
                 length(keys(hgmap)),
                 hypergraph_ids,
                 getobs(hg.vdata, rel_vs),
-                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hedata, sort(collect(keys(hemap)))),
                 getobs(hg.hgdata, mask)
             )
         )
@@ -965,15 +1010,15 @@ end
 
 function split_hypergraphs(
     hg::HGNNDiHypergraph{T,D},
-    index_groups::AbstractVector{AbstractVector{Int}}
-) where {T <: Real, D <: AbstractDict{Int, T}} 
+    index_groups::AbstractVector{V}
+) where {T <: Real, D <: AbstractDict{Int, T}, V <: AbstractVector{Int}} 
     masks = BitVector[]
 
     for indgroup in index_groups
         push!(masks, BitArray(i in indgroup for i in 1:hg.num_hypergraphs))
     end
 
-    split_hyperedges(hg, masks)
+    split_hypergraphs(hg, masks)
 end
 
 function split_hypergraphs(
@@ -995,7 +1040,7 @@ function split_hypergraphs(
         ]
     end
 
-    hgs = split_hyperedges(hg, masks)
+    hgs = split_hypergraphs(hg, masks)
 
     val_data = isnothing(val_inds) ? nothing : hgs[2]
 
@@ -1029,20 +1074,20 @@ function random_split_vertices(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_vertices)
-    rand_inds = shuffle(rng, Vector(1:hg.num_vertices))
+    num_choices = convert.(Int, round.(fracs .* hg.num_vertices))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_vertices))
     
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
-        push!(masks, BitArray(i in part for i in 1:hg.num_vertices(hg)))
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[i]
+        push!(masks, BitArray(i in part for i in 1:hg.num_vertices))
     end
     remainder = rand_inds[start_point:end]
-    push!(masks, BitArray(i in remainder for i in 1:hg.num_vertices(hg)))
+    push!(masks, BitArray(i in remainder for i in 1:hg.num_vertices))
 
     split_vertices(hg, masks)
 end
@@ -1057,20 +1102,20 @@ function random_split_vertices(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_vertices)
-    rand_inds = shuffle(rng, Vector(1:hg.num_vertices))
+    num_choices = convert.(Int, round.(fracs .* hg.num_vertices))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_vertices))
 
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
-        push!(masks, BitArray(i in part for i in 1:hg.num_vertices(hg)))
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[i]
+        push!(masks, BitArray(i in part for i in 1:hg.num_vertices))
     end
     remainder = rand_inds[start_point:end]
-    push!(masks, BitArray(i in remainder for i in 1:hg.num_vertices(hg)))
+    push!(masks, BitArray(i in remainder for i in 1:hg.num_vertices))
 
     split_vertices(hg, masks)
 end
@@ -1102,16 +1147,16 @@ function random_split_hyperedges(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_hyperedges)
-    rand_inds = shuffle(rng, Vector(1:hg.num_hyperedges))
+    num_choices = convert.(Int, round.(fracs .* hg.num_hyperedges))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_hyperedges))
     
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[i]
         push!(masks, BitArray(i in part for i in 1:hg.num_hyperedges))
     end
     remainder = rand_inds[start_point:end]
@@ -1130,16 +1175,16 @@ function random_split_hyperedges(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_hyperedges)
-    rand_inds = shuffle(rng, Vector(1:hg.num_hyperedges))
+    num_choices = convert.(Int, round.(fracs .* hg.num_hyperedges))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_hyperedges))
     
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[i]
         push!(masks, BitArray(i in part for i in 1:hg.num_hyperedges))
     end
     remainder = rand_inds[start_point:end]
@@ -1175,16 +1220,16 @@ function random_split_hypergraphs(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_hypergraphs)
-    rand_inds = shuffle(rng, Vector(1:hg.num_hypergraphs))
+    num_choices = convert.(Int, round.(fracs .* hg.num_hypergraphs))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_hypergraphs))
     
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[i]
         push!(masks, BitArray(i in part for i in 1:hg.num_hypergraphs))
     end
     remainder = rand_inds[start_point:end]
@@ -1203,16 +1248,16 @@ function random_split_hypergraphs(
     # Fractions must sum to 1
     @assert abs(sum(fracs) - 1) <= 1e-5
 
-    num_choices = round.(fracs .* hg.num_hypergraphs)
-    rand_inds = shuffle(rng, Vector(1:hg.num_hypergraphs))
+    num_choices = convert.(Int, round.(fracs .* hg.num_hypergraphs))
+    rand_inds = shuffle(rng, Vector{Int}(1:hg.num_hypergraphs))
     
     masks = BitVector[]
     start_point = 1
 
     # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
     for i in 1:(length(num_choices) - 1)
-        part = rand_inds[start_point:start_point + num_choices[i] - 1]
-        start_point += num_choices
+        part = rand_inds[start_point:(start_point + num_choices[i] - 1)]
+        start_point += num_choices[i]
         push!(masks, BitArray(i in part for i in 1:hg.num_hypergraphs))
     end
     remainder = rand_inds[start_point:end]
