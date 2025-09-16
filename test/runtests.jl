@@ -8,57 +8,83 @@ using HyperGraphNeuralNetworks
 using SimpleHypergraphs
 using SimpleDirectedHypergraphs
 
-@testset "HyperGraphNeuralNetworks HGNNHypergraph" begin
-    h1 = Hypergraph{Float64, Int, String}(11,5)
-    #1st graph
-    h1[1, 1] = 1.0
-    h1[2, 1] = 2.0
-    h1[4, 1] = 4.0
-    h1[2, 2] = 3.0
-    h1[5, 2] = 12.0
-    h1[3, 2] = 0.0
-    h1[4, 3] = 1.0
-    h1[6, 3] = 4.0
-    #2nd graph
-    h1[7, 4] = 3.5
-    h1[10, 4] = 1.0
-    h1[11, 4] = 4.0
-    h1[8, 5] = 1.0
-    h1[9, 5] = 5.0
-    h1[10, 5] = 7.0
+# Necessary for MLDatasets
+ENV["DATADEPS_ALWAYS_ACCEPT"] = true
 
-    id1 = [1,1,1,1,1,1,2,2,2,2,2]
-    hedata1 = [10, 20, 30, 40, 50] 
+# Example undirected hypergraph
+uh1 = Hypergraph{Float64, Int, String}(11,5)
+#1st graph
+uh1[1, 1] = 1.0
+uh1[2, 1] = 2.0
+uh1[4, 1] = 4.0
+uh1[2, 2] = 3.0
+uh1[5, 2] = 12.0
+uh1[3, 2] = 0.0
+uh1[4, 3] = 1.0
+uh1[6, 3] = 4.0
+#2nd graph
+uh1[7, 4] = 3.5
+uh1[10, 4] = 1.0
+uh1[11, 4] = 4.0
+uh1[8, 5] = 1.0
+uh1[9, 5] = 5.0
+uh1[10, 5] = 7.0
+
+uid1 = [1,1,1,1,1,1,2,2,2,2,2]
+uhedata1 = [10, 20, 30, 40, 50]
+
+# Example directed hypergraph
+dh1 = DirectedHypergraph{Float64, Int, String}(11,5)
+dh1[1,1,1] = 1.0
+dh1[1,2,1] = 2.0
+dh1[2,4,1] = 4.0
+dh1[1,2,2] = 3.0
+dh1[1,5,2] = 12.0
+dh1[2,3,2] = 0.0
+dh1[1,4,3] = 1.0
+dh1[2,6,3] = 4.0
+#2nd graph
+dh1[1,7,4] = 3.5
+dh1[1,10,4] = 1.0
+dh1[2,11,4] = 4.0
+dh1[2,8,5] = 1.0
+dh1[2,9,5] = 5.0
+dh1[1,10,5] = 7.0
+did1 = [1,1,1,1,1,1,2,2,2,2,2]
+dhedata1 = [10, 20, 30, 40, 50]
+
+
+@testset "HyperGraphNeuralNetworks HGNNHypergraph" begin
 
     # Direct Construction
-    HGNN0 = HGNNHypergraph(h1.v2he, h1.he2v, 11, 5, 2, id1, DataStore(), DataStore(), DataStore())
+    HGNN0 = HGNNHypergraph(uh1.v2he, uh1.he2v, 11, 5, 2, uid1, DataStore(), DataStore(), DataStore())
     @test size(HGNN0) == (11, 5)
     @test nhv(HGNN0) == 11
     @test nhe(HGNN0) == 5
-    @test HGNN0.hypergraph_ids == id1
+    @test HGNN0.hypergraph_ids == uid1
     @test HGNN0.vdata == DataStore()
     @test HGNN0.hedata == DataStore() 
     @test HGNN0.hgdata == DataStore()
 
     # Test type equality
-    @test HGNN0 == HGNNHypergraph{Float64, Dict{Int, Float64}}(h1.v2he, h1.he2v, 11, 5, 2, id1, DataStore(), DataStore(), DataStore())
+    @test HGNN0 == HGNNHypergraph{Float64, Dict{Int, Float64}}(uh1.v2he, uh1.he2v, 11, 5, 2, uid1, DataStore(), DataStore(), DataStore())
 
     # Construct using existing hypergraph
-    HGNN1 = HGNNHypergraph(h1; hypergraph_ids = id1, hedata = hedata1)
+    HGNN1 = HGNNHypergraph(uh1; hypergraph_ids = uid1, hedata = uhedata1)
     @test size(HGNN1) == (11, 5)
     @test nhv(HGNN1) == 11
     @test nhe(HGNN1) == 5
-    @test HGNN1.hypergraph_ids == id1
-    @test HGNN1.hedata == DataStore(e = hedata1) 
+    @test HGNN1.hypergraph_ids == uid1
+    @test HGNN1.hedata == DataStore(e = uhedata1) 
     @test HGNN1.hgdata == DataStore(2)
 
     # Test type equality
-    @test HGNN1 == HGNNHypergraph{Float64}(h1; hypergraph_ids = id1, hedata=hedata1)
-    @test HGNN1 == HGNNHypergraph{Float64, Dict{Int, Float64}}(h1; hypergraph_ids = id1, hedata=hedata1)
+    @test HGNN1 == HGNNHypergraph{Float64}(uh1; hypergraph_ids = uid1, hedata=uhedata1)
+    @test HGNN1 == HGNNHypergraph{Float64, Dict{Int, Float64}}(uh1; hypergraph_ids = uid1, hedata=uhedata1)
 
     # Construct using matrix
-    m = Matrix(h1)
-    @test m == h1
+    m = Matrix(uh1)
+    @test m == uh1
     @test m == [1.0     nothing nothing nothing nothing
                 2.0     3.0     nothing nothing nothing
                 nothing 0.0     nothing nothing nothing
@@ -70,12 +96,12 @@ using SimpleDirectedHypergraphs
                 nothing nothing nothing nothing 5.0
                 nothing nothing nothing 1.0     7.0
                 nothing nothing nothing 4.0     nothing]
-    HGNN2 = HGNNHypergraph(m; hypergraph_ids = id1, hedata = hedata1)
+    HGNN2 = HGNNHypergraph(m; hypergraph_ids = uid1, hedata = uhedata1)
     @test HGNN2 == HGNN1
 
     # Test type equality
-    @test HGNN2 == HGNNHypergraph{Float64}(m; hypergraph_ids = id1, hedata = hedata1)
-    @test HGNN2 == HGNNHypergraph{Float64, Dict{Int, Float64}}(m; hypergraph_ids = id1, hedata = hedata1)
+    @test HGNN2 == HGNNHypergraph{Float64}(m; hypergraph_ids = uid1, hedata = uhedata1)
+    @test HGNN2 == HGNNHypergraph{Float64, Dict{Int, Float64}}(m; hypergraph_ids = uid1, hedata = uhedata1)
 
     # Construct with no hypergraph and num_nodes vertices
     HGNN3 = HGNNHypergraph(3)
@@ -254,37 +280,18 @@ end
 end
 
 @testset "HyperGraphNeuralNetworks HGNNDiHypergraph" begin
-    h1 = DirectedHypergraph{Float64, Int, String}(11,5)
-    h1[1,1,1] = 1.0
-    h1[1,2,1] = 2.0
-    h1[2,4,1] = 4.0
-    h1[1,2,2] = 3.0
-    h1[1,5,2] = 12.0
-    h1[2,3,2] = 0.0
-    h1[1,4,3] = 1.0
-    h1[2,6,3] = 4.0
-    #2nd graph
-    h1[1,7,4] = 3.5
-    h1[1,10,4] = 1.0
-    h1[2,11,4] = 4.0
-    h1[2,8,5] = 1.0
-    h1[2,9,5] = 5.0
-    h1[1,10,5] = 7.0
-    id1 = [1,1,1,1,1,1,2,2,2,2,2]
-    hedata1 = [10, 20, 30, 40, 50]
-
     #construct using exsiting directedhypergraph
-    HGNN1 = HGNNDiHypergraph(h1, hypergraph_ids = id1, hedata = hedata1)
+    HGNN1 = HGNNDiHypergraph(dh1, hypergraph_ids = did1, hedata = dhedata1)
     @test size(HGNN1) == (11, 5)
     @test nhv(HGNN1) == 11
     @test nhe(HGNN1) == 5
-    @test HGNN1.hypergraph_ids == id1
-    @test HGNN1.hedata == DataStore(e = hedata1) 
+    @test HGNN1.hypergraph_ids == did1
+    @test HGNN1.hedata == DataStore(e = dhedata1) 
     @test HGNN1.hgdata == DataStore(2)
 
     #construct using matrix
-    m = Matrix(h1)
-    @test m == h1
+    m = Matrix(dh1)
+    @test m == dh1
     tailMatrix = getindex.(m, 1)
     headMatrix = getindex.(m, 2)
     @test tailMatrix == [1.0     nothing nothing nothing nothing 
@@ -309,7 +316,7 @@ end
                          nothing nothing nothing nothing 5.0
                          nothing nothing nothing nothing nothing
                          nothing nothing nothing 4.0     nothing]
-    HGNN2 = HGNNDiHypergraph(tailMatrix, headMatrix; hypergraph_ids = id1, hedata = hedata1)
+    HGNN2 = HGNNDiHypergraph(tailMatrix, headMatrix; hypergraph_ids = did1, hedata = dhedata1)
     @test HGNN2 == HGNN1
 
     #construct with no hypergraph and num_nodes vertices
@@ -505,3 +512,533 @@ end
 
 end
 
+@testset "HyperGraphNeuralNetworks split vertices" begin    
+    # Split vertices of undirected hypergraphs
+    hgnn1 = HGNNHypergraph(
+        uh1;
+        hypergraph_ids = uid1,
+        vdata = rand(Float64, 5, 11),
+        hedata = rand(Float64, 5, 5),
+        hgdata = rand(Float64, 5, 2)
+    )
+
+    vmasks = [
+        BitVector((false, true, true, false, true, false, true, false, false, false, true)),
+        BitVector((false, false, false, true, false, true, false, true, false, true, false)),
+        BitVector((true, false, false, false, false, false, false, false, true, false, false))
+    ]
+
+    # Split vertices using masks
+    hgnns = split_vertices(hgnn1, vmasks)
+    @test length(hgnns) == 3
+    @test hgnns[1].num_vertices == 5
+    @test hgnns[1].num_hyperedges == 3
+    @test hgnns[1].num_hypergraphs == 2
+    @test getobs(hgnns[1].vdata, 1).x == getobs(hgnn1.vdata, 2).x
+    @test getobs(hgnns[1].hedata, 1).e == getobs(hgnn1.hedata, 1).e
+    @test getobs(hgnns[1].hgdata, 1).u == getobs(hgnn1.hgdata, 1).u
+    @test hgnns[2].num_vertices == 4
+    @test hgnns[2].num_hyperedges == 4
+    @test hgnns[2].num_hypergraphs == 2
+    @test getobs(hgnns[2].vdata, 1).x == getobs(hgnn1.vdata, 4).x
+    @test getobs(hgnns[2].hedata, 2).e == getobs(hgnn1.hedata, 3).e
+    @test getobs(hgnns[2].hgdata, 2).u == getobs(hgnn1.hgdata, 2).u
+    @test hgnns[3].num_vertices == 2
+    @test hgnns[3].num_hyperedges == 2
+    @test hgnns[3].num_hypergraphs == 2
+    @test getobs(hgnns[3].vdata, 2).x == getobs(hgnn1.vdata, 9).x
+    @test getobs(hgnns[3].hedata, 2).e == getobs(hgnn1.hedata, 5).e
+    @test getobs(hgnns[3].hgdata, 1).u == getobs(hgnn1.hgdata, 1).u
+
+    # Split vertices by train-val-test labeled masks
+    hgnns_tvt = split_vertices(hgnn1, vmasks[1], vmasks[3]; val_mask=vmasks[2])
+    @test hgnns_tvt.train == hgnns[1]
+    @test hgnns_tvt.val == hgnns[2]
+    @test hgnns_tvt.test == hgnns[3]
+
+    # Split without validation set
+    hgnns_tvt_noval = split_vertices(hgnn1, vmasks[1], vmasks[3])
+    @test hgnns_tvt_noval.train == hgnns[1]
+    @test hgnns_tvt_noval.val === nothing
+    @test hgnns_tvt_noval.test == hgnns[3]
+
+    vinds = [
+        [2, 3, 5, 7, 11],
+        [4, 6, 8, 10],
+        [1, 9]
+    ]
+
+    # Split vertices using vertex indices
+    hgnns_ind = split_vertices(hgnn1, vinds)
+    @test length(hgnns_ind) == 3
+    @test hgnns_ind[1] == hgnns[1]
+    @test hgnns_ind[2] == hgnns[2]
+    @test hgnns_ind[3] == hgnns[3]
+
+    # Split vertices by train-val-test labeled indices
+    hgnns_ind_tvt = split_vertices(hgnn1, vinds[1], vinds[3]; val_inds=vinds[2])
+    @test hgnns_ind_tvt.train == hgnns[1]
+    @test hgnns_ind_tvt.val == hgnns[2]
+    @test hgnns_ind_tvt.test == hgnns[3]
+
+    # Split without validation set
+    hgnns_ind_tvt_noval = split_vertices(hgnn1, vinds[1], vinds[3])
+    @test hgnns_ind_tvt_noval.train == hgnns[1]
+    @test hgnns_ind_tvt_noval.val === nothing
+    @test hgnns_ind_tvt_noval.test == hgnns[3]
+
+    # "Random" split
+    rng = Xoshiro(42)
+    hgnns_rand = random_split_vertices(hgnn1, [0.7, 0.1, 0.2], rng)
+    @test length(hgnns_rand) == 3
+    @test hgnns_rand[1].num_vertices == 8
+    @test hgnns_rand[2].num_vertices == 1
+    @test hgnns_rand[3].num_vertices == 2
+
+    # Split vertices of directed hypergraphs
+    dhgnn1 = HGNNDiHypergraph(
+        dh1;
+        hypergraph_ids = did1,
+        vdata = rand(Float64, 5, 11),
+        hedata = rand(Float64, 5, 5),
+        hgdata = rand(Float64, 5, 2)
+    )
+
+    vmasks = [
+        BitVector((false, true, true, false, true, false, true, false, false, false, true)),
+        BitVector((false, false, false, true, false, true, false, true, false, true, false)),
+        BitVector((true, false, false, false, false, false, false, false, true, false, false))
+    ]
+
+    # Split vertices using masks
+    dhgnns = split_vertices(dhgnn1, vmasks)
+    @test length(dhgnns) == 3
+    @test dhgnns[1].num_vertices == 5
+    @test dhgnns[1].num_hyperedges == 3
+    @test dhgnns[1].num_hypergraphs == 2
+    @test getobs(dhgnns[1].vdata, 1).x == getobs(dhgnn1.vdata, 2).x
+    @test getobs(dhgnns[1].hedata, 1).e == getobs(dhgnn1.hedata, 1).e
+    @test getobs(dhgnns[1].hgdata, 1).u == getobs(dhgnn1.hgdata, 1).u
+    @test dhgnns[2].num_vertices == 4
+    @test dhgnns[2].num_hyperedges == 4
+    @test dhgnns[2].num_hypergraphs == 2
+    @test getobs(dhgnns[2].vdata, 1).x == getobs(dhgnn1.vdata, 4).x
+    @test getobs(dhgnns[2].hedata, 2).e == getobs(dhgnn1.hedata, 3).e
+    @test getobs(dhgnns[2].hgdata, 2).u == getobs(dhgnn1.hgdata, 2).u
+    @test dhgnns[3].num_vertices == 2
+    @test dhgnns[3].num_hyperedges == 2
+    @test dhgnns[3].num_hypergraphs == 2
+    @test getobs(dhgnns[3].vdata, 2).x == getobs(dhgnn1.vdata, 9).x
+    @test getobs(dhgnns[3].hedata, 2).e == getobs(dhgnn1.hedata, 5).e
+    @test getobs(dhgnns[3].hgdata, 1).u == getobs(dhgnn1.hgdata, 1).u
+
+    # Split vertices by train-val-test labeled masks
+    dhgnns_tvt = split_vertices(dhgnn1, vmasks[1], vmasks[3]; val_mask=vmasks[2])
+    @test dhgnns_tvt.train == dhgnns[1]
+    @test dhgnns_tvt.val == dhgnns[2]
+    @test dhgnns_tvt.test == dhgnns[3]
+
+    # Split without validation set
+    dhgnns_tvt_noval = split_vertices(dhgnn1, vmasks[1], vmasks[3])
+    @test dhgnns_tvt_noval.train == dhgnns[1]
+    @test dhgnns_tvt_noval.val === nothing
+    @test dhgnns_tvt_noval.test == dhgnns[3]
+
+    vinds = [
+        [2, 3, 5, 7, 11],
+        [4, 6, 8, 10],
+        [1, 9]
+    ]
+
+    # Split vertices using vertex indices
+    dhgnns_ind = split_vertices(dhgnn1, vinds)
+    @test length(dhgnns_ind) == 3
+    @test dhgnns_ind[1] == dhgnns[1]
+    @test dhgnns_ind[2] == dhgnns[2]
+    @test dhgnns_ind[3] == dhgnns[3]
+
+    # Split vertices by train-val-test labeled indices
+    dhgnns_ind_tvt = split_vertices(dhgnn1, vinds[1], vinds[3]; val_inds=vinds[2])
+    @test dhgnns_ind_tvt.train == dhgnns[1]
+    @test dhgnns_ind_tvt.val == dhgnns[2]
+    @test dhgnns_ind_tvt.test == dhgnns[3]
+
+    # Split without validation set
+    dhgnns_ind_tvt_noval = split_vertices(dhgnn1, vinds[1], vinds[3])
+    @test dhgnns_ind_tvt_noval.train == dhgnns[1]
+    @test dhgnns_ind_tvt_noval.val === nothing
+    @test dhgnns_ind_tvt_noval.test == dhgnns[3]
+
+    # "Random" split
+    rng = Xoshiro(42)
+    dhgnns_rand = random_split_vertices(dhgnn1, [0.7, 0.1, 0.2], rng)
+    @test length(dhgnns_rand) == 3
+    @test dhgnns_rand[1].num_vertices == 8
+    @test dhgnns_rand[2].num_vertices == 1
+    @test dhgnns_rand[3].num_vertices == 2
+end
+
+@testset "HyperGraphNeuralNetworks split hyperedges" begin    
+    # Split hyperedges of undirected hypergraphs
+    hgnn1 = HGNNHypergraph(
+        uh1;
+        hypergraph_ids = uid1,
+        vdata = rand(Float64, 5, 11),
+        hedata = rand(Float64, 5, 5),
+        hgdata = rand(Float64, 5, 2)
+    )
+
+    hemasks = [
+        BitVector((false, true, true, false, true)),
+        BitVector((false, false, false, true, false)),
+        BitVector((true, false, false, false, false))
+    ]
+
+    # Split hyperedges using masks
+    hgnns = split_hyperedges(hgnn1, hemasks)
+    @test length(hgnns) == 3
+    @test hgnns[1].num_vertices == 8
+    @test hgnns[1].num_hyperedges == 3
+    @test hgnns[1].num_hypergraphs == 2
+    @test getobs(hgnns[1].vdata, 1).x == getobs(hgnn1.vdata, 2).x
+    @test getobs(hgnns[1].hedata, 1).e == getobs(hgnn1.hedata, 2).e
+    @test getobs(hgnns[1].hgdata, 1).u == getobs(hgnn1.hgdata, 1).u
+    @test hgnns[2].num_vertices == 3
+    @test hgnns[2].num_hyperedges == 1
+    @test hgnns[2].num_hypergraphs == 1
+    @test getobs(hgnns[2].vdata, 1).x == getobs(hgnn1.vdata, 7).x
+    @test getobs(hgnns[2].hedata, 1).e == getobs(hgnn1.hedata, 4).e
+    @test getobs(hgnns[2].hgdata, 1).u == getobs(hgnn1.hgdata, 2).u
+    @test hgnns[3].num_vertices == 3
+    @test hgnns[3].num_hyperedges == 1
+    @test hgnns[3].num_hypergraphs == 1
+    @test getobs(hgnns[3].vdata, 1).x == getobs(hgnn1.vdata, 1).x
+    @test getobs(hgnns[3].hedata, 1).e == getobs(hgnn1.hedata, 1).e
+    @test getobs(hgnns[3].hgdata, 1).u == getobs(hgnn1.hgdata, 1).u
+
+    # Split hyperedges by train-val-test labeled masks
+    hgnns_tvt = split_hyperedges(hgnn1, hemasks[1], hemasks[3]; val_mask=hemasks[2])
+    @test hgnns_tvt.train == hgnns[1]
+    @test hgnns_tvt.val == hgnns[2]
+    @test hgnns_tvt.test == hgnns[3]
+
+    # Split without validation set
+    hgnns_tvt_noval = split_hyperedges(hgnn1, hemasks[1], hemasks[3])
+    @test hgnns_tvt_noval.train == hgnns[1]
+    @test hgnns_tvt_noval.val === nothing
+    @test hgnns_tvt_noval.test == hgnns[3]
+
+    heinds = [
+        [2, 3, 5],
+        [4],
+        [1]
+    ]
+
+    # Split hyperedges using hyperedge indices
+    hgnns_ind = split_hyperedges(hgnn1, heinds)
+    @test length(hgnns_ind) == 3
+    @test hgnns_ind[1] == hgnns[1]
+    @test hgnns_ind[2] == hgnns[2]
+    @test hgnns_ind[3] == hgnns[3]
+
+    # Split hyperedges by train-val-test labeled indices
+    hgnns_ind_tvt = split_hyperedges(hgnn1, heinds[1], heinds[3]; val_inds=heinds[2])
+    @test hgnns_ind_tvt.train == hgnns[1]
+    @test hgnns_ind_tvt.val == hgnns[2]
+    @test hgnns_ind_tvt.test == hgnns[3]
+
+    # Split without validation set
+    hgnns_ind_tvt_noval = split_hyperedges(hgnn1, heinds[1], heinds[3])
+    @test hgnns_ind_tvt_noval.train == hgnns[1]
+    @test hgnns_ind_tvt_noval.val === nothing
+    @test hgnns_ind_tvt_noval.test == hgnns[3]
+
+    # "Random" split
+    rng = Xoshiro(42)
+    hgnns_rand = random_split_hyperedges(hgnn1, [0.7, 0.3], rng)
+    @test length(hgnns_rand) == 2
+    @test hgnns_rand[1].num_hyperedges == 4
+    @test hgnns_rand[2].num_hyperedges == 1
+
+    # Split hyperedges of directed hypergraphs
+    dhgnn1 = HGNNDiHypergraph(
+        dh1;
+        hypergraph_ids = did1,
+        vdata = rand(Float64, 5, 11),
+        hedata = rand(Float64, 5, 5),
+        hgdata = rand(Float64, 5, 2)
+    )
+
+    hemasks = [
+        BitVector((false, true, true, false, true)),
+        BitVector((false, false, false, true, false)),
+        BitVector((true, false, false, false, false))
+    ]
+
+    # Split hyperedges using masks
+    dhgnns = split_hyperedges(dhgnn1, hemasks)
+    @test length(dhgnns) == 3
+    @test dhgnns[1].num_vertices == 8
+    @test dhgnns[1].num_hyperedges == 3
+    @test dhgnns[1].num_hypergraphs == 2
+    @test getobs(dhgnns[1].vdata, 1).x == getobs(dhgnn1.vdata, 2).x
+    @test getobs(dhgnns[1].hedata, 1).e == getobs(dhgnn1.hedata, 2).e
+    @test getobs(dhgnns[1].hgdata, 1).u == getobs(dhgnn1.hgdata, 1).u
+    @test dhgnns[2].num_vertices == 3
+    @test dhgnns[2].num_hyperedges == 1
+    @test dhgnns[2].num_hypergraphs == 1
+    @test getobs(dhgnns[2].vdata, 1).x == getobs(dhgnn1.vdata, 7).x
+    @test getobs(dhgnns[2].hedata, 1).e == getobs(dhgnn1.hedata, 4).e
+    @test getobs(dhgnns[2].hgdata, 1).u == getobs(dhgnn1.hgdata, 2).u
+    @test dhgnns[3].num_vertices == 3
+    @test dhgnns[3].num_hyperedges == 1
+    @test dhgnns[3].num_hypergraphs == 1
+    @test getobs(dhgnns[3].vdata, 1).x == getobs(dhgnn1.vdata, 1).x
+    @test getobs(dhgnns[3].hedata, 1).e == getobs(dhgnn1.hedata, 1).e
+    @test getobs(dhgnns[3].hgdata, 1).u == getobs(dhgnn1.hgdata, 1).u
+
+    # Split hyperedges by train-val-test labeled masks
+    dhgnns_tvt = split_hyperedges(dhgnn1, hemasks[1], hemasks[3]; val_mask=hemasks[2])
+    @test dhgnns_tvt.train == dhgnns[1]
+    @test dhgnns_tvt.val == dhgnns[2]
+    @test dhgnns_tvt.test == dhgnns[3]
+
+    # Split without validation set
+    dhgnns_tvt_noval = split_hyperedges(dhgnn1, hemasks[1], hemasks[3])
+    @test dhgnns_tvt_noval.train == dhgnns[1]
+    @test dhgnns_tvt_noval.val === nothing
+    @test dhgnns_tvt_noval.test == dhgnns[3]
+
+    heinds = [
+        [2, 3, 5],
+        [4],
+        [1]
+    ]
+
+    # Split hyperedges using hyperedge indices
+    dhgnns_ind = split_hyperedges(dhgnn1, heinds)
+    @test length(dhgnns_ind) == 3
+    @test dhgnns_ind[1] == dhgnns[1]
+    @test dhgnns_ind[2] == dhgnns[2]
+    @test dhgnns_ind[3] == dhgnns[3]
+
+    # Split hyperedges by train-val-test labeled indices
+    dhgnns_ind_tvt = split_hyperedges(dhgnn1, heinds[1], heinds[3]; val_inds=heinds[2])
+    @test dhgnns_ind_tvt.train == dhgnns[1]
+    @test dhgnns_ind_tvt.val == dhgnns[2]
+    @test dhgnns_ind_tvt.test == dhgnns[3]
+
+    # Split without validation set
+    dhgnns_ind_tvt_noval = split_hyperedges(dhgnn1, heinds[1], heinds[3])
+    @test dhgnns_ind_tvt_noval.train == dhgnns[1]
+    @test dhgnns_ind_tvt_noval.val === nothing
+    @test dhgnns_ind_tvt_noval.test == dhgnns[3]
+
+    # "Random" split
+    rng = Xoshiro(42)
+    dhgnns_rand = random_split_hyperedges(dhgnn1, [0.7, 0.3], rng)
+    @test length(dhgnns_rand) == 2
+    @test dhgnns_rand[1].num_hyperedges == 4
+    @test dhgnns_rand[2].num_hyperedges == 1
+end
+
+@testset "HyperGraphNeuralNetworks split hypergraphs" begin
+    uid2 = [1,1,1,1,2,2,3,3,3,3,3]
+
+    # Split hypergraphs of undirected hypergraphs
+    hgnn1 = HGNNHypergraph(
+        uh1;
+        hypergraph_ids = uid2,
+        vdata = rand(Float64, 5, 11),
+        hedata = rand(Float64, 5, 5),
+        hgdata = rand(Float64, 5, 3)
+    )
+
+    hgmasks = [
+        BitVector((true, false, false)),
+        BitVector((false, true, false)),
+        BitVector((false, false, true))
+    ]
+
+    # Split hypergraphs using masks
+    hgnns = split_hypergraphs(hgnn1, hgmasks)
+    @test length(hgnns) == 3
+    @test hgnns[1].num_vertices == 4
+    @test hgnns[1].num_hyperedges == 3
+    @test hgnns[1].num_hypergraphs == 1
+    @test getobs(hgnns[1].vdata, 1).x == getobs(hgnn1.vdata, 1).x
+    @test getobs(hgnns[1].hedata, 2).e == getobs(hgnn1.hedata, 2).e
+    @test getobs(hgnns[1].hgdata, 1).u == getobs(hgnn1.hgdata, 1).u
+    @test hgnns[2].num_vertices == 2
+    @test hgnns[2].num_hyperedges == 2
+    @test hgnns[2].num_hypergraphs == 1
+    @test getobs(hgnns[2].vdata, 1).x == getobs(hgnn1.vdata, 5).x
+    @test getobs(hgnns[2].hedata, 2).e == getobs(hgnn1.hedata, 3).e
+    @test getobs(hgnns[2].hgdata, 1).u == getobs(hgnn1.hgdata, 2).u
+    @test hgnns[3].num_vertices == 5
+    @test hgnns[3].num_hyperedges == 2
+    @test hgnns[3].num_hypergraphs == 1
+    @test getobs(hgnns[3].vdata, 1).x == getobs(hgnn1.vdata, 7).x
+    @test getobs(hgnns[3].hedata, 2).e == getobs(hgnn1.hedata, 5).e
+    @test getobs(hgnns[3].hgdata, 1).u == getobs(hgnn1.hgdata, 3).u
+
+    # Split hypergraphs by train-val-test labeled masks
+    hgnns_tvt = split_hypergraphs(hgnn1, hgmasks[1], hgmasks[3]; val_mask=hgmasks[2])
+    @test hgnns_tvt.train == hgnns[1]
+    @test hgnns_tvt.val == hgnns[2]
+    @test hgnns_tvt.test == hgnns[3]
+
+    # Split without validation set
+    hgnns_tvt_noval = split_hypergraphs(hgnn1, hgmasks[1], hgmasks[3])
+    @test hgnns_tvt_noval.train == hgnns[1]
+    @test hgnns_tvt_noval.val === nothing
+    @test hgnns_tvt_noval.test == hgnns[3]
+
+    hginds = [[1], [2], [3]]
+
+    # Split hypergraphs using vertex indices
+    hgnns_ind = split_hypergraphs(hgnn1, hginds)
+    @test length(hgnns_ind) == 3
+    @test hgnns_ind[1] == hgnns[1]
+    @test hgnns_ind[2] == hgnns[2]
+    @test hgnns_ind[3] == hgnns[3]
+
+    # Split hypergraphs by train-val-test labeled indices
+    hgnns_ind_tvt = split_hypergraphs(hgnn1, hginds[1], hginds[3]; val_inds=hginds[2])
+    @test hgnns_ind_tvt.train == hgnns[1]
+    @test hgnns_ind_tvt.val == hgnns[2]
+    @test hgnns_ind_tvt.test == hgnns[3]
+
+    # Split without validation set
+    hgnns_ind_tvt_noval = split_hypergraphs(hgnn1, hginds[1], hginds[3])
+    @test hgnns_ind_tvt_noval.train == hgnns[1]
+    @test hgnns_ind_tvt_noval.val === nothing
+    @test hgnns_ind_tvt_noval.test == hgnns[3]
+
+    # "Random" split
+    rng = Xoshiro(42)
+    hgnns_rand = random_split_hypergraphs(hgnn1, [0.34, 0.33, 0.33], rng)
+    @test length(hgnns_rand) == 3
+    @test hgnns_rand[1].num_hypergraphs == 1
+    @test hgnns_rand[2].num_hypergraphs == 1
+    @test hgnns_rand[3].num_hypergraphs == 1
+
+
+    # Split hypergraphs of directed hypergraphs
+    dhgnn1 = HGNNDiHypergraph(
+        dh1;
+        hypergraph_ids = uid2,
+        vdata = rand(Float64, 5, 11),
+        hedata = rand(Float64, 5, 5),
+        hgdata = rand(Float64, 5, 3)
+    )
+
+    hgmasks = [
+        BitVector((true, false, false)),
+        BitVector((false, true, false)),
+        BitVector((false, false, true))
+    ]
+
+    # Split hypergraphs using masks
+    dhgnns = split_hypergraphs(dhgnn1, hgmasks)
+    @test length(dhgnns) == 3
+    @test dhgnns[1].num_vertices == 4
+    @test dhgnns[1].num_hyperedges == 3
+    @test dhgnns[1].num_hypergraphs == 1
+    @test getobs(dhgnns[1].vdata, 1).x == getobs(dhgnn1.vdata, 1).x
+    @test getobs(dhgnns[1].hedata, 2).e == getobs(dhgnn1.hedata, 2).e
+    @test getobs(dhgnns[1].hgdata, 1).u == getobs(dhgnn1.hgdata, 1).u
+    @test dhgnns[2].num_vertices == 2
+    @test dhgnns[2].num_hyperedges == 2
+    @test dhgnns[2].num_hypergraphs == 1
+    @test getobs(dhgnns[2].vdata, 1).x == getobs(dhgnn1.vdata, 5).x
+    @test getobs(dhgnns[2].hedata, 2).e == getobs(dhgnn1.hedata, 3).e
+    @test getobs(dhgnns[2].hgdata, 1).u == getobs(dhgnn1.hgdata, 2).u
+    @test dhgnns[3].num_vertices == 5
+    @test dhgnns[3].num_hyperedges == 2
+    @test dhgnns[3].num_hypergraphs == 1
+    @test getobs(dhgnns[3].vdata, 1).x == getobs(dhgnn1.vdata, 7).x
+    @test getobs(dhgnns[3].hedata, 2).e == getobs(dhgnn1.hedata, 5).e
+    @test getobs(dhgnns[3].hgdata, 1).u == getobs(dhgnn1.hgdata, 3).u
+
+    # Split hypergraphs by train-val-test labeled masks
+    dhgnns_tvt = split_hypergraphs(dhgnn1, hgmasks[1], hgmasks[3]; val_mask=hgmasks[2])
+    @test dhgnns_tvt.train == dhgnns[1]
+    @test dhgnns_tvt.val == dhgnns[2]
+    @test dhgnns_tvt.test == dhgnns[3]
+
+    # Split without validation set
+    dhgnns_tvt_noval = split_hypergraphs(dhgnn1, hgmasks[1], hgmasks[3])
+    @test dhgnns_tvt_noval.train == dhgnns[1]
+    @test dhgnns_tvt_noval.val === nothing
+    @test dhgnns_tvt_noval.test == dhgnns[3]
+
+    hginds = [[1], [2], [3]]
+
+    # Split hypergraphs using vertex indices
+    dhgnns_ind = split_hypergraphs(dhgnn1, hginds)
+    @test length(dhgnns_ind) == 3
+    @test dhgnns_ind[1] == dhgnns[1]
+    @test dhgnns_ind[2] == dhgnns[2]
+    @test dhgnns_ind[3] == dhgnns[3]
+
+    # Split hypergraphs by train-val-test labeled indices
+    dhgnns_ind_tvt = split_hypergraphs(dhgnn1, hginds[1], hginds[3]; val_inds=hginds[2])
+    @test dhgnns_ind_tvt.train == dhgnns[1]
+    @test dhgnns_ind_tvt.val == dhgnns[2]
+    @test dhgnns_ind_tvt.test == dhgnns[3]
+
+    # Split without validation set
+    dhgnns_ind_tvt_noval = split_hypergraphs(dhgnn1, hginds[1], hginds[3])
+    @test dhgnns_ind_tvt_noval.train == dhgnns[1]
+    @test dhgnns_ind_tvt_noval.val === nothing
+    @test dhgnns_ind_tvt_noval.test == dhgnns[3]
+
+    # "Random" split
+    rng = Xoshiro(42)
+    dhgnns_rand = random_split_hypergraphs(dhgnn1, [0.34, 0.33, 0.33], rng)
+    @test length(dhgnns_rand) == 3
+    @test dhgnns_rand[1].num_hypergraphs == 1
+    @test dhgnns_rand[2].num_hypergraphs == 1
+    @test dhgnns_rand[3].num_hypergraphs == 1
+end
+
+@testset "HyperGraphNeuralNetworks undirected hypergraph datasets" begin
+    # Full Cora dataset
+    cora = getHyperCora(Float64)
+
+    @test nhv(cora) == 2708
+    @test nhe(cora) == 2708
+    @test size(cora.vdata.features) == (1433, 2708)
+    @test size(cora.vdata.targets) == (2708,)
+    @test cora.hedata == DataStore()
+    @test cora.hgdata == DataStore()
+
+    # Split into train, val, and test
+    cora = getHyperCora(Float64; split=true)
+    @test cora.train.num_vertices == 140
+    @test cora.train.num_hyperedges == 535
+    @test cora.val.num_vertices == 500
+    @test cora.val.num_hyperedges == 1237
+    @test cora.test.num_vertices == 1000
+    @test cora.test.num_hyperedges == 1882
+
+    # Full CiteSeer dataset
+    cs = getHyperCiteSeer(Int)
+    @test nhv(cs) == 3327
+    @test nhe(cs) == 3327
+    @test size(cs.vdata.features) == (3703, 3327)
+    @test size(cs.vdata.targets) == (3327,)
+    @test cs.hedata == DataStore()
+    @test cs.hgdata == DataStore()
+
+    # Split into train, val, and test
+    cs = getHyperCiteSeer(Int; split=true)
+    @test cs.train.num_vertices == 120
+    @test cs.train.num_hyperedges == 337
+    @test cs.val.num_vertices == 500
+    @test cs.val.num_hyperedges == 1036
+    @test cs.test.num_vertices == 1015
+    @test cs.test.num_hyperedges == 1752
+
+end
