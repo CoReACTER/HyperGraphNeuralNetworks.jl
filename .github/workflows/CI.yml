@@ -31,11 +31,15 @@ jobs:
           - x64
     env:
       DATADEPS_ALWAYS_ACCEPT: true
-      PYTHON: "/usr/bin/python3"
+      CONDA_JL_HOME: "/home/runner/miniconda/envs/conda_jl"
     steps:
-      - name: Install matplotlib
-        run: if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get install -y python3-matplotlib; fi
+      - name: Setup mamba
+        - uses: mamba-org/setup-micromamba@v2
+          with:
+            micromamba-binary-path: ${{ runner.temp }}/bin/conda
+      - name: Mamba/conda environment
         shell: bash
+        run: ${{ runner.temp }}/bin/conda create -p /home/runner/miniconda/envs/conda_jl python=3.10 matplotlib
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
@@ -48,7 +52,6 @@ jobs:
           using Pkg
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()
-          Pkg.add("PyCall")
           Pkg.add(name="OpenSSL_jll", version="3.0")
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
