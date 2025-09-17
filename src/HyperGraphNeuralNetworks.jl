@@ -28,8 +28,6 @@ include("core/query.jl")
 
 export hyperedge_index, get_hyperedge_weight, get_hyperedge_weights
 export has_vertex, vertices, isolated_vertices
-export degree, indegree, outdegree
-export all_neighbors, in_neighbors, out_neighbors, hyperedge_neighbors
 export incidence_matrix, complex_incidence_matrix, hyperedge_weight_matrix, vertex_weight_matrix
 export normalized_laplacian
 export hypergraph_ids, has_self_loops, has_multi_hyperedges

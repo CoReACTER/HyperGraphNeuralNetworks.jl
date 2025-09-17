@@ -4,9 +4,9 @@ using Test
 using Graphs
 using GNNGraphs
 using MLUtils
-using HyperGraphNeuralNetworks
 using SimpleHypergraphs
 using SimpleDirectedHypergraphs
+using HyperGraphNeuralNetworks
 
 # Necessary for MLDatasets
 ENV["DATADEPS_ALWAYS_ACCEPT"] = true
@@ -659,24 +659,58 @@ end
 end
 
 @testset "HyperGraphNeuralNetworks query" begin
+    hgnn = HGNNHypergraph(uh1.v2he, uh1.he2v, 11, 5, 2, uid1, DataStore(), DataStore(), DataStore())
 
     # hyperedge_index
-
+    @test hyperedge_index(hgnn) == [
+        [1, 2, 4],
+        [2, 3, 5],
+        [4, 6],
+        [7, 10, 11],
+        [8, 9, 10],
+    ]
+    
     # get_hyperedge_weights
+    @test get_hyperedge_weights(hgnn) == [
+        [1.0, 2.0, 4.0],
+        [3.0, 0.0, 12.0],
+        [1.0, 4.0],
+        [3.5, 1.0, 4.0],
+        [1.0, 5.0, 7.0]
+    ]    
 
     # get_hyperedge_weight
+    @test get_hyperedge_weight(hgnn, 2) == [3.0, 0.0, 12.0]
+
+    # has_vertex
+    @test has_vertex(hgnn, 10)
+    @test !(has_vertex(hgnn, 12))
+
+    # vertices
+    @test vertices(hgnn) == 1:11
 
     # degree
+    @test degree(hgnn) == [1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1]
 
     # indegree
 
     # outdegree
 
-    # has_vertex
-
-    # vertices
-
     # all_neighbors
+    @test all_neighbors(hgnn) == [
+        [2, 4],
+        [1, 3, 4, 5],
+        [2, 5],
+        [1, 2, 6],
+        [2, 3],
+        [4],
+        [10, 11],
+        [9, 10],
+        [8, 10],
+        [7, 8, 9, 11],
+        [7, 10]
+    ]
+    @test all_neighbors(hgnn, 2) == [1,3,4,5]
 
     # in_neighbors
 
