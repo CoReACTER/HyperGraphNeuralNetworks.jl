@@ -669,6 +669,16 @@ function hyperedge_weight_matrix(hg::H; weighting_function::Function=sum) where 
     (Wt, Wh)
 end
 
+
+"""
+    vertex_degree_matrix(hg::H) where {H <: AbstractSimpleHypergraph}
+    vertex_degree_matrix(hg::H) where {H <: AbstractDirectedHypergraph}
+
+    A `VxV` matrix (where `V` is the number of vertices in `hg`) where the diagonal element `(i,i)` is the degree of
+    vertex `i` and all other elements are 0. For directed hypergraphs, degrees are provided as a tuple `(Dt, Dh)`,
+    where `Dt` is the number of hyperedges in which a given vertex is in the tail and `Dh` is the number of hyperedges
+    in which that vertex is in the head.
+"""
 vertex_degree_matrix(hg::H) where {H <: AbstractSimpleHypergraph} = Diagonal(length.(keys.(hg.v2he)))
 
 vertex_degree_matrix(hg::H) where {H <: AbstractDirectedHypergraph} = (
@@ -676,6 +686,15 @@ vertex_degree_matrix(hg::H) where {H <: AbstractDirectedHypergraph} = (
     Diagonal(length.(keys.(hg.hg_head.v2he)))
 )
 
+"""
+    hyperedge_degree_matrix(hg::H) where {H <: AbstractSimpleHypergraph}
+    hyperedge_degree_matrix(hg::H) where {H <: AbstractDirectedHypergraph}
+
+    An `ExE` matrix (where `E` is the number of hyperedges in `hg`) where the diagonal element `(i,i)` is the degree of
+    hyperedge `i` and all other elements are 0. For directed hypergraphs, degrees are provided as a tuple `(Dt, Dh)`,
+    where `Dt` is the number of vertices in the tail of the hyperedge and `Dh` is the number of vertices in the head of
+    the hyperedge.
+"""
 hyperedge_degree_matrix(hg::H) where {H <: AbstractSimpleHypergraph} = Diagonal(length.(keys.(hg.he2v)))
 
 hyperedge_degree_matrix(hg::H) where {H <: AbstractDirectedHypergraph} = (
