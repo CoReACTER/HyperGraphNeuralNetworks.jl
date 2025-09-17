@@ -30,11 +30,10 @@ jobs:
         arch:
           - x64
     steps:
-      - name: Install matplotlib
-        run: if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get install -y python3-matplotlib; fi
-        shell: bash
       - name: Setup shell
-        run: export DATADEPS_ALWAYS_ACCEPT=true
+        run: |
+          export DATADEPS_ALWAYS_ACCEPT=true
+          export PYTHON=""
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
@@ -48,6 +47,10 @@ jobs:
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()
           Pkg.add(name="OpenSSL_jll", version="3.0")
+          Pkg.add("Conda")
+          Pkg.add("PyCall")
+          using Conda
+          Conda.add("matplotlib"; channel="")
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
