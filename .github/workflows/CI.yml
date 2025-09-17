@@ -29,17 +29,32 @@ jobs:
           - ubuntu-latest
         arch:
           - x64
+    env:
+      DATADEPS_ALWAYS_ACCEPT: true
+      PYTHON: ""
+      ROOTENV: "/home/runner/.julia/conda/3/x86_64"
+      MINICONDA_VERSION: "3"
+      USE_MINIFORGE: true
+      CONDA_EXE: "/home/runner/.julia/conda/3/x86_64/bin/conda"
     steps:
-      - name: Setup shell
-        run: |
-          export DATADEPS_ALWAYS_ACCEPT=true
-          export PYTHON=""
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia-version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
+      - name: Conda/PyCall
+        shell: julia --color=yes {0}
+        run: |
+          using Pkg
+          Pkg.develop(PackageSpec(path=pwd()))
+          Pkg.instantiate()
+          Pkg.build("PyCall")
+          using Conda
+          print(read(joinpath(dirname(pathof(Conda)), "..", "deps", "deps.jl"),String))
+          Conda.pip_interop(true)
+          Conda.pip("install", "pythtb")
+          Conda.pip("install", "matplotlib")
       - name: Configure test environment
         shell: julia --color=yes {0}
         run: |
@@ -47,10 +62,6 @@ jobs:
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()
           Pkg.add(name="OpenSSL_jll", version="3.0")
-          Pkg.add("Conda")
-          Pkg.add("PyCall")
-          using Conda
-          Conda.add("matplotlib"; channel="")
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
