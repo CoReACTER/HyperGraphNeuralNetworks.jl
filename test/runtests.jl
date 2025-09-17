@@ -1,5 +1,6 @@
 using Random
 using StatsBase
+using LinearAlgebra
 using Test
 using Graphs
 using GNNGraphs
@@ -717,28 +718,69 @@ end
     # out_neighbors
 
     # hyperedge_neighbors
+    @test hyperedge_neighbors(hgnn) == [[2, 3], [1], [1], [5], [4]]
+    @test hyperedge_neighbors(hgnn, 4) == [5]
 
     # isolated_vertices
+    @test length(isolated_vertices(hgnn)) == 0
+    @test isolated_vertices(HGNNHypergraph(Hypergraph(5,0))) == [1,2,3,4,5]
 
     # incidence_matrix
+    @test incidence_matrix(hgnn) == [
+        1.0  0.0  0.0  0.0  0.0
+        1.0  1.0  0.0  0.0  0.0
+        0.0  1.0  0.0  0.0  0.0
+        1.0  0.0  1.0  0.0  0.0
+        0.0  1.0  0.0  0.0  0.0
+        0.0  0.0  1.0  0.0  0.0
+        0.0  0.0  0.0  1.0  0.0
+        0.0  0.0  0.0  0.0  1.0
+        0.0  0.0  0.0  0.0  1.0
+        0.0  0.0  0.0  1.0  1.0
+        0.0  0.0  0.0  1.0  0.0
+    ]
 
     # complex_incidence_matrix
 
+
     # vertex_weight_matrix
+    @test vertex_weight_matrix(hgnn) == Diagonal([1.0, 5.0, 0.0, 5.0, 12.0, 4.0, 3.5, 1.0, 5.0, 8.0, 4.0])
+    # Non-standard weighting function
+    @test vertex_weight_matrix(hgnn; weighting_function=prod) == Diagonal(zeros(11))
 
     # hyperedge_weight_matrix
+    @test hyperedge_weight_matrix(hgnn) == Diagonal([7.0, 15.0, 5.0, 8.5, 13.0])
+    # Non-standard weighting function
+    @test hyperedge_weight_matrix(hgnn; weighting_function=prod) == Diagonal(zeros(5))
 
     # vertex_degree_matrix
+    @test vertex_degree_matrix(hgnn) == Diagonal([1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1])
 
     # hyperedge_degree_matrix
+    @test hyperedge_degree_matrix(hgnn) == Diagonal([3, 3, 2, 3, 3])
 
     # normalized_laplacian
+    L = normalized_laplacian_matrix(hgnn)
+    @test size(L) == (11,11)
+    @test L[1,3] == 0.0
+    @test isapprox(L, L'; rtol=1e-5)
 
     # hypergraph_ids
+    @test hypergraph_ids(hgnn) == uid1
+
+    # Case with no hypergraph_ids
+    hgnn2 = HGNNHypergraph(uh1.v2he, uh1.he2v, 11, 5, 2, nothing, DataStore(), DataStore(), DataStore())
+    @test hypergraph_ids(hgnn2) == ones(11)
 
     # has_self_loops
+    @test !(has_self_loops(hgnn))
 
     # has_multi_hyperedges
+    @test !(has_multi_hyperedges(hgnn))
+    hg3 = Hypergraph{Bool}(2,2)
+    hg3[:,:] .= true
+    hgnn3 = HGNNHypergraph(hg3)
+    @test has_multi_hyperedges(hgnn3)
 
 end
 

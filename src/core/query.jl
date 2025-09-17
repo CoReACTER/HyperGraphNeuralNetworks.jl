@@ -420,8 +420,9 @@ function hyperedge_neighbors(hg::H) where {H <: AbstractHGNNHypergraph}
     # Two hyperedges are considered "neighbors" if they share at least one vertex
     vs = Set.(collect.(keys.(hg.he2v)))
 
-    neighbors = Vector{Vector{Int}}(undef,length(vs))
+    neighbors = [Int[] for _ in eachindex(vs)]
     for i in eachindex(vs)
+
         for j in eachindex(vs)[i+1:end]
             if length(intersect(vs[i], vs[j])) > 0
                 push!(neighbors[i], j)
@@ -441,9 +442,9 @@ end
 """
 function hyperedge_neighbors(hg::H, i::Int) where {H <: AbstractHGNNHypergraph}
     # Two hyperedges are considered "neighbors" if they share at least one vertex
-    vs = Set(collect(keys(hg.he2v[i])))
+    vs = Set.(collect.(keys.(hg.he2v)))
 
-    neighbors = Vector{Int}[]
+    neighbors = Int[]
     for j in eachindex(vs)
         if i == j
             continue
@@ -560,7 +561,7 @@ isolated_vertices(hg::H) where {H <: AbstractHGNNDiHypergraph} = [
     Convert the matrix representation of an undirected hypergraph `hg` to an incidence matrix. The (i,j)-th element of
     the incidence matrix `M` is 1 if vertex `i` is in hyperedge `j` and 0 otherwise.
 """
-function incidence_matrix(hg::H) where {H <: AbstractSimpleHypergraph}
+function Graphs.incidence_matrix(hg::H) where {H <: AbstractSimpleHypergraph}
     M = Matrix(hg)
     M[M .!== nothing] .= 1
     M[M .=== nothing] .= 0
@@ -575,7 +576,7 @@ end
     incidence matrix) and `Mh` (the head incidence matrix). The (i,j)-th element of `Mt` is 1 if vertex `i` is in the
     tail of hyperedge `j` and 0 otherwise. Likewise, `Mh`[i, j] is 1 if `i` is in the head of `j` and 0 otherwise
 """
-function incidence_matrix(hg::H) where {H <: AbstractDirectedHypergraph}
+function Graphs.incidence_matrix(hg::H) where {H <: AbstractDirectedHypergraph}
     Mt = incidence_matrix(hg.hg_tail)
     Mh = incidence_matrix(hg.hg_head)
 
@@ -617,7 +618,10 @@ end
 """
 function vertex_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
     # Weight matrix is the diagonal matrix of vertex weights
-    weights = [weighting_function(hg[i,:]) for i in 1:nhv(hg)]
+    M = Matrix(hg)
+    M[M .=== nothing] .= 0
+
+    weights = [weighting_function(M[i,:]) for i in 1:hg.num_vertices]
     
     Diagonal(weights)
 end
@@ -632,7 +636,10 @@ end
 """
 function hyperedge_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
     # Weight matrix is the diagonal matrix of hyperedge weights
-    weights = [weighting_function(hg[:,i]) for i in 1:nhe(hg)]
+    M = Matrix(hg)
+    M[M .=== nothing] .= 0
+
+    weights = [weighting_function(M[:,i]) for i in 1:hg.num_hyperedges]
     
     Diagonal(weights)
 end
@@ -703,7 +710,7 @@ hyperedge_degree_matrix(hg::H) where {H <: AbstractDirectedHypergraph} = (
 )
 
 """
-    normalized_laplacian(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
+    normalized_laplacian_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
 
     Returns the normalized Laplacian for an undirected hypergraph `hg`.
 
@@ -731,7 +738,7 @@ hyperedge_degree_matrix(hg::H) where {H <: AbstractDirectedHypergraph} = (
         Fiorini, S., Coniglio, S., Ciavotta, M., Del Bue, A., Let There be Direction in Hypergraph Neural Networks.
         Transactions on Machine Learning Research, 2024.
 """
-function normalized_laplacian(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
+function normalized_laplacian_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractSimpleHypergraph}
     Dv = vertex_degree_matrix(hg)
     De = hyperedge_degree_matrix(hg)
     W = hyperedge_weight_matrix(hg; weighting_function=weighting_function)
@@ -745,7 +752,7 @@ end
 _matrix_avg(a::AbstractMatrix{T}, b::AbstractMatrix{T}) where {T <: Real} = (a .+ b) ./ 2
 
 """
-    normalized_laplacian(
+    normalized_laplacian_matrix(
         h::H;
         weighting_function::Function=sum,
         combining_function::Function=_matrix_avg
@@ -779,7 +786,7 @@ _matrix_avg(a::AbstractMatrix{T}, b::AbstractMatrix{T}) where {T <: Real} = (a .
         Fiorini, S., Coniglio, S., Ciavotta, M., Del Bue, A., Let There be Direction in Hypergraph Neural Networks.
         Transactions on Machine Learning Research, 2024.
 """
-function normalized_laplacian(
+function normalized_laplacian_matrix(
     h::H;
     weighting_function::Function=sum,
     combining_function::Function=_matrix_avg
@@ -829,9 +836,9 @@ end
     directed hypergraph, this function checks the intersection between the tail and the head of each hyperedge in `hg`.
     If any intersections are nonempty, then the dihypergraph has a self-loop.
 """
-has_self_loops(_::H) where {H <: AbstractHGNNHypergraph} = false
+Graphs.has_self_loops(_::H) where {H <: AbstractHGNNHypergraph} = false
 
-function has_self_loops(hg::H) where {H <: AbstractHGNNDiHypergraph}
+function Graphs.has_self_loops(hg::H) where {H <: AbstractHGNNDiHypergraph}
     vs_tail = Set.(collect.(keys.(hg.hg_tail.he2v)))
     vs_head = Set.(collect.(keys.(hg.hg_head.he2v)))
 
