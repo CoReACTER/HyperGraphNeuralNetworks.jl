@@ -214,7 +214,7 @@ function random_preferential_hypergraph(
     HType::Type{HO};
     seed::Int = -1,
     HTypeStart::Type{HI} = Hypergraph,
-    hg::HI = random_model(5,5, HI),
+    hg::HI = random_model(5,5, HTypeStart),
     kws...
 ) where {HI<:AbstractSimpleHypergraph, HO<:AbstractHGNNHypergraph}
     if seed >= 0
