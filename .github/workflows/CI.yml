@@ -42,7 +42,7 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
       - name: Configure test environment
-        shell: julia --project=. --color=yes {0}
+        shell: julia --color=yes {0}
         run: |
           using Pkg
           Pkg.develop(PackageSpec(path=pwd()))
