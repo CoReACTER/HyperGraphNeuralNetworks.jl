@@ -33,10 +33,9 @@ jobs:
       DATADEPS_ALWAYS_ACCEPT: true
       CONDA_JL_HOME: "/home/runner/miniconda/envs/conda_jl"
     steps:
-      - name: Setup mamba
-        - uses: mamba-org/setup-micromamba@v2
-          with:
-            micromamba-binary-path: ${{ runner.temp }}/bin/conda
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          micromamba-binary-path: ${{ runner.temp }}/bin/conda
       - name: Mamba/conda environment
         shell: bash
         run: ${{ runner.temp }}/bin/conda create -p /home/runner/miniconda/envs/conda_jl python=3.10 matplotlib
