@@ -136,13 +136,12 @@ function Base.eltype(hg::HGNNHypergraph)
 end
 
 # From Graphs.jl, but not directly implemented for hypergraphs
-has_vertex(hg::H, i::Int) where {H <: AbstractHGNNHypergraph} = 1 <= i <= hg.num_vertices
-has_vertex(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph} = 1 <= i <= hg.num_vertices
+Graphs.has_vertex(hg::H, i::Int) where {H <: AbstractHGNNHypergraph} = 1 <= i <= hg.num_vertices
+Graphs.has_vertex(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph} = 1 <= i <= hg.num_vertices
 
-vertices(hg::H) where {H <: AbstractHGNNHypergraph} = 1:(hg.num_vertices)
-vertices(hg::H) where {H <: AbstractHGNNDiHypergraph} = 1:(hg.num_vertices)
+Graphs.vertices(hg::H) where {H <: AbstractHGNNHypergraph} = 1:(hg.num_vertices)
+Graphs.vertices(hg::H) where {H <: AbstractHGNNDiHypergraph} = 1:(hg.num_vertices)
 
-#TODO: docstrings
 
 """
     degree(hg::H) where {H <: AbstractHGNNHypergraph}
@@ -784,7 +783,7 @@ end
     hypergraph_ids(hg::H) where {H <: AbstractHGNNHypergraph}
     hypergraph_ids(hg::H) where {H <: AbstractHGNNDiHypergraph}
 
-Return a vector containing the graph membership of each vertex in the hypergraph `hg`.
+    Returns a vector containing the graph membership of each vertex in the hypergraph `hg`.
 """
 function hypergraph_ids(hg::H) where {H <: AbstractHGNNHypergraph}
     if isnothing(hg.hypergraph_ids)
@@ -803,7 +802,15 @@ function hypergraph_ids(hg::H) where {H <: AbstractHGNNDiHypergraph}
 end
 
 # TODO: be consistent in handling; see transform.jl
-has_self_loops(hg::H) where {H <: AbstractHGNNHypergraph} = false
+"""
+    has_self_loops(_::H) where {H <: AbstractHGNNHypergraph}
+    has_self_loops(hg::H) where {H <: AbstractHGNNDiHypergraph}
+
+    Does the hypergraph contain self-loops? For an undirected hypergraph, this is defined to always be `false`. For a
+    directed hypergraph, this function checks the intersection between the tail and the head of each hyperedge in `hg`.
+    If any intersections are nonempty, then the dihypergraph has a self-loop.
+"""
+has_self_loops(_::H) where {H <: AbstractHGNNHypergraph} = false
 
 function has_self_loops(hg::H) where {H <: AbstractHGNNDiHypergraph}
     vs_tail = Set.(collect.(keys.(hg.hg_tail.he2v)))
@@ -812,6 +819,14 @@ function has_self_loops(hg::H) where {H <: AbstractHGNNDiHypergraph}
     any([length(intersect(vs_tail[i], vs_head[i])) for i in eachindex(vs_tail)])
 end
 
+"""
+    has_multi_hyperedges(hg::H) where {H <: AbstractHGNNHypergraph}
+    has_multi_hyperedges(hg::H) where {H <: AbstractHGNNDiHypergraph}
+
+    Checks if there are any hyperedges with multiplicity greater than 1, i.e., if there are two or more hyperedges
+    containing identical vertices. For directed hyperedges, both the tail vertices and the head vertices have to be
+    identical to be considered duplicates.
+"""
 function has_multi_hyperedges(hg::H) where {H <: AbstractHGNNHypergraph}
     vs = sort!.(collect.(keys.(hg.he2v)))
 

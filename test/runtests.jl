@@ -660,6 +660,52 @@ end
 
 @testset "HyperGraphNeuralNetworks query" begin
 
+    # hyperedge_index
+
+    # get_hyperedge_weights
+
+    # get_hyperedge_weight
+
+    # degree
+
+    # indegree
+
+    # outdegree
+
+    # has_vertex
+
+    # vertices
+
+    # all_neighbors
+
+    # in_neighbors
+
+    # out_neighbors
+
+    # hyperedge_neighbors
+
+    # isolated_vertices
+
+    # incidence_matrix
+
+    # complex_incidence_matrix
+
+    # vertex_weight_matrix
+
+    # hyperedge_weight_matrix
+
+    # vertex_degree_matrix
+
+    # hyperedge_degree_matrix
+
+    # normalized_laplacian
+
+    # hypergraph_ids
+
+    # has_self_loops
+
+    # has_multi_hyperedges
+
 end
 
 @testset "HyperGraphNeuralNetworks transforms" begin
