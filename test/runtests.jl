@@ -660,6 +660,8 @@ end
 end
 
 @testset "HyperGraphNeuralNetworks query" begin
+    # TODO: do this for directed hypergraphs
+
     hgnn = HGNNHypergraph(uh1.v2he, uh1.he2v, 11, 5, 2, uid1, DataStore(), DataStore(), DataStore())
 
     # hyperedge_index
