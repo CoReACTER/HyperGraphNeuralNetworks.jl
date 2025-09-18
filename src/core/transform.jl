@@ -1,4 +1,3 @@
-
 """
     add_self_loops(
         hg::HGNNHypergraph{T, D};
@@ -307,8 +306,27 @@ function to_undirected(hg::HGNNDiHypergraph{T,D}) where {T <: Real, D <: Abstrac
     )
 end
 
-#TODO: docstrings
-function combine_hypergraphs(hg1::HGNNHypergraph{T, D}, hg2::HGNNHypergraph{T, D}) where {T <: Real, D <: AbstractDict{Int, T}}
+"""
+    combine_hypergraphs(
+        hg1::HGNNHypergraph{T, D},
+        hg2::HGNNHypergraph{T, D}
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    combine_hypergraphs(
+        hg1::HGNNHypergraph{T,D},
+        hgothers::HGNNHypergraph{T,D}...
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    combine_hypergraphs(
+        hgs::AbstractVector{HGNNHypergraph{T,D}}
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Merge two (or more) undirected hypergraphs into a single hypergraph. This is used for batching (`MLUtils.batch`).
+"""
+function combine_hypergraphs(
+    hg1::HGNNHypergraph{T, D},
+    hg2::HGNNHypergraph{T, D}
+) where {T <: Real, D <: AbstractDict{Int, T}}
     num_vertices = hg1.num_vertices + hg2.num_vertices
     num_hyperedges = hg1.num_hyperedges + hg2.num_hyperedges
     num_hypergraphs = hg1.num_hypergraphs + hg2.num_hypergraphs
@@ -358,7 +376,10 @@ function combine_hypergraphs(hg1::HGNNHypergraph{T, D}, hg2::HGNNHypergraph{T, D
     )
 end
 
-function combine_hypergraphs(hg1::HGNNHypergraph{T,D}, hgothers::HGNNHypergraph{T,D}...) where {T <: Real, D <: AbstractDict{Int, T}}
+function combine_hypergraphs(
+    hg1::HGNNHypergraph{T,D},
+    hgothers::HGNNHypergraph{T,D}...
+) where {T <: Real, D <: AbstractDict{Int, T}}
     hg = hg1
 
     for hgo in hgothers
@@ -368,7 +389,9 @@ function combine_hypergraphs(hg1::HGNNHypergraph{T,D}, hgothers::HGNNHypergraph{
     hg
 end
 
-function combine_hypergraphs(hgs::AbstractVector{HGNNHypergraph{T,D}}) where {T <: Real, D <: AbstractDict{Int, T}}
+function combine_hypergraphs(
+    hgs::AbstractVector{HGNNHypergraph{T,D}}
+) where {T <: Real, D <: AbstractDict{Int, T}}
     num_vs = [hg.num_vertices for hg in hgs]
     num_hes = [hg.num_hyperedges for hg in hgs]
     num_hgs = [hg.num_hypergraphs for hg in hgs]
@@ -419,7 +442,27 @@ function combine_hypergraphs(hgs::AbstractVector{HGNNHypergraph{T,D}}) where {T 
     )
 end
 
-function combine_hypergraphs(hg1::HGNNDiHypergraph{T, D}, hg2::HGNNDiHypergraph{T, D}) where {T <: Real, D <: AbstractDict{Int, T}}
+"""
+    combine_hypergraphs(
+        hg1::HGNNDiHypergraph{T, D},
+        hg2::HGNNDiHypergraph{T, D}
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    combine_hypergraphs(
+        hg1::HGNNDiHypergraph{T,D},
+        hgothers::HGNNDiHypergraph{T,D}...
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    combine_hypergraphs(
+        hgs::AbstractVector{HGNNDiHypergraph{T,D}}
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Merge two (or more) directed hypergraphs into a single hypergraph. This is used for batching (`MLUtils.batch`).
+"""
+function combine_hypergraphs(
+    hg1::HGNNDiHypergraph{T, D},
+    hg2::HGNNDiHypergraph{T, D}
+) where {T <: Real, D <: AbstractDict{Int, T}}
     num_vertices = hg1.num_vertices + hg2.num_vertices
     num_hyperedges = hg1.num_hyperedges + hg2.num_hyperedges
     num_hypergraphs = hg1.num_hypergraphs + hg2.num_hypergraphs
@@ -487,7 +530,10 @@ function combine_hypergraphs(hg1::HGNNDiHypergraph{T, D}, hg2::HGNNDiHypergraph{
     )
 end
 
-function combine_hypergraphs(hg1::HGNNDiHypergraph{T,D}, hgothers::HGNNDiHypergraph{T,D}...) where {T <: Real, D <: AbstractDict{Int, T}}
+function combine_hypergraphs(
+    hg1::HGNNDiHypergraph{T,D},
+    hgothers::HGNNDiHypergraph{T,D}...
+) where {T <: Real, D <: AbstractDict{Int, T}}
     hg = hg1
 
     for hgo in hgothers
@@ -497,7 +543,9 @@ function combine_hypergraphs(hg1::HGNNDiHypergraph{T,D}, hgothers::HGNNDiHypergr
     hg
 end
 
-function combine_hypergraphs(hgs::AbstractVector{HGNNDiHypergraph{T,D}}) where {T <: Real, D <: AbstractDict{Int, T}}
+function combine_hypergraphs(
+    hgs::AbstractVector{HGNNDiHypergraph{T,D}}
+) where {T <: Real, D <: AbstractDict{Int, T}}
     num_vs = [hg.num_vertices for hg in hgs]
     num_hes = [hg.num_hyperedges for hg in hgs]
     num_hgs = [hg.num_hypergraphs for hg in hgs]
@@ -576,7 +624,16 @@ function MLUtils.batch(hgs::AbstractVector{HGNNDiHypergraph{T,D}}) where {T <: R
     combine_hypergraphs(hgs)
 end
 
-get_hypergraph(hg::HGNNHypergraph, i::Int; kws...) = getgraph(hg, [i]; kws...)
+"""
+    get_hypergraph(hg::HGNNHypergraph, i::Int; kws...)
+
+    get_hypergraph(hg::HGNNHypergraph, i::AbstractVector{Int}; map_vertices::Bool = false)
+
+    Extract one or more hypergraphs (based on `hypergraph_ids`) from an `HGNNHypergraph` containing multiple
+    hypergraphs. This is used for unbatching (`MLUtils.unbatch`).
+
+"""
+get_hypergraph(hg::HGNNHypergraph, i::Int; kws...) = get_hypergraph(hg, [i]; kws...)
 
 function get_hypergraph(hg::HGNNHypergraph, i::AbstractVector{Int}; map_vertices::Bool = false)
     if hg.hypergraph_ids === nothing
@@ -646,7 +703,15 @@ function MLUtils.unbatch(hg::HGNNHypergraph)
     return [get_hypergraph(hg, i) for i in 1:(hg.num_hypergraphs)]
 end
 
-get_hypergraph(hg::HGNNDiHypergraph, i::Int; kws...) = getgraph(hg, [i]; kws...)
+"""
+    get_hypergraph(hg::HGNNDiHypergraph, i::Int; kws...)
+
+    get_hypergraph(hg::HGNNDiHypergraph, i::AbstractVector{Int}; map_vertices::Bool = false)
+
+    Extract one or more hypergraphs (based on `hypergraph_ids`) from an `HGNNHypergraph` containing multiple
+    hypergraphs. This is used for unbatching (`MLUtils.unbatch`).
+"""
+get_hypergraph(hg::HGNNDiHypergraph, i::Int; kws...) = get_hypergraph(hg, [i]; kws...)
 
 function get_hypergraph(hg::HGNNDiHypergraph, i::AbstractVector{Int}; map_vertices::Bool = false)
     if hg.hypergraph_ids === nothing
@@ -738,12 +803,37 @@ function MLUtils.unbatch(hg::HGNNDiHypergraph)
 end
 
 
+"""
+    abstract type AbstractNegativeSamplingStrategy
+    struct UniformSample <: AbstractNegativeSamplingStrategy
+    struct SizedSample <: AbstractNegativeSamplingStrategy
+    struct MotifSample <: AbstractNegativeSamplingStrategy
+    struct CliqueSample <: AbstractNegativeSamplingStrategy
+
+    Types for negative sampling of hyperedges in hypergraphs (see `negative_sample_hyperedge`).
+"""
 abstract type AbstractNegativeSamplingStrategy end
 struct UniformSample <: AbstractNegativeSamplingStrategy end
 struct SizedSample <: AbstractNegativeSamplingStrategy end
 struct MotifSample <: AbstractNegativeSamplingStrategy end
 struct CliqueSample <: AbstractNegativeSamplingStrategy end
 
+"""
+    uniform_negative_sample(
+        hg::HGNNHypergraph{T, D},
+        n::Int,
+        rng::AbstractRNG;
+        max_trials::Int = 10
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Sample `n` negative hyperedges in an undirected hypergraph `hg` using a random number generator `rng`
+    and a uniform sampling strategy.
+
+    It is possible that any given hyperedge generated using uniform sampling may be a duplicate or may not be a
+    negative hyperedge (i.e., it may exist in the hyperedge set of `hg`). To minimize this possibility, the algorithm
+    will attempt to generate negative hyperedges `max_trials` number of times (default: 10). However, it is still
+    possible that less than `n` unique negative hyperedges will be produced.
+"""
 function uniform_negative_sample(
     hg::HGNNHypergraph{T, D},
     n::Int,
@@ -779,6 +869,22 @@ function uniform_negative_sample(
 
 end
 
+"""
+    uniform_negative_sample(
+        hg::HGNNDiHypergraph{T, D},
+        n::Int,
+        rng::AbstractRNG;
+        max_trials::Int = 10
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Sample `n` negative hyperedges in a directed hypergraph `hg` using a random number generator `rng`
+    and a uniform sampling strategy.
+
+    It is possible that any given hyperedge generated using uniform sampling may be a duplicate or may not be a
+    negative hyperedge (i.e., it may exist in the hyperedge set of `hg`). To minimize this possibility, the algorithm
+    will attempt to generate negative hyperedges `max_trials` number of times (default: 10). However, it is still
+    possible that less than `n` unique negative hyperedges will be produced.
+"""
 function uniform_negative_sample(
     hg::HGNNDiHypergraph{T, D},
     n::Int,
@@ -824,7 +930,23 @@ function uniform_negative_sample(
     return HGNNDiHypergraph(DirectedHypergraph(hg_tail, hg_head))
 end
 
+"""
+    sized_negative_sample(
+        hg::HGNNHypergraph{T, D},
+        n::Int,
+        rng::AbstractRNG;
+        max_trials::Int = 10
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
 
+    Sample `n` negative hyperedges in an undirected hypergraph `hg` using a random number generator `rng` in such a way
+    as to ensure that the size distribution of negative hyperedges generated approximately matches that of hyperedges
+    in `hg`.
+
+    It is possible that any given hyperedge generated using sized sampling may be a duplicate or may not be a
+    negative hyperedge (i.e., it may exist in the hyperedge set of `hg`). To minimize this possibility, the algorithm
+    will attempt to generate negative hyperedges `max_trials` number of times (default: 10). However, it is still
+    possible that less than `n` unique negative hyperedges will be produced.
+"""
 function sized_negative_sample(
     hg::HGNNHypergraph{T, D},
     n::Int,
@@ -863,6 +985,25 @@ function sized_negative_sample(
 
 end
 
+"""
+    sized_negative_sample(
+        hg::HGNNDiHypergraph{T, D},
+        n::Int,
+        rng::AbstractRNG;
+        max_trials::Int = 10
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Sample `n` negative hyperedges in a directed hypergraph `hg` using a random number generator `rng` in such a way
+    as to ensure that the size distribution of negative hyperedges generated approximately matches that of hyperedges
+    in `hg`. Specifically, this algorithm samples hypergraphs with total size `|e| = |e_tail| + |e_head|` based on the
+    total size distribution in the hyperedge set of `hg` and further samples the tail sizes `|e_tail|` based on the
+    tail size distribution in the hyperedge set of `hg`. 
+
+    It is possible that any given hyperedge generated using sized sampling may be a duplicate or may not be a
+    negative hyperedge (i.e., it may exist in the hyperedge set of `hg`). To minimize this possibility, the algorithm
+    will attempt to generate negative hyperedges `max_trials` number of times (default: 10). However, it is still
+    possible that less than `n` unique negative hyperedges will be produced.
+"""
 function sized_negative_sample(
     hg::HGNNDiHypergraph{T, D},
     n::Int,
@@ -918,6 +1059,24 @@ function sized_negative_sample(
 
 end
 
+"""
+    motif_negative_sample(
+        hg::HGNNHypergraph{T, D},
+        n::Int,
+        rng::AbstractRNG;
+        max_trials::Int = 10
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Sample `n` negative hyperedges in an undirected hypergraph `hg` using a random number generator `rng` using the
+    "motif negative sampling" (MNS) strategy described in Patil et al., "Negative Sampling for Hyperlink Prediction in
+    Networks", DOI: 10.1007/978-3-030-47436-2_46 (2020). MNS samples in such a way as to approximate the edge-density
+    distribution of hyperedges in `hg`. 
+
+    It is possible that any given hyperedge generated using motif negatiive sampling may be a duplicate or may not be a
+    negative hyperedge (i.e., it may exist in the hyperedge set of `hg`). To minimize this possibility, the algorithm
+    will attempt to generate negative hyperedges `max_trials` number of times (default: 10). However, it is still
+    possible that less than `n` unique negative hyperedges will be produced.
+"""
 function motif_negative_sample(
     hg::HGNNHypergraph{T, D},
     n::Int,
@@ -970,7 +1129,26 @@ function motif_negative_sample(
     return HGNNHypergraph(base_h)
 end
 
-# TODO: does this have the same nice properties re: edge distribution as the undirected case?
+"""
+    motif_negative_sample(
+        hg::HGNNHypergraph{T, D},
+        n::Int,
+        rng::AbstractRNG;
+        max_trials::Int = 10
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Sample `n` negative hyperedges in a directed hypergraph `hg` using a random number generator `rng` using the
+    "motif negative sampling" (MNS) strategy described in Patil et al., "Negative Sampling for Hyperlink Prediction in
+    Networks", DOI: 10.1007/978-3-030-47436-2_46 (2020). MNS samples in such a way as to approximate the edge-density
+    distribution of hyperedges in `hg`. Note that MNS was not tested on directed hypergraphs in Patil et al., and it
+    is possible that this algorithm does not produce the same or similar edge-density distributions to the hyperedge
+    set in `hg`.
+
+    It is possible that any given hyperedge generated using motif negative sampling may be a duplicate or may not be a
+    negative hyperedge (i.e., it may exist in the hyperedge set of `hg`). To minimize this possibility, the algorithm
+    will attempt to generate negative hyperedges `max_trials` number of times (default: 10). However, it is still
+    possible that less than `n` unique negative hyperedges will be produced.
+"""
 function motif_negative_sample(
     hg::HGNNDiHypergraph{T, D},
     n::Int,
@@ -1040,7 +1218,24 @@ function motif_negative_sample(
     return HGNNDiHypergraph(DirectedHypergraph(hg_tail, hg_head))
 end
 
-# TODO: you are here
+"""
+    clique_negative_sample(
+        hg::HGNNHypergraph{T, D},
+        n::Int,
+        rng::AbstractRNG;
+        max_trials::Int = 10
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Sample `n` negative hyperedges in an undirected hypergraph `hg` using a random number generator `rng` using the
+    "clique negative sampling" (CNS) strategy described in Patil et al., "Negative Sampling for Hyperlink Prediction in
+    Networks", DOI: 10.1007/978-3-030-47436-2_46 (2020). CNS samples negative hyperedges using the clique-expanded
+    graph of `hg`, ensuring that the edge density of sampled hyperedges will always be 1. 
+
+    It is possible that any given hyperedge generated using clique negative sampling may be a duplicate or may not be a
+    negative hyperedge (i.e., it may exist in the hyperedge set of `hg`). To minimize this possibility, the algorithm
+    will attempt to generate negative hyperedges `max_trials` number of times (default: 10). However, it is still
+    possible that less than `n` unique negative hyperedges will be produced.
+"""
 function clique_negative_sample(
     hg::HGNNHypergraph{T, D},
     n::Int,
@@ -1106,8 +1301,32 @@ end
 # ) where {T <: Real, D <: AbstractDict{Int, T}}
 # end
 
+"""
+    negative_sample_hyperedge(
+        hg::H,
+        n::Int,
+        rng::AbstractRNG,
+        ::S;
+        max_trials::Int = 10
+    ) where {H <: AbstractSimpleHypergraph, S <: AbstractNegativeSamplingStrategy}
 
-function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_trials::Int = 10) where {H <: AbstractSimpleHypergraph, S <: AbstractNegativeSamplingStrategy}
+    Sample `n` negative hyperedges in an undirected hypergraph `hg` using a random number generator `rng` using the
+    sampling strategy of type `S <: AbstractNegativeSamplingStrategy`. Currently, uniform sampling
+    (`uniform_negative_sample`), sized negative sampling (`sized_negative_sample`), motif negative sampling
+    (`motif_negative_sample`), and clique negative sampling (`clique_negative_sample`) are implemented.
+
+    It is possible that any given hyperedge generated using this function may be a duplicate or may not be a
+    negative hyperedge (i.e., it may exist in the hyperedge set of `hg`). To minimize this possibility, the algorithm
+    will attempt to generate negative hyperedges `max_trials` number of times (default: 10). However, it is still
+    possible that less than `n` unique negative hyperedges will be produced.
+"""
+function negative_sample_hyperedge(
+    hg::H,
+    n::Int,
+    rng::AbstractRNG,
+    ::S;
+    max_trials::Int = 10
+) where {H <: AbstractSimpleHypergraph, S <: AbstractNegativeSamplingStrategy}
     if S <: UniformSample
         return uniform_negative_sample(hg, n, rng; max_trials=max_trials)
     elseif S <: SizedSample
@@ -1121,7 +1340,33 @@ function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_tri
     end
 end
 
-function negative_sample_hyperedge(hg::H, n::Int, rng::AbstractRNG, ::S; max_trials::Int = 10) where {H <: AbstractDirectedHypergraph, S <: AbstractNegativeSamplingStrategy}
+"""
+    negative_sample_hyperedge(
+        hg::H,
+        n::Int,
+        rng::AbstractRNG,
+        ::S;
+        max_trials::Int = 10
+    ) where {H <: AbstractDirectedHypergraph, S <: AbstractNegativeSamplingStrategy}
+
+    Sample `n` negative hyperedges in a directed hypergraph `hg` using a random number generator `rng` using the
+    sampling strategy of type `S <: AbstractNegativeSamplingStrategy`. Currently, uniform sampling
+    (`uniform_negative_sample`), sized negative sampling (`sized_negative_sample`), and motif negative sampling
+    (`motif_negative_sample`) are implemented.
+
+    It is possible that any given hyperedge generated using this function may be a duplicate or may not be a
+    negative hyperedge (i.e., it may exist in the hyperedge set of `hg`). To minimize this possibility, the algorithm
+    will attempt to generate negative hyperedges `max_trials` number of times (default: 10). However, it is still
+    possible that less than `n` unique negative hyperedges will be produced.
+
+"""
+function negative_sample_hyperedge(
+    hg::H,
+    n::Int,
+    rng::AbstractRNG,
+    ::S;
+    max_trials::Int = 10
+) where {H <: AbstractDirectedHypergraph, S <: AbstractNegativeSamplingStrategy}
     if S <: UniformSample
         return uniform_negative_sample(hg, n, rng; max_trials=max_trials)
     elseif S <: SizedSample
@@ -1237,7 +1482,6 @@ function random_split_vertices(
         v2he_tail = hg.hg_tail.v2he[part]
         v2he_head = hg.hg_head.v2he[part]
 
-        # TODO: you are here
         he2v_tail = D[]
         he2v_head = D[]
 
@@ -1247,7 +1491,7 @@ function random_split_vertices(
 
         for i in 1:hg.num_hyperedges
             he_tail = hg.hg_tail.he2v[i]
-            hg_head = hg.hg_head.he2v[i]
+            he_head = hg.hg_head.he2v[i]
             
             newhe_tail = filter(((k,v), ) -> k in part, he_tail)
             newhe_head = filter(((k,v), ) -> k in part, he_head)
@@ -1278,15 +1522,15 @@ function random_split_vertices(
                 Hypergraph{T, Nothing, Nothing, D}(
                     v2he_tail,
                     he2v_tail,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_tail))
-                    ),
+                    Vector{Nothing}(nothing, length(part)),
+                    Vector{Nothing}(nothing, length(newhe_tail))
+                ),
                 Hypergraph{T, Nothing, Nothing, D}(
                     v2he_head,
                     he2v_head,
-                    Vector{Nothing}(undef, length(part)),
-                    Vector{Nothing}(undef, length(newhe_head))
-                    ),
+                    Vector{Nothing}(nothing, length(part)),
+                    Vector{Nothing}(nothing, length(newhe_head))
+                ),
                 length(part),
                 length(he2v_tail),
                 length(unique_hgids),
@@ -1378,12 +1622,104 @@ function random_split_hyperedges(
     return res
 end
 
-# TODO: you are here
 function random_split_hyperedges(
     hg::HGNNDiHypergraph{T,D},
     fracs::AbstractVector{<:Real},
     rng::AbstractRNG
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    # For all f ∈ fracs, 0 < f <= 1
+    @assert all(fracs .> 0) && all(fracs .<= 1)
+    # Fractions must sum to 1
+    @assert abs(sum(fracs) - 1) <= 1e-5
+
+    num_choices = round.(fracs .* hg.num_hyperedges)
+    rand_inds = shuffle(rng, Vector(1:hg.num_hyperedges))
+    
+    partitions = Vector{Int}[]
+    start_point = 1
+
+    # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
+    for i in 1:(length(num_choices) - 1)
+        part = rand_inds[start_point:start_point + num_choices[i] - 1]
+        start_point += num_choices
+        push!(partitions, sort(part))
+    end
+    push!(partitions, sort(rand_inds[start_point:end]))
+
+    res = HGNNDiHypergraph{T,D}[]
+
+    # Partition v2he and he2v, being careful of indices
+    for part in partitions
+        he2v_tail = hg.hg_tail.he2v[part]
+        he2v_head = hg.hg_head.he2v[part]
+
+        v2he_tail = D[]
+        v2he_head = D[]
+
+        vmap = Dict{Int, Int}()
+        hemap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
+        hgmap = Dict{Int, Int}()
+
+        for i in 1:hg.num_vertices
+            v_tail = hg.hg_tail.v2he[i]
+            v_head = hg.hg_head.v2he[i]
+            
+            newv_tail = filter(((k,v), ) -> k in part, v_tail)
+            newv_head = filter(((k,v), ) -> k in part, v_head)
+            if length(newv_tail) > 0 || length(newv_head) > 0
+                newv_tail = D(vmap[k] => v for (k, v) in newv_tail)
+                newv_head = D(vmap[k] => v for (k, v) in newv_head)
+                push!(v2he_tail, newv_tail)
+                push!(v2he_tail, newv_head)
+                vmap[i] = length(v2he)
+            end
+        end
+
+        for i in eachindex(he2v_tail)
+            he2v_tail[i] = D(vmap[k] => v for (k, v) in he2v_tail[i])
+            he2v_head[i] = D(vmap[k] => v for (k, v) in he2v_head[i])
+        end
+
+        unique_hgids = sort(collect(Set(hg.hypergraph_ids[part])))
+        for (i, e) in enumerate(unique_hgids)
+            hgmap[e] = i
+        end
+
+        rel_vs = collect(keys(vmap))
+        unique_hgids = sort(collect(Set(hg.hypergraph_ids[rel_vs])))
+        for (i, e) in enumerate(unique_hgids)
+            hgmap[e] = i
+        end
+
+        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
+
+        push!(
+            res,
+            HGNNHypergraph{T,D}(
+                Hypergraph{T, Nothing, Nothing, D}(
+                    v2he_tail,
+                    he2v_tail,
+                    Vector{Nothing}(nothing, length(newv_tail)),
+                    Vector{Nothing}(nothing, length(part))
+                ),
+                Hypergraph{T, Nothing, Nothing, D}(
+                    v2he_head,
+                    he2v_head,
+                    Vector{Nothing}(nothing, length(newv_head)),
+                    Vector{Nothing}(nothing, length(part))
+                ),
+                length(v2he_tail),
+                length(part),
+                length(unique_hgids),
+                hypergraph_ids,
+                getobs(hg.vdata, collect(keys(vmap))),
+                getobs(hg.hedata, part),
+                getobs(hg.hgdata, unique_hgids)
+            )
+        )
+    end
+
+    return res
 end
 
 function random_split_hypergraphs(
@@ -1462,6 +1798,85 @@ function random_split_hypergraphs(
     fracs::AbstractVector{<:Real},
     rng::AbstractRNG
 ) where {T <: Real, D <: AbstractDict{Int, T}}
+    # For all f ∈ fracs, 0 < f <= 1
+    @assert all(fracs .> 0) && all(fracs .<= 1)
+    # Fractions must sum to 1
+    @assert abs(sum(fracs) - 1) <= 1e-5
 
+    num_choices = round.(fracs .* hg.num_hypergraphs)
+    rand_inds = shuffle(rng, Vector(1:hg.num_hypergraphs))
+    
+    partitions = Vector{Int}[]
+    start_point = 1
 
+    # Provide the (approximate) right amount of (randomly selected) vertex indices per partition
+    for i in 1:(length(num_choices) - 1)
+        part = rand_inds[start_point:start_point + num_choices[i] - 1]
+        start_point += num_choices
+        push!(partitions, sort(part))
+    end
+    push!(partitions, sort(rand_inds[start_point:end]))
+
+    res = HGNNDiHypergraph{T,D}[]
+
+    # Partition v2he and he2v, being careful of indices
+    for part in partitions
+        rel_vs = [i for (i, e) in enumerate(hg.hypergraph_ids) if e in part]
+        
+        v2he_tail = hg.hg_tail.v2he[rel_vs]
+        v2he_head = hg.hg_head.v2he[rel_vs]
+        he2v_tail = D[]
+        he2v_head = D[]
+
+        vmap = Dict{Int, Int}(x => i for (i, x) in enumerate(rel_vs))
+        hemap = Dict{Int, Int}()
+        hgmap = Dict{Int, Int}(x => i for (i, x) in enumerate(part))
+
+        for i in 1:hg.num_hyperedges
+            newhe_tail = filter(((k,v), ) -> k in rel_vs, hg.hg_tail.he2v[i])
+            newhe_head = filter(((k,v), ) -> k in rel_vs, hg.hg_head.he2v[i])
+
+            if length(newhe_tail) > 0 || length(newhe_head) > 0
+                newhe_tail = D(vmap[k] => v for (k, v) in newhe_tail)
+                newhe_head = D(vmap[k] => v for (k, v) in newhe_head)
+                push!(he2v_tail, newhe_tail)
+                push!(he2v_head, newhe_head)
+                hemap[i] = length(he2v)
+            end
+        end
+
+        for i in eachindex(v2he_tail)
+            v2he_tail[i] = D(hemap[k] => v for (k, v) in v2he_tail[i])
+            v2he_head[i] = D(hemap[k] => v for (k, v) in v2he_head[i])
+        end
+
+        hypergraph_ids = [hgmap[x] for x in hg.hypergraph_ids[rel_vs]]
+
+        push!(
+            res,
+            HGNNHypergraph{T,D}(
+                Hypergraph{T, Nothing, Nothing, D}(
+                    v2he_tail,
+                    he2v_tail,
+                    Vector{Nothing}(nothing, length(newv_tail)),
+                    Vector{Nothing}(nothing, length(part))
+                ),
+                Hypergraph{T, Nothing, Nothing, D}(
+                    v2he_head,
+                    he2v_head,
+                    Vector{Nothing}(nothing, length(newv_head)),
+                    Vector{Nothing}(nothing, length(part))
+                ),
+                length(v2he_tail),
+                length(he2v_tail),
+                length(part),
+                hypergraph_ids,
+                getobs(hg.vdata, rel_vs),
+                getobs(hg.hedata, collect(keys(hemap))),
+                getobs(hg.hgdata, part)
+            )
+        )
+    end
+
+    return res
 end
