@@ -663,6 +663,13 @@ end
     # TODO: do this for directed hypergraphs
 
     hgnn = HGNNHypergraph(uh1.v2he, uh1.he2v, 11, 5, 2, uid1, DataStore(), DataStore(), DataStore())
+    dhgnn = HGNNDiHypergraph(
+        dh1;
+        hypergraph_ids = did1,
+        vdata = rand(Float64, 5, 11),
+        hedata = rand(Float64, 5, 5),
+        hgdata = rand(Float64, 5, 2)
+    )
 
     # hyperedge_index
     @test hyperedge_index(hgnn) == [
@@ -672,6 +679,10 @@ end
         [7, 10, 11],
         [8, 9, 10],
     ]
+    @test hyperedge_index(dhgnn) == (
+        [[1, 2], [2, 5], [4], [7, 10], [10]],
+        [[4], [3], [6], [11], [8, 9]]
+    )
     
     # get_hyperedge_weights
     @test get_hyperedge_weights(hgnn) == [
@@ -680,10 +691,23 @@ end
         [1.0, 4.0],
         [3.5, 1.0, 4.0],
         [1.0, 5.0, 7.0]
-    ]    
+    ]
+    @test get_hyperedge_weights(hgnn, sum) == [7.0, 15.0, 5.0, 8.5, 13.0]
+
+    dweights = (
+        [[1.0, 2.0], [3.0, 12.0], [1.0], [3.5, 1.0], [7.0]],
+        [[4.0], [0.0], [4.0], [4.0], [1.0, 5.0]]
+    )
+
+    @test get_hyperedge_weights(dhgnn) == dweights
+    @test get_hyperedge_weights(dhgnn; side=:both) == dweights
+    @test get_hyperedge_weights(dhgnn; side=:tail) == dweights[1]
+    @test get_hyperedge_weights(dhgnn; side=:head) == dweights[2]
+    @test get_hyperedge_weights(dhgnn, sum) == ([3.0, 15.0, 1.0, 4.5, 7.0], [4.0, 0.0, 4.0, 4.0, 6.0])
 
     # get_hyperedge_weight
     @test get_hyperedge_weight(hgnn, 2) == [3.0, 0.0, 12.0]
+    @test get_hyperedge_weight(hgnn, 2, sum) == 15.0
 
     # has_vertex
     @test has_vertex(hgnn, 10)
