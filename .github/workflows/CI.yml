@@ -53,6 +53,7 @@ jobs:
       - name: Configure test environment
         shell: julia --color=yes {0}
         run: |
+          using InteractiveUtils
           versioninfo()
           using Pkg
           Pkg.develop(PackageSpec(path=pwd()))

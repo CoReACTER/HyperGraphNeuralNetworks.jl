@@ -709,12 +709,22 @@ end
     @test get_hyperedge_weight(hgnn, 2) == [3.0, 0.0, 12.0]
     @test get_hyperedge_weight(hgnn, 2, sum) == 15.0
 
+    @test get_hyperedge_weight(dhgnn, 2) == ([3.0, 12.0], [0.0])
+    @test get_hyperedge_weight(dhgnn, 2; side=:both) == ([3.0, 12.0], [0.0])
+    @test get_hyperedge_weight(dhgnn, 2; side=:tail) == [3.0, 12.0]
+    @test get_hyperedge_weight(dhgnn, 2; side=:head) == [0.0]
+    @test get_hyperedge_weight(dhgnn, 2, sum) == (15.0, 0.0)
+
     # has_vertex
     @test has_vertex(hgnn, 10)
     @test !(has_vertex(hgnn, 12))
 
+    @test has_vertex(dhgnn, 10)
+    @test !(has_vertex(dhgnn, 25))
+
     # vertices
     @test vertices(hgnn) == 1:11
+    @test vertices(dhgnn) == 1:11
 
     # degree
     @test degree(hgnn) == [1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1]
