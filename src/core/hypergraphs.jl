@@ -320,7 +320,7 @@ function add_vertex(
         )
     end
 
-    return HGNNHypergraph(
+    return HGNNHypergraph{T,D}(
         v2he,
         he2v,
         ix,
@@ -331,6 +331,61 @@ function add_vertex(
         hg.hedata,
         hg.hgdata
     )
+end
+
+
+"""
+    add_vertices(
+        hg::HGNNHypergraph{T, D},
+        n::Int,
+        features::DataStore;
+        hyperedges::AbstractVector{D} = Vector{D}(D(), n),
+        hypergraph_ids::AbstractVector{Int} = ones(Int, n)
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Adds a set of vertices to an undirected hypergraph `hg`. Optionally, the user can specify the hyperedges on which
+    these vertices are incident.
+"""
+function add_vertices(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    features::DataStore;
+    hyperedges::AbstractVector{D} = Vector{D}(D(), n),
+    hypergraph_ids::AbstractVector{Int} = ones(Int, n)
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_vertex(hg, getobs(features, i); hyperedges=hyperedges[i], hypergraph_id=hypergraph_ids[i])
+    end
+
+    hg
+
+end
+
+
+"""
+    add_hyperedges(
+        hg::HGNNHypergraph{T, D},
+        n::Int,
+        features::DataStore;
+        vertices::AbstractVector{D} = Vector{D}(D(), n)    
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Adds a set of hyperedges to an undirected hypergraph `hg`. Optionally, the user can specify the vertices that are
+    incident on these hyperedges.
+"""
+function add_hyperedges(
+    hg::HGNNHypergraph{T, D},
+    n::Int,
+    features::DataStore;
+    vertices::AbstractVector{D} = Vector{D}(D(), n)    
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_hyperedge(hg, getobs(features, i); vertices=vertices[i])
+    end
+
+    hg
 end
 
 
@@ -665,6 +720,11 @@ function Base.copy(hg::HGNNHypergraph; deep = false)
     end
 end
 
+"""
+    print_all_features(io::IO, vdata, hedata, hgdata)\
+
+    Helper function that reports the vertex, hyperedge, and hypergraph features of a hypergraph.
+"""
 function print_all_features(io::IO, vdata, hedata, hgdata)
     print(io, "vertex features: $(vdata), 
                 hyperedge features: $(hedata), 
@@ -708,8 +768,6 @@ function Base.show(io::IO, ::MIME"text/plain", hg::HGNNHypergraph)
 end
 
 MLUtils.numobs(hg::HGNNHypergraph) = hg.num_hypergraphs
-# TODO: implement gethypergraph function
-# MLUtils.getobs(hg::HGNNHypergraph, i) = gethypergraph(hg, i)
 
 function Base.:(==)(hg1::HGNNHypergraph, hg2::HGNNHypergraph)
     hg1 === hg2 && return true
@@ -744,8 +802,6 @@ function Base.getproperty(hg::HGNNHypergraph, s::Symbol)
 end
 
 
-# TODO: update docstring
-# ALSO: test new constructors
 """
    HGNNDiHypergraph{T<:Real, D<:AbstractDict{Int,T}} <: AbstractHGNNDiHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
 
@@ -753,37 +809,80 @@ A directed hypergraph type for use in hypergraph neural networks
 
 **Constructors**
 
-    HGNNDiHypergraph(
-        h::AbstractDirectedHypergraph{T};
+    HGNNDiHypergraph{T,D}(
+        h::DirectedHypergraph{T,V,E,D};
         hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-        vdata::Union{DataStore, Nothing} = nothing,
-        hedata::Union{DataStore, Nothing} = nothing,
-        hgdata::Union{DataStore, Nothing} = nothing
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real, V, E, D<:AbstractDict{Int,T}}
+
+    function HGNNDiHypergraph{T}(
+        h::DirectedHypergraph;
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
     ) where {T<:Real}
+
+    HGNNDiHypergraph(
+        h::DirectedHypergraph;
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    )
 
     Construct a `HGNNDiHypergraph` from a previously constructed directed hypergraph. Optionally, the user can specify
     what hypergraph each vertex belongs to (if multiple distinct hypergraphs are included), as well as vertex,
     hyperedge, and hypergraph features.
 
     HGNNDiHypergraph{T, D}(
-        hg_tail::Hypergraph{T, D},
-        hg_head::Hypergraph{T, D};
+        hg_tail::Hypergraph{T,V,E,D},
+        hg_head::Hypergraph{T,V,E,D};
         hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
         vdata = nothing,
         hedata = nothing,
         hgdata = nothing
-    ) where {T<:Real, D<:AbstractDict{Int, T}}
+    ) where {T<:Real, V, E, D<:AbstractDict{Int, T}}
+
+    HGNNDiHypergraph{T}(
+        hg_tail::Hypergraph{T},
+        hg_head::Hypergraph{T};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real}
+
+    HGNNDiHypergraph(
+        hg_tail::Hypergraph{T},
+        hg_head::Hypergraph{T};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real}
 
     Construct a `HGNNDiHypergraph` from two undirected hypergraphs representing the tails and the heads of hyperedges
     in a directed hypergraph.
+
+    HGNNDiHypergraph{T}(
+        incidence_tail::AbstractMatrix{Union{T, Nothing}},
+        incidence_head::AbstractMatrix{Union{T, Nothing}};
+        hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    ) where {T<:Real}
 
     HGNNDiHypergraph(
         incidence_tail::AbstractMatrix{Union{T, Nothing}},
         incidence_head::AbstractMatrix{Union{T, Nothing}};
         hypergraph_ids::Union{Nothing, AbstractVector{<:Integer}} = nothing,
-        vdata::Union{DataStore, Nothing} = nothing,
-        hedata::Union{DataStore, Nothing} = nothing,
-        hgdata::Union{DataStore, Nothing} = nothing
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
     ) where {T<:Real}
 
     Construct a `HGNNDiHypergraph` from incidence matrices `incidence_tail` (containing information regarding which 
@@ -791,11 +890,11 @@ A directed hypergraph type for use in hypergraph neural networks
     about the heads). The incidence matrices have dimensions `M`x`N`, where `M` is the
     number of vertices and `N` is the number of hyperedges.
 
-    function HGNNDiHypergraph(num_nodes::T; vdata=nothing, kws...) where {T<:Integer}
+    HGNNDiHypergraph(num_nodes::T; vdata=nothing, kws...) where {T<:Integer}
 
     Construct a `HGNNDiHypergraph` with no hyperedges and `num_nodes` vertices.
 
-    function HGNNDiHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
+    HGNNDiHypergraph(; num_nodes=nothing, vdata=nothing, kws...)
 
     Construct a `HGNNDiHypergraph` with minimal (perhaps no) information.
 
@@ -1318,6 +1417,72 @@ function add_hyperedge(
 
 end
 
+
+"""
+    add_vertices(
+        hg::HGNNDiHypergraph{T, D},
+        n::Int,
+        features::DataStore;
+        hyperedges_tail::AbstractVector{D} = Vector{D}(D(), n),
+        hyperedges_head::AbstractVector{D} = Vector{D}(D(), n),
+        hypergraph_ids::AbstractVector{Int} = ones(Int, n)
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Adds a set of vertices to an directed hypergraph `hg`. Optionally, the user can specify the hyperedges on which
+    these vertices are incident.
+"""
+function add_vertices(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    features::DataStore;
+    hyperedges_tail::AbstractVector{D} = Vector{D}(D(), n),
+    hyperedges_head::AbstractVector{D} = Vector{D}(D(), n),
+    hypergraph_ids::AbstractVector{Int} = ones(Int, n)
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_vertex(
+            hg,
+            getobs(features, i);
+            hyperedges_tail = hyperedges_tail[i],
+            hyperedges_head = hyperedges_head[i],
+            hypergraph_id = hypergraph_ids[i]
+        )
+    end
+
+    hg
+
+end
+
+
+"""
+    add_hyperedges(
+        hg::HGNNDiHypergraph{T, D},
+        n::Int,
+        features::DataStore;
+        vertices_tail::AbstractVector{D} = Vector{D}(D(), n),
+        vertices_head::AbstractVector{D} = Vector{D}(D(), n)
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    Adds a set of hyperedges to a directed hypergraph `hg`. Optionally, the user can specify the vertices that are
+    incident on these hyperedges.
+"""
+function add_hyperedges(
+    hg::HGNNDiHypergraph{T, D},
+    n::Int,
+    features::DataStore;
+    vertices_tail::AbstractVector{D} = Vector{D}(D(), n),
+    vertices_head::AbstractVector{D} = Vector{D}(D(), n)
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
+    for i in 1:n
+        hg = add_hyperedge(hg, getobs(features, i); vertices_tail=vertices_tail[i], vertices_head=vertices_head[i])
+    end
+
+    hg
+end
+
+
 """
     remove_hyperedge!(::HGNNHypergraph, ::Int)
     
@@ -1560,74 +1725,6 @@ function remove_hyperedges(hg::HGNNDiHypergraph{T, D}, to_remove::AbstractVector
     )
 end
 
-function add_vertices(
-    hg::HGNNHypergraph{T, D},
-    n::Int,
-    features::DataStore;
-    hyperedges::AbstractVector{D} = Vector{D}(D(), n),
-    hypergraph_ids::AbstractVector{Int} = ones(Int, n)
-) where {T <: Real, D <: AbstractDict{Int, T}}
-
-    for i in 1:n
-        hg = add_vertex(hg, getobs(features, i); hyperedges=hyperedges[i], hypergraph_id=hypergraph_ids[i])
-    end
-
-    hg
-
-end
-
-function add_vertices(
-    hg::HGNNDiHypergraph{T, D},
-    n::Int,
-    features::DataStore;
-    hyperedges_tail::AbstractVector{D} = Vector{D}(D(), n),
-    hyperedges_head::AbstractVector{D} = Vector{D}(D(), n),
-    hypergraph_ids::AbstractVector{Int} = ones(Int, n)
-) where {T <: Real, D <: AbstractDict{Int, T}}
-
-    for i in 1:n
-        hg = add_vertex(
-            hg,
-            getobs(features, i);
-            hyperedges_tail = hyperedges_tail[i],
-            hyperedges_head = hyperedges_head[i],
-            hypergraph_id = hypergraph_ids[i]
-        )
-    end
-
-    hg
-
-end
-
-function add_hyperedges(
-    hg::HGNNHypergraph{T, D},
-    n::Int,
-    features::DataStore;
-    vertices::AbstractVector{D} = Vector{D}(D(), n)    
-) where {T <: Real, D <: AbstractDict{Int, T}}
-
-    for i in 1:n
-        hg = add_hyperedge(hg, getobs(features, i); vertices=vertices[i])
-    end
-
-    hg
-end
-
-function add_hyperedges(
-    hg::HGNNDiHypergraph{T, D},
-    n::Int,
-    features::DataStore;
-    vertices_tail::AbstractVector{D} = Vector{D}(D(), n),
-    vertices_head::AbstractVector{D} = Vector{D}(D(), n)
-) where {T <: Real, D <: AbstractDict{Int, T}}
-
-    for i in 1:n
-        hg = add_hyperedge(hg, getobs(features, i); vertices_tail=vertices_tail[i], vertices_head=vertices_head[i])
-    end
-
-    hg
-end
-
 
 function Base.show(io::IO, hg::HGNNDiHypergraph)
     print(io, "HGNNDiHypergraph($(hg.num_vertices), $(hg.num_hyperedges), $(hg.num_hypergraphs)) with ")
@@ -1690,8 +1787,6 @@ function Base.copy(hg::HGNNDiHypergraph; deep = false)
 end
 
 MLUtils.numobs(hg::HGNNDiHypergraph) = hg.num_hypergraphs
-# TODO: implement gethypergraph function
-# MLUtils.getobs(hg::HGNNDiHypergraph, i) = gethypergraph(hg, i)
 
 function Base.:(==)(hg1::HGNNDiHypergraph, hg2::HGNNDiHypergraph)
     hg1 === hg2 && return true
