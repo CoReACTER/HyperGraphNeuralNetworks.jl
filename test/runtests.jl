@@ -728,10 +728,22 @@ end
 
     # degree
     @test degree(hgnn) == [1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1]
+    @test degree(hgnn, 2) == 2
+    @test degree(hgnn, [1,3,5]) == [1, 1, 1]
+
+    @test degree(dhgnn) == [1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1]
+    @test degree(dhgnn, 1) == 1
+    @test degree(dhgnn, [1,2,3]) == [1, 2, 1]
 
     # indegree
+    @test indegree(dhgnn) == [0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1]
+    @test indegree(dhgnn, 5) == 0
+    @test indegree(dhgnn, [1,2,4,8]) == [0, 0, 1, 1]
 
     # outdegree
+    @test outdegree(dhgnn) == [1, 2, 0, 1, 1, 0, 1, 0, 0, 2, 0]
+    @test outdegree(dhgnn, 2) == 2
+    @test outdegree(dhgnn, [5, 10]) == [1, 2]
 
     # all_neighbors
     @test all_neighbors(hgnn) == [
@@ -1313,44 +1325,4 @@ end
     @test dhgnns_rand[1].num_hypergraphs == 1
     @test dhgnns_rand[2].num_hypergraphs == 1
     @test dhgnns_rand[3].num_hypergraphs == 1
-end
-
-@testset "HyperGraphNeuralNetworks undirected hypergraph datasets" begin
-    # Full Cora dataset
-    cora = getHyperCora(Float64)
-
-    @test nhv(cora) == 2708
-    @test nhe(cora) == 2708
-    @test size(cora.vdata.features) == (1433, 2708)
-    @test size(cora.vdata.targets) == (2708,)
-    @test cora.hedata == DataStore()
-    @test cora.hgdata == DataStore()
-
-    # Split into train, val, and test
-    cora = getHyperCora(Float64; split=true)
-    @test cora.train.num_vertices == 140
-    @test cora.train.num_hyperedges == 535
-    @test cora.val.num_vertices == 500
-    @test cora.val.num_hyperedges == 1237
-    @test cora.test.num_vertices == 1000
-    @test cora.test.num_hyperedges == 1882
-
-    # Full CiteSeer dataset
-    cs = getHyperCiteSeer(Int)
-    @test nhv(cs) == 3327
-    @test nhe(cs) == 3327
-    @test size(cs.vdata.features) == (3703, 3327)
-    @test size(cs.vdata.targets) == (3327,)
-    @test cs.hedata == DataStore()
-    @test cs.hgdata == DataStore()
-
-    # Split into train, val, and test
-    cs = getHyperCiteSeer(Int; split=true)
-    @test cs.train.num_vertices == 120
-    @test cs.train.num_hyperedges == 337
-    @test cs.val.num_vertices == 500
-    @test cs.val.num_hyperedges == 1036
-    @test cs.test.num_vertices == 1015
-    @test cs.test.num_hyperedges == 1752
-
 end

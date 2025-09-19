@@ -31,15 +31,8 @@ jobs:
           - x64
     env:
       DATADEPS_ALWAYS_ACCEPT: true
-      CONDA_JL_HOME: "/home/runner/miniconda/envs/conda_jl"
       LD_LIBRARY_PATH: ""
     steps:
-      # - uses: mamba-org/setup-micromamba@v2
-      #   with:
-      #     micromamba-binary-path: ${{ runner.temp }}/bin/conda
-      # - name: Mamba/conda environment
-      #   shell: bash
-      #   run: ${{ runner.temp }}/bin/conda create -p /home/runner/miniconda/envs/conda_jl python=3.10 matplotlib
       - name: Install matplotlib
         run: if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get install -y python3-matplotlib; fi
         shell: bash
@@ -53,8 +46,6 @@ jobs:
       - name: Configure test environment
         shell: julia --color=yes {0}
         run: |
-          using InteractiveUtils
-          versioninfo()
           using Pkg
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()

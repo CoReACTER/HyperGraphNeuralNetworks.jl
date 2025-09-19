@@ -189,7 +189,7 @@ Graphs.indegree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHype
 """
 Graphs.outdegree(hg::H) where {H <: AbstractHGNNDiHypergraph} = length.(keys.(hg.hg_tail.v2he))
 Graphs.outdegree(hg::H, i::Int) where {H <: AbstractHGNNDiHypergraph} = length(hg.hg_tail.v2he[i])
-Graphs.outdegree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHypergraph} = [indegree(hg, i) for i in inds]
+Graphs.outdegree(hg::H, inds::AbstractVector{Int}) where {H <: AbstractHGNNDiHypergraph} = [outdegree(hg, i) for i in inds]
 
 """
     all_neighbors(hg::H) where {H <: AbstractHGNNHypergraph}
@@ -249,10 +249,10 @@ end
 """
 function Graphs.all_neighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
 
-    incoming = in_neighbors(hg; same_side=same_side)
-    outgoing = out_neighbors(hg; same_side=same_side)
+    incoming = inneighbors(hg; same_side=same_side)
+    outgoing = outneighbors(hg; same_side=same_side)
 
-    sort!(unique!([incoming; outgoing]))
+    sort!.(unique!.(vcat.(incoming, outgoing)))
 
 end
 
@@ -274,10 +274,10 @@ end
 """
 function Graphs.all_neighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
 
-    incoming = in_neighbors(hg, i; same_side=same_side)
-    outgoing = out_neighbors(hg, i; same_side=same_side)
+    incoming = inneighbors(hg, i; same_side=same_side)
+    outgoing = outneighbors(hg, i; same_side=same_side)
 
-    sort!(unique!([incoming; outgoing]))
+    sort!(unique!(vcat(incoming, outgoing)))
 
 end
 
@@ -304,8 +304,9 @@ function Graphs.inneighbors(hg::H; same_side::Bool=false) where {H <: AbstractHG
         # Neighbors are the vertices in the associated tails
         neighbors = Vector{Vector{Int}}(undef,length(hes))
         for (i, hes_i) in enumerate(hes)
+            neighbors[i] = []
             for he in hes_i
-                cat(neighbors[i], collect(keys(hg.hg_tail.he2v[he])))
+                neighbors[i] = vcat(neighbors[i], collect(keys(hg.hg_tail.he2v[he])))
             end
             neighbors[i] = sort!(unique!(neighbors[i]))
         end
@@ -338,7 +339,7 @@ function Graphs.inneighbors(hg::H, i::Int; same_side::Bool=false) where {H <: Ab
         # Neighbors are the vertices in the associated tails
         neighbors = Vector{Int}[]
         for he in hes
-            cat(neighbors, collect(keys(hg.hg_tail.he2v[he])))
+            neighbors = vcat(neighbors, collect(keys(hg.hg_tail.he2v[he])))
         end
         
         sort!(unique!(neighbors))
@@ -368,8 +369,9 @@ function Graphs.outneighbors(hg::H; same_side::Bool=false) where {H <: AbstractH
         # Neighbors are the vertices in the associated heads
         neighbors = Vector{Vector{Int}}(undef,length(hes))
         for (i, hes_i) in enumerate(hes)
+            neighbors[i] = []
             for he in hes_i
-                cat(neighbors[i], collect(keys(hg.hg_head.he2v[he])))
+                neighbors[i] = vcat(neighbors[i], collect(keys(hg.hg_head.he2v[he])))
             end
             neighbors[i] = sort!(unique!(neighbors[i]))
         end
@@ -402,7 +404,7 @@ function Graphs.outneighbors(hg::H, i::Int; same_side::Bool=false) where {H <: A
         # Neighbors are the vertices in the associated tails
         neighbors = Vector{Int}[]
         for he in hes
-            cat(neighbors, collect(keys(hg.hg_tail.he2v[he])))
+            neighbors = vcat(neighbors, collect(keys(hg.hg_tail.he2v[he])))
         end
         
         sort!(unique!(neighbors))
