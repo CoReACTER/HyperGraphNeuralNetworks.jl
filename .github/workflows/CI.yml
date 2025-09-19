@@ -32,6 +32,7 @@ jobs:
     env:
       DATADEPS_ALWAYS_ACCEPT: true
       CONDA_JL_HOME: "/home/runner/miniconda/envs/conda_jl"
+      LD_LIBRARY_PATH: ""
     steps:
       # - uses: mamba-org/setup-micromamba@v2
       #   with:
@@ -52,6 +53,7 @@ jobs:
       - name: Configure test environment
         shell: julia --color=yes {0}
         run: |
+          versioninfo()
           using Pkg
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()
