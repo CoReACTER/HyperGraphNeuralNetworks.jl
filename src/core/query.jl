@@ -295,24 +295,24 @@ end
         `j` is in the tail of `e`, then `j` is an incoming neighbor to `i`. Default is false.
 """
 function Graphs.inneighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
-    if same_side
-        all_neighbors(hg.hg_head)
-    else
-        # Find the hyperedges for which each node is in the head
-        hes = collect.(keys.(hg.hg_head.v2he))
+    # Find the hyperedges for which each node is in the head
+    hes = collect.(keys.(hg.hg_head.v2he))
 
-        # Neighbors are the vertices in the associated tails
-        neighbors = Vector{Vector{Int}}(undef,length(hes))
-        for (i, hes_i) in enumerate(hes)
-            neighbors[i] = []
-            for he in hes_i
-                neighbors[i] = vcat(neighbors[i], collect(keys(hg.hg_tail.he2v[he])))
+    # Neighbors are the vertices in the associated tails
+    neighbors = Vector{Vector{Int}}(undef,length(hes))
+    for (i, hes_i) in enumerate(hes)
+        neighbors[i] = []
+        for he in hes_i
+            neighbors[i] = vcat(neighbors[i], collect(keys(hg.hg_tail.he2v[he])))
+            # Consider vertices in the head with this vertex to be neighbors
+            if same_side
+                neighbors[i] = vcat(neighbors[i], collect(keys(hg.hg_head.he2v[he])))
             end
-            neighbors[i] = sort!(unique!(neighbors[i]))
         end
-
-        neighbors
+        neighbors[i] = sort!(filter!(x -> x != i, unique!(neighbors[i])))
     end
+
+    neighbors
 end
 
 """
@@ -330,20 +330,20 @@ end
         `j` is in the tail of `e`, then `j` is an incoming neighbor to `i`. Default is false.
 """
 function Graphs.inneighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
-    if same_side
-        all_neighbors(hg.hg_head, i)
-    else
-        # Find the hyperedges for which this node is in the head
-        hes = collect(keys(hg.hg_head.v2he[i]))
+    # Find the hyperedges for which this node is in the head
+    hes = collect(keys(hg.hg_head.v2he[i]))
 
-        # Neighbors are the vertices in the associated tails
-        neighbors = Vector{Int}[]
-        for he in hes
-            neighbors = vcat(neighbors, collect(keys(hg.hg_tail.he2v[he])))
+    # Neighbors are the vertices in the associated tails
+    neighbors = Vector{Int}[]
+    for he in hes
+        neighbors = vcat(neighbors, collect(keys(hg.hg_tail.he2v[he])))
+        # Consider vertices in the head with this vertex to be neighbors
+        if same_side
+            neighbors = vcat(neighbors, collect(keys(hg.hg_head.he2v[he])))
         end
-        
-        sort!(unique!(neighbors))
     end
+    
+    sort!(filter!(x -> x != i, unique!(neighbors)))
 end
 
 """
@@ -360,24 +360,24 @@ end
         `j` is in the head of `e`, then `j` is an outgoing neighbor to `i`. Default is false.
 """
 function Graphs.outneighbors(hg::H; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
-    if same_side
-        all_neighbors(hg.hg_tail)
-    else
-        # Find the hyperedges for which each node is in the tail
-        hes = collect.(keys.(hg.hg_tail.v2he))
+    # Find the hyperedges for which each node is in the tail
+    hes = collect.(keys.(hg.hg_tail.v2he))
 
-        # Neighbors are the vertices in the associated heads
-        neighbors = Vector{Vector{Int}}(undef,length(hes))
-        for (i, hes_i) in enumerate(hes)
-            neighbors[i] = []
-            for he in hes_i
-                neighbors[i] = vcat(neighbors[i], collect(keys(hg.hg_head.he2v[he])))
+    # Neighbors are the vertices in the associated heads
+    neighbors = Vector{Vector{Int}}(undef,length(hes))
+    for (i, hes_i) in enumerate(hes)
+        neighbors[i] = []
+        for he in hes_i
+            neighbors[i] = vcat(neighbors[i], collect(keys(hg.hg_head.he2v[he])))
+            # Consider vertices in the tail with this vertex to be neighbors
+            if same_side
+                neighbors[i] = vcat(neighbors[i], collect(keys(hg.hg_tail.he2v[he])))
             end
-            neighbors[i] = sort!(unique!(neighbors[i]))
         end
-
-        neighbors
+        neighbors[i] = sort!(filter!(x -> x != i, unique!(neighbors[i])))
     end
+
+    neighbors
 end
 
 """
@@ -395,20 +395,21 @@ end
         `j` is in the head of `e`, then `j` is an outgoing neighbor to `i`. Default is false.
 """
 function Graphs.outneighbors(hg::H, i::Int; same_side::Bool=false) where {H <: AbstractHGNNDiHypergraph}
-    if same_side
-        all_neighbors(hg.hg_tail, i)
-    else
-        # Find the hyperedges for which this node is in the head
-        hes = collect(keys(hg.hg_head.v2he[i]))
+    # Find the hyperedges for which this node is in the tail
+    hes = collect(keys(hg.hg_tail.v2he[i]))
 
-        # Neighbors are the vertices in the associated tails
-        neighbors = Vector{Int}[]
-        for he in hes
+    # Neighbors are the vertices in the associated tails
+    neighbors = Vector{Int}[]
+    for he in hes
+        neighbors = vcat(neighbors, collect(keys(hg.hg_head.he2v[he])))
+
+        # Consider vertices in the tail with this vertex to be neighbors
+        if same_side
             neighbors = vcat(neighbors, collect(keys(hg.hg_tail.he2v[he])))
         end
-        
-        sort!(unique!(neighbors))
     end
+    
+    sort!(filter!(x -> x != i, unique!(neighbors)))
 end
 
 """
@@ -568,7 +569,7 @@ function Graphs.incidence_matrix(hg::H) where {H <: AbstractSimpleHypergraph}
     M[M .!== nothing] .= 1
     M[M .=== nothing] .= 0
 
-    M
+    convert(Matrix{eltype(M).b}, M) # Ugly, but ensures that Nothing is not included in type
 end
 
 """
@@ -600,7 +601,7 @@ end
 function complex_incidence_matrix(hg::H) where {H <: AbstractDirectedHypergraph}
     Mt, Mh = incidence_matrix(hg)
 
-    M = convert(Complex{typeof(Mh)}, Mh) .- (im .* convert(Complex{typeof(Mt)}, Mt))
+    M = Mh .- (im .* Mt)
 
     # Means that there's overlap between head and hg_tail
     if any(abs.(M) .> 1)
@@ -656,10 +657,16 @@ end
     (default is `sum`) that operates on each row of the hypergraph tail/head weighted incidence matrix.
 """
 function vertex_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractDirectedHypergraph}
-    Wt = vertex_weight_matrix(hg.hg_tail; weighting_function=weighting_function)
-    Wh = vertex_weight_matrix(hg.hg_head; weighting_function=weighting_function)
+    Wt = Matrix(hg.hg_tail)
+    Wt[Wt .=== nothing] .= 0
 
-    (Wt, Wh)
+    Wh = Matrix(hg.hg_head)
+    Wh[Wh .=== nothing] .= 0
+
+    weights_t = [weighting_function(Wt[i,:]) for i in 1:hg.num_vertices]
+    weights_h = [weighting_function(Wh[i,:]) for i in 1:hg.num_vertices]
+    
+    (Diagonal(weights_t), Diagonal(weights_h))
 end
 
 """
@@ -672,10 +679,16 @@ end
     hypergraph tail/head weighted incidence matrix.
 """
 function hyperedge_weight_matrix(hg::H; weighting_function::Function=sum) where {H <: AbstractDirectedHypergraph}
-    Wt = hyperedge_weight_matrix(hg.hg_tail; weighting_function=weighting_function)
-    Wh = hyperedge_weight_matrix(hg.hg_head; weighting_function=weighting_function)
+    Wt = Matrix(hg.hg_tail)
+    Wt[Wt .=== nothing] .= 0
 
-    (Wt, Wh)
+    Wh = Matrix(hg.hg_head)
+    Wh[Wh .=== nothing] .= 0
+
+    weights_t = [weighting_function(Wt[:,i]) for i in 1:hg.num_hyperedges]
+    weights_h = [weighting_function(Wh[:,i]) for i in 1:hg.num_hyperedges]
+    
+    (Diagonal(weights_t), Diagonal(weights_h))
 end
 
 
@@ -844,7 +857,7 @@ function Graphs.has_self_loops(hg::H) where {H <: AbstractHGNNDiHypergraph}
     vs_tail = Set.(collect.(keys.(hg.hg_tail.he2v)))
     vs_head = Set.(collect.(keys.(hg.hg_head.he2v)))
 
-    any([length(intersect(vs_tail[i], vs_head[i])) for i in eachindex(vs_tail)])
+    any([length(intersect(vs_tail[i], vs_head[i])) > 0 for i in eachindex(vs_tail)])
 end
 
 """
