@@ -1,12 +1,13 @@
 using Random
 using StatsBase
+using LinearAlgebra
 using Test
 using Graphs
 using GNNGraphs
 using MLUtils
-using HyperGraphNeuralNetworks
 using SimpleHypergraphs
 using SimpleDirectedHypergraphs
+using HyperGraphNeuralNetworks
 
 # Necessary for MLDatasets
 ENV["DATADEPS_ALWAYS_ACCEPT"] = true
@@ -444,7 +445,7 @@ end
     @test_throws "Not implemented! Number of hyperedges in HGNNDiHypergraph is fixed." SimpleHypergraphs.remove_hyperedge!(HGNN1, 1)
 end
 
-@testset "Base function of HGNN Undirected Hypergraph" begin
+@testset "HyperGraphNeuralNetworks HGNNDiHypergraph Base functions" begin
     h = DirectedHypergraph{Float64, Int, String}(2,1)
     h[1, 1, 1] = 1.0
     h[2, 2, 1] = 2.0
@@ -509,6 +510,492 @@ end
     @test_throws ArgumentError getproperty(HGNN, :b)
     @test getproperty(HGNN, :a) == vdata.a
     @test_throws ArgumentError getproperty(HGNN, :foo) 
+
+end
+
+@testset "HyperGraphNeuralNetworks random generation" begin
+    # Erdos-Renyi random hypergraphs
+    
+    # Undirected
+    Her_un = erdos_renyi_hypergraph(5, 5, HGNNHypergraph)
+    @test nhv(Her_un) == 5
+    @test nhe(Her_un) == 5
+    @test all(length.(Her_un.v2he) .> 0)
+    @test all(length.(Her_un.v2he) .<= 5)
+
+    # With specified seed
+    Her_un = erdos_renyi_hypergraph(5, 5, HGNNHypergraph; seed=1)
+    @test Matrix(Her_un) == [
+        nothing   nothing  1         1         1
+        1         1         1          nothing  1
+        nothing  1         1         1         1
+        nothing  1         1          nothing  1
+        nothing  1          nothing   nothing   nothing
+    ]
+
+    # Directed
+    Her_di = erdos_renyi_hypergraph(5, 5, HGNNDiHypergraph)
+    @test nhv(Her_un) == 5
+    @test nhe(Her_un) == 5
+    @test all(length.(Her_di.hg_tail.v2he) .> 0)
+    @test all(length.(Her_di.hg_head.v2he) .> 0)
+    @test all(length.(Her_di.hg_tail.v2he) .<= 5)
+    @test all(length.(Her_di.hg_head.v2he) .<= 5)
+
+    # With specified seed
+    Her_di = erdos_renyi_hypergraph(5, 5, HGNNDiHypergraph; seed=42)
+    @test Matrix(Her_di) == [
+        (1, 1)              (nothing, 1)  (nothing, 1)        (1, 1)  (1, 1)
+        (nothing, nothing)  (1, 1)        (nothing, nothing)  (1, 1)  (1, 1)
+        (nothing, 1)        (1, 1)        (1, nothing)        (1, 1)  (1, nothing)
+        (nothing, 1)        (nothing, 1)  (nothing, nothing)  (1, 1)  (1, 1)
+        (1, 1)              (1, 1)        (1, 1)              (1, 1)  (1, 1)
+    ]
+
+    # With no self-loops
+    DHr_nsl = erdos_renyi_hypergraph(5, 5, HGNNDiHypergraph; no_self_loops=true)
+    for i in 1:5
+        @test length(intersect(keys(DHr_nsl.hg_tail.v2he[i]), keys(DHr_nsl.hg_head.v2he[i]))) == 0
+    end
+
+    # Random k-uniform hypergraph
+
+    # Undirected
+    Hk = random_kuniform_hypergraph(5, 5, 3, HGNNHypergraph)
+    @test nhv(Hk) == 5
+    @test nhe(Hk) == 5
+    @test all(length.(Hk.he2v) .== 3)
+
+    # With specified seed
+    Hk = random_kuniform_hypergraph(5, 5, 3, HGNNHypergraph; seed=42)
+    @test Matrix(Hk) == [
+        1         1         1         1          nothing
+        nothing   nothing  1         1         1
+        1         1          nothing   nothing  1
+        1         1         1         1         1
+        nothing   nothing   nothing   nothing   nothing
+    ]
+
+    # Directed
+    DHk = random_kuniform_hypergraph(5, 5, 3, HGNNDiHypergraph)
+    @test nhv(DHk) == 5
+    @test nhe(DHk) == 5
+    @test all(length.(DHk.hg_tail.he2v) .+ length.(DHk.hg_head.he2v) .== 3)
+
+    # With specified seed
+    DHk = random_kuniform_hypergraph(5, 5, 3, HGNNDiHypergraph; seed=42)
+    @test Matrix(DHk) == [
+        (nothing, nothing)  (1, nothing)        (nothing, nothing)  (nothing, 1)        (1, nothing)
+        (1, nothing)        (nothing, nothing)  (1, nothing)        (1, nothing)        (nothing, 1)
+        (1, nothing)        (nothing, nothing)  (1, nothing)        (1, nothing)        (nothing, 1)
+        (nothing, 1)        (1, nothing)        (nothing, 1)        (nothing, nothing)  (nothing, nothing)
+        (nothing, nothing)  (1, nothing)        (nothing, nothing)  (nothing, nothing)  (nothing, nothing)
+    ]
+
+    # Random d-regular hypergraph
+
+    # Undirected
+    Hd = random_dregular_hypergraph(5, 5, 3, HGNNHypergraph)
+    @test nhv(Hd) == 5
+    @test nhe(Hd) == 5
+    @test all(length.(Hd.v2he) .== 3)
+
+    # With specified seed
+    Hd = random_dregular_hypergraph(5, 5, 3, HGNNHypergraph; seed=42)
+    @test Matrix(Hd) == [
+        1          nothing  1         1  nothing
+        1          nothing  1         1  nothing
+        1         1          nothing  1  nothing
+        1         1          nothing  1  nothing
+         nothing  1         1         1  nothing
+    ]
+
+    # Directed
+    DHd = random_dregular_hypergraph(5, 5, 3, HGNNDiHypergraph)
+    @test nhv(DHd) == 5
+    @test nhe(DHd) == 5
+    @test all(length.(DHd.hg_tail.v2he) .+ length.(DHd.hg_head.v2he) .== 3)
+
+    # With specified seed
+    DHd = random_dregular_hypergraph(5, 5, 3, HGNNDiHypergraph; seed=42)
+    @test Matrix(DHd) == [
+        (nothing, nothing)  (1, nothing)        (1, nothing)        (nothing, 1)        (nothing, nothing)
+        (1, nothing)        (nothing, nothing)  (nothing, nothing)  (1, nothing)        (1, nothing)
+        (nothing, nothing)  (1, nothing)        (1, nothing)        (nothing, 1)        (nothing, nothing)
+        (nothing, 1)        (1, nothing)        (1, nothing)        (nothing, nothing)  (nothing, nothing)
+        (1, nothing)        (nothing, 1)        (nothing, 1)        (nothing, nothing)  (nothing, nothing)
+    ]
+
+    # Random hypergraph with preferential attachment (undirected only, for now)
+
+    H∂ = random_preferential_hypergraph(20, 0.5, HGNNHypergraph)
+    @test nhv(H∂) == 20
+
+    uh2 = Hypergraph{Bool}(5,5)
+    uh2[1, 1] = true
+    uh2[2, 1] = true
+    uh2[4, 1] = true
+    uh2[2, 2] = true
+    uh2[5, 2] = true
+    uh2[4, 3] = true
+    uh2[2, 3] = true
+    uh2[2, 4] = true
+    uh2[4, 4] = true
+    uh2[5, 4] = true
+    uh2[4, 5] = true
+    uh2[5, 5] = true
+
+    # With specified seed
+    H∂ = random_preferential_hypergraph(8, 0.5, HGNNHypergraph; seed=42, hg=uh2)
+    @test Matrix(H∂) == [
+        1          nothing   nothing   nothing   nothing   nothing   nothing  1          nothing   nothing
+        1         1         1         1          nothing  1         1         1          nothing   nothing
+         nothing   nothing   nothing   nothing   nothing   nothing   nothing   nothing   nothing   nothing
+        1          nothing  1         1         1         1         1         1         1          nothing
+         nothing  1          nothing  1         1         1         1         1          nothing   nothing
+         nothing   nothing   nothing   nothing   nothing   nothing  1          nothing   nothing   nothing
+         nothing   nothing   nothing   nothing   nothing   nothing   nothing   nothing  1          nothing
+         nothing   nothing   nothing   nothing   nothing   nothing   nothing   nothing   nothing  1       
+    ]
+end
+
+@testset "HyperGraphNeuralNetworks query" begin
+    # TODO: do this for directed hypergraphs
+
+    hgnn = HGNNHypergraph(uh1.v2he, uh1.he2v, 11, 5, 2, uid1, DataStore(), DataStore(), DataStore())
+    dhgnn = HGNNDiHypergraph(
+        dh1;
+        hypergraph_ids = did1,
+        vdata = rand(Float64, 5, 11),
+        hedata = rand(Float64, 5, 5),
+        hgdata = rand(Float64, 5, 2)
+    )
+
+    # hyperedge_index
+    @test hyperedge_index(hgnn) == [
+        [1, 2, 4],
+        [2, 3, 5],
+        [4, 6],
+        [7, 10, 11],
+        [8, 9, 10],
+    ]
+    @test hyperedge_index(dhgnn) == (
+        [[1, 2], [2, 5], [4], [7, 10], [10]],
+        [[4], [3], [6], [11], [8, 9]]
+    )
+    
+    # get_hyperedge_weights
+    @test get_hyperedge_weights(hgnn) == [
+        [1.0, 2.0, 4.0],
+        [3.0, 0.0, 12.0],
+        [1.0, 4.0],
+        [3.5, 1.0, 4.0],
+        [1.0, 5.0, 7.0]
+    ]
+    @test get_hyperedge_weights(hgnn, sum) == [7.0, 15.0, 5.0, 8.5, 13.0]
+
+    dweights = (
+        [[1.0, 2.0], [3.0, 12.0], [1.0], [3.5, 1.0], [7.0]],
+        [[4.0], [0.0], [4.0], [4.0], [1.0, 5.0]]
+    )
+
+    @test get_hyperedge_weights(dhgnn) == dweights
+    @test get_hyperedge_weights(dhgnn; side=:both) == dweights
+    @test get_hyperedge_weights(dhgnn; side=:tail) == dweights[1]
+    @test get_hyperedge_weights(dhgnn; side=:head) == dweights[2]
+    @test get_hyperedge_weights(dhgnn, sum) == ([3.0, 15.0, 1.0, 4.5, 7.0], [4.0, 0.0, 4.0, 4.0, 6.0])
+
+    # get_hyperedge_weight
+    @test get_hyperedge_weight(hgnn, 2) == [3.0, 0.0, 12.0]
+    @test get_hyperedge_weight(hgnn, 2, sum) == 15.0
+
+    @test get_hyperedge_weight(dhgnn, 2) == ([3.0, 12.0], [0.0])
+    @test get_hyperedge_weight(dhgnn, 2; side=:both) == ([3.0, 12.0], [0.0])
+    @test get_hyperedge_weight(dhgnn, 2; side=:tail) == [3.0, 12.0]
+    @test get_hyperedge_weight(dhgnn, 2; side=:head) == [0.0]
+    @test get_hyperedge_weight(dhgnn, 2, sum) == (15.0, 0.0)
+
+    # has_vertex
+    @test has_vertex(hgnn, 10)
+    @test !(has_vertex(hgnn, 12))
+
+    @test has_vertex(dhgnn, 10)
+    @test !(has_vertex(dhgnn, 25))
+
+    # vertices
+    @test vertices(hgnn) == 1:11
+    @test vertices(dhgnn) == 1:11
+
+    # degree
+    @test degree(hgnn) == [1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1]
+    @test degree(hgnn, 2) == 2
+    @test degree(hgnn, [1,3,5]) == [1, 1, 1]
+
+    @test degree(dhgnn) == [1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1]
+    @test degree(dhgnn, 1) == 1
+    @test degree(dhgnn, [1,2,3]) == [1, 2, 1]
+
+    # indegree
+    @test indegree(dhgnn) == [0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1]
+    @test indegree(dhgnn, 5) == 0
+    @test indegree(dhgnn, [1,2,4,8]) == [0, 0, 1, 1]
+
+    # outdegree
+    @test outdegree(dhgnn) == [1, 2, 0, 1, 1, 0, 1, 0, 0, 2, 0]
+    @test outdegree(dhgnn, 2) == 2
+    @test outdegree(dhgnn, [5, 10]) == [1, 2]
+
+    # all_neighbors
+    @test all_neighbors(hgnn) == [
+        [2, 4],
+        [1, 3, 4, 5],
+        [2, 5],
+        [1, 2, 6],
+        [2, 3],
+        [4],
+        [10, 11],
+        [9, 10],
+        [8, 10],
+        [7, 8, 9, 11],
+        [7, 10]
+    ]
+    @test all_neighbors(hgnn, 2) == [1,3,4,5]
+
+    @test all_neighbors(dhgnn) == [
+        [4],
+        [3, 4],
+        [2, 5],
+        [1, 2, 6],
+        [3],
+        [4],
+        [11],
+        [10],
+        [10],
+        [8, 9, 11],
+        [7, 10]
+    ]
+    @test all_neighbors(dhgnn; same_side=true) == [
+        [2, 4],
+        [1, 3, 4, 5],
+        [2, 5],
+        [1, 2, 6],
+        [2, 3],
+        [4],
+        [10, 11],
+        [9, 10],
+        [8, 10],
+        [7, 8, 9, 11],
+        [7, 10]
+    ]
+
+    @test all_neighbors(dhgnn, 2) == [3, 4]
+    @test all_neighbors(dhgnn, 2; same_side=true) == [1, 3, 4, 5]
+
+    # inneighbors
+    @test inneighbors(dhgnn) == [
+        [],
+        [],
+        [2, 5],
+        [1, 2],
+        [],
+        [4],
+        [],
+        [10],
+        [10],
+        [],
+        [7, 10]
+    ]
+    @test inneighbors(dhgnn; same_side=true) == [
+        [],
+        [],
+        [2, 5],
+        [1, 2],
+        [],
+        [4],
+        [],
+        [9, 10],
+        [8, 10],
+        [],
+        [7, 10]
+    ]
+
+    @test inneighbors(dhgnn, 9) == [10]
+    @test inneighbors(dhgnn, 9; same_side=true) == [8, 10]
+
+    # outneighbors
+    @test outneighbors(dhgnn) == [
+        [4],
+        [3, 4],
+        [],
+        [6],
+        [3],
+        [],
+        [11],
+        [],
+        [],
+        [8, 9, 11],
+        []
+    ]
+    @test outneighbors(dhgnn; same_side=true) == [
+        [2, 4],
+        [1, 3, 4, 5],
+        [],
+        [6],
+        [2, 3],
+        [],
+        [10, 11],
+        [],
+        [],
+        [7, 8, 9, 11],
+        []
+    ]
+
+    @test outneighbors(dhgnn, 2) == [3, 4]
+    @test outneighbors(dhgnn, 2; same_side=true) == [1, 3, 4, 5]
+
+    # hyperedge_neighbors
+    @test hyperedge_neighbors(hgnn) == [[2, 3], [1], [1], [5], [4]]
+    @test hyperedge_neighbors(hgnn, 4) == [5]
+
+    # isolated_vertices
+    @test length(isolated_vertices(hgnn)) == 0
+    @test isolated_vertices(HGNNHypergraph(Hypergraph(5,0))) == [1,2,3,4,5]
+
+    # incidence_matrix
+    @test incidence_matrix(hgnn) == [
+        1.0  0.0  0.0  0.0  0.0
+        1.0  1.0  0.0  0.0  0.0
+        0.0  1.0  0.0  0.0  0.0
+        1.0  0.0  1.0  0.0  0.0
+        0.0  1.0  0.0  0.0  0.0
+        0.0  0.0  1.0  0.0  0.0
+        0.0  0.0  0.0  1.0  0.0
+        0.0  0.0  0.0  0.0  1.0
+        0.0  0.0  0.0  0.0  1.0
+        0.0  0.0  0.0  1.0  1.0
+        0.0  0.0  0.0  1.0  0.0
+    ]
+
+    inc = incidence_matrix(dhgnn)
+    @test inc[1] == [
+        1.0  0.0  0.0  0.0  0.0
+        1.0  1.0  0.0  0.0  0.0
+        0.0  0.0  0.0  0.0  0.0
+        0.0  0.0  1.0  0.0  0.0
+        0.0  1.0  0.0  0.0  0.0
+        0.0  0.0  0.0  0.0  0.0
+        0.0  0.0  0.0  1.0  0.0
+        0.0  0.0  0.0  0.0  0.0
+        0.0  0.0  0.0  0.0  0.0
+        0.0  0.0  0.0  1.0  1.0
+        0.0  0.0  0.0  0.0  0.0
+    ]
+    @test inc[2] == [
+        0.0  0.0  0.0  0.0  0.0
+        0.0  0.0  0.0  0.0  0.0
+        0.0  1.0  0.0  0.0  0.0
+        1.0  0.0  0.0  0.0  0.0
+        0.0  0.0  0.0  0.0  0.0
+        0.0  0.0  1.0  0.0  0.0
+        0.0  0.0  0.0  0.0  0.0
+        0.0  0.0  0.0  0.0  1.0
+        0.0  0.0  0.0  0.0  1.0
+        0.0  0.0  0.0  0.0  0.0
+        0.0  0.0  0.0  1.0  0.0
+    ]
+
+    # complex_incidence_matrix
+    @test complex_incidence_matrix(dhgnn) == [
+        0.0-1.0im  0.0-0.0im  0.0-0.0im  0.0-0.0im  0.0-0.0im
+        0.0-1.0im  0.0-1.0im  0.0-0.0im  0.0-0.0im  0.0-0.0im
+        0.0-0.0im  1.0-0.0im  0.0-0.0im  0.0-0.0im  0.0-0.0im
+        1.0-0.0im  0.0-0.0im  0.0-1.0im  0.0-0.0im  0.0-0.0im
+        0.0-0.0im  0.0-1.0im  0.0-0.0im  0.0-0.0im  0.0-0.0im
+        0.0-0.0im  0.0-0.0im  1.0-0.0im  0.0-0.0im  0.0-0.0im
+        0.0-0.0im  0.0-0.0im  0.0-0.0im  0.0-1.0im  0.0-0.0im
+        0.0-0.0im  0.0-0.0im  0.0-0.0im  0.0-0.0im  1.0-0.0im
+        0.0-0.0im  0.0-0.0im  0.0-0.0im  0.0-0.0im  1.0-0.0im
+        0.0-0.0im  0.0-0.0im  0.0-0.0im  0.0-1.0im  0.0-1.0im
+        0.0-0.0im  0.0-0.0im  0.0-0.0im  1.0-0.0im  0.0-0.0im
+    ]
+    
+    # vertex_weight_matrix
+    @test vertex_weight_matrix(hgnn) == Diagonal([1.0, 5.0, 0.0, 5.0, 12.0, 4.0, 3.5, 1.0, 5.0, 8.0, 4.0])
+    # Non-standard weighting function
+    @test vertex_weight_matrix(hgnn; weighting_function=prod) == Diagonal(zeros(11))
+
+    @test vertex_weight_matrix(dhgnn)[1] == Diagonal([1.0, 5.0, 0.0, 1.0, 12.0, 0.0, 3.5, 0.0, 0.0, 8.0, 0.0])
+    @test vertex_weight_matrix(dhgnn; weighting_function=prod)[1] == Diagonal(zeros(11))
+
+    @test vertex_weight_matrix(dhgnn)[2] == Diagonal([0.0, 0.0, 0.0, 4.0, 0.0, 4.0, 0.0, 1.0, 5.0, 0.0, 4.0])
+    @test vertex_weight_matrix(dhgnn; weighting_function=prod)[2] == Diagonal(zeros(11))
+
+    # hyperedge_weight_matrix
+    @test hyperedge_weight_matrix(hgnn) == Diagonal([7.0, 15.0, 5.0, 8.5, 13.0])
+    # Non-standard weighting function
+    @test hyperedge_weight_matrix(hgnn; weighting_function=prod) == Diagonal(zeros(5))
+
+    @test hyperedge_weight_matrix(dhgnn)[1] == Diagonal([3.0, 15.0, 1.0, 4.5, 7.0])
+    @test hyperedge_weight_matrix(dhgnn; weighting_function=prod)[1] == Diagonal(zeros(5))
+
+    @test hyperedge_weight_matrix(dhgnn)[2] == Diagonal([4.0, 0.0, 4.0, 4.0, 6.0])
+    @test hyperedge_weight_matrix(dhgnn; weighting_function=prod)[2] == Diagonal(zeros(5))
+
+    # vertex_degree_matrix
+    @test vertex_degree_matrix(hgnn) == Diagonal([1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1])
+
+    @test vertex_degree_matrix(dhgnn)[1] == Diagonal([1, 2, 0, 1, 1, 0, 1, 0, 0, 2, 0])
+    @test vertex_degree_matrix(dhgnn)[2] == Diagonal([0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1])
+
+    # hyperedge_degree_matrix
+    @test hyperedge_degree_matrix(hgnn) == Diagonal([3, 3, 2, 3, 3])
+
+    @test hyperedge_degree_matrix(dhgnn)[1] == Diagonal([2, 2, 1, 2, 1])
+    @test hyperedge_degree_matrix(dhgnn)[2] == Diagonal([1, 1, 1, 1, 2])
+
+    # normalized_laplacian
+    L = normalized_laplacian_matrix(hgnn)
+    @test size(L) == (11,11)
+    @test L[1,3] == 0.0
+    @test isapprox(L, L'; rtol=1e-5)
+
+    L = normalized_laplacian_matrix(dhgnn)
+    @test size(L) == (11, 11)
+    @test L[1,3] == 0.0-0.0im
+    @test isapprox(L, L'; rtol=1e-5)
+
+    # hypergraph_ids
+    @test hypergraph_ids(hgnn) == uid1
+    @test hypergraph_ids(dhgnn) == did1
+
+    # Case with no hypergraph_ids
+    hgnn2 = HGNNHypergraph(uh1.v2he, uh1.he2v, 11, 5, 1, nothing, DataStore(), DataStore(), DataStore())
+    @test hypergraph_ids(hgnn2) == ones(11)
+
+    dhgnn2 = HGNNDiHypergraph(dh1; hypergraph_ids = nothing)
+    @test hypergraph_ids(dhgnn2) == ones(11)
+
+    # has_self_loops
+    @test !(has_self_loops(hgnn))
+    @test !(has_self_loops(dhgnn))
+
+    # has_multi_hyperedges
+    @test !(has_multi_hyperedges(hgnn))
+    hg3 = Hypergraph{Bool}(2,2)
+    hg3[:,:] .= true
+    hgnn3 = HGNNHypergraph(hg3)
+    @test has_multi_hyperedges(hgnn3)
+
+    @test !(has_multi_hyperedges(dhgnn))
+    dhg3 = DirectedHypergraph{Bool}(2, 3)
+    dhg3.hg_tail[:,:] .= true
+    dhg3.hg_head[:,:] .= true
+    dhgnn3 = HGNNDiHypergraph(dhg3)
+    @test has_multi_hyperedges(dhgnn3)
+
+end
+
+@testset "HyperGraphNeuralNetworks transforms" begin
 
 end
 
@@ -1001,44 +1488,4 @@ end
     @test dhgnns_rand[1].num_hypergraphs == 1
     @test dhgnns_rand[2].num_hypergraphs == 1
     @test dhgnns_rand[3].num_hypergraphs == 1
-end
-
-@testset "HyperGraphNeuralNetworks undirected hypergraph datasets" begin
-    # Full Cora dataset
-    cora = getHyperCora(Float64)
-
-    @test nhv(cora) == 2708
-    @test nhe(cora) == 2708
-    @test size(cora.vdata.features) == (1433, 2708)
-    @test size(cora.vdata.targets) == (2708,)
-    @test cora.hedata == DataStore()
-    @test cora.hgdata == DataStore()
-
-    # Split into train, val, and test
-    cora = getHyperCora(Float64; split=true)
-    @test cora.train.num_vertices == 140
-    @test cora.train.num_hyperedges == 535
-    @test cora.val.num_vertices == 500
-    @test cora.val.num_hyperedges == 1237
-    @test cora.test.num_vertices == 1000
-    @test cora.test.num_hyperedges == 1882
-
-    # Full CiteSeer dataset
-    cs = getHyperCiteSeer(Int)
-    @test nhv(cs) == 3327
-    @test nhe(cs) == 3327
-    @test size(cs.vdata.features) == (3703, 3327)
-    @test size(cs.vdata.targets) == (3327,)
-    @test cs.hedata == DataStore()
-    @test cs.hgdata == DataStore()
-
-    # Split into train, val, and test
-    cs = getHyperCiteSeer(Int; split=true)
-    @test cs.train.num_vertices == 120
-    @test cs.train.num_hyperedges == 337
-    @test cs.val.num_vertices == 500
-    @test cs.val.num_hyperedges == 1036
-    @test cs.test.num_vertices == 1015
-    @test cs.test.num_hyperedges == 1752
-
 end
