@@ -33,7 +33,9 @@ jobs:
       - name: Install matplotlib
         run: if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get install -y python3-matplotlib; fi
         shell: bash
-      - uses: actions/checkout@v4
+      - name: Setup shell
+        run: export DATADEPS_ALWAYS_ACCEPT=true
+      - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia-version }}
@@ -42,9 +44,10 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v5
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v5
         with:
-          files: lcov.info
+          file: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
   docs:
@@ -58,7 +61,7 @@ jobs:
       - name: Install matplotlib
         run: if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get install -y python3-matplotlib; fi
         shell: bash
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1'

@@ -5,10 +5,10 @@ DocMeta.setdocmeta!(HyperGraphNeuralNetworks, :DocTestSetup, :(using HyperGraphN
 
 makedocs(;
     modules=[HyperGraphNeuralNetworks],
-    authors="Evan Walter Clark Spotte-Smith",
+    authors="Evan Walter Clark Spotte-Smith, Punna Amornvivat, CoReACTER",
     sitename="HyperGraphNeuralNetworks.jl",
     format=Documenter.HTML(;
-        canonical="https://espottesmith.github.io/HyperGraphNeuralNetworks.jl",
+        canonical="https://CoReACTER.org/HyperGraphNeuralNetworks.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -18,6 +18,7 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/espottesmith/HyperGraphNeuralNetworks.jl",
+    repo="https://github.com/CoReACTER/HyperGraphNeuralNetworks.jl",
+    branch="gh-pages",
     devbranch="main",
 )
