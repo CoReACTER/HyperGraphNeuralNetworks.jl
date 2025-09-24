@@ -1055,7 +1055,20 @@ end
     @test hg_comb1.hedata == cat_features(hg1.hedata, hg2.hedata)
     @test hg_comb1.hgdata == cat_features(hg1.hgdata, hg2.hgdata)
 
-    # @test combine_hypergraphs([hg1, hg2]) == batch([hg1, hg2])
+    hg_comb2 = combine_hypergraphs(hg1, hg1, hg2, hg2)
+    @test hg_comb2.num_vertices == 10
+    @test hg_comb2.num_hyperedges == 10
+    @test hg_comb2.num_hypergraphs == 6
+    @test hg_comb2.hypergraph_ids == [1, 2, 2, 3, 4, 4, 5, 5, 6, 6]
+    @test hg_comb2.vdata == cat_features([hg1.vdata, hg1.vdata, hg2.vdata, hg2.vdata])
+    @test hg_comb2.hedata == cat_features([hg1.hedata, hg1.hedata, hg2.hedata, hg2.hedata])
+    @test hg_comb2.hgdata == cat_features([hg1.hgdata, hg1.hgdata, hg2.hgdata, hg2.hgdata])
+
+    @test isnothing(combine_hypergraphs(HGNNHypergraph{Float64, Dict{Int,Float64}}[]))
+    @test combine_hypergraphs([hg1]) == hg1
+    @test combine_hypergraphs([hg1, hg1, hg2, hg2]) == hg_comb2
+
+    @test combine_hypergraphs([hg1, hg2]) == batch([hg1, hg2])
 
     # get_hypergraph / MLUtils.unbatch
 

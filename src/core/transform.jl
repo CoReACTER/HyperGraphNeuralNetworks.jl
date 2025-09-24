@@ -392,54 +392,13 @@ end
 function combine_hypergraphs(
     hgs::AbstractVector{HGNNHypergraph{T,D}}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
-    num_vs = [hg.num_vertices for hg in hgs]
-    num_hes = [hg.num_hyperedges for hg in hgs]
-    num_hgs = [hg.num_hypergraphs for hg in hgs]
-    
-    vsum = cumsum([0; num_vs])
-    hesum = cumsum([0; num_hes])
-    hgsum = cumsum([0; num_hgs])
-
-    v2hes = [hg.v2he for hg in hgs]
-    he2vs = [hg.he2v for hg in hgs]
-
-    v2he = D[]
-    he2v = D[]
-
-    for (i, v) in enumerate(v2hes)
-        new_v = D()
-        for (he, val) in v
-            new_v[he + hesum[i]] = val
-        end
-        push!(v2he, new_v)
-    end
-
-    for (i, he) in enumerate(he2vs)
-        new_he = D()
-        for (v, val) in he
-            new_he[v + vsum[i]] = val
-        end
-        push!(he2v, new_he)
-    end
-
-    function obtain_hg_inds(hg)
-        hg.hypergraph_ids === nothing ? ones(hg.num_vertices) : hg.hypergraph_ids
+    if length(hgs) == 0
+        return nothing
+    elseif length(hgs) == 1
+        return hgs[1]
     end
     
-    hypergraph_id_vecs = obtain_hg_inds.(hgs)
-    hypergraph_ids = cat_features([nhg .+ inc for (nhg, inc) in zip(hgsum, hypergraph_id_vecs)])
-
-    HGNNHypergraph(
-        v2he,
-        he2v,
-        sum(num_vs),
-        sum(num_hes),
-        sum(num_hgs),
-        hypergraph_ids,
-        cat_features([hg.vdata for hg in hgs]),
-        cat_features([hg.hedata for hg in hgs]),
-        cat_features([hg.hgdata for hg in hgs])
-    )
+    combine_hypergraphs(hgs...)
 end
 
 """
