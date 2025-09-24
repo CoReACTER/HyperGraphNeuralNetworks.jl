@@ -1,5 +1,5 @@
 """
-    add_self_loops(
+    add_selfloops(
         hg::HGNNHypergraph{T, D};
         add_repeated_hyperedge::Bool = false
     ) where {T<:Real, D<:AbstractDict{Int,T}}
@@ -9,11 +9,11 @@
 
     NOTE: this function will throw an AssertionError if hg.hedata is not empty
 """
-function add_self_loops(hg::HGNNHypergraph{T, D}; add_repeated_hyperedge::Bool = false) where {T<:Real, D<:AbstractDict{Int,T}}
+function add_selfloops(hg::HGNNHypergraph{T, D}; add_repeated_hyperedge::Bool = false) where {T<:Real, D<:AbstractDict{Int,T}}
     
     @assert isempty(hg.hedata)
     
-    vertices = [1:hg.num_vertices]
+    vertices = collect(1:hg.num_vertices)
     v2he = deepcopy(hg.v2he)    
     he2v = deepcopy(hg.he2v)
 
@@ -46,7 +46,7 @@ function add_self_loops(hg::HGNNHypergraph{T, D}; add_repeated_hyperedge::Bool =
 end
 
 """
-    add_self_loops(
+    add_selfloops(
         hg::HGNNDiHypergraph{T, D};
         add_repeated_hyperedge::Bool = false
     ) where {T<:Real, D<:AbstractDict{Int,T}}
@@ -57,7 +57,7 @@ end
 
     NOTE: this function will throw an AssertionError if hg.hedata is not empty
 """
-function add_self_loops(hg::HGNNDiHypergraph{T, D}; add_repeated_hyperedge::Bool = false) where {T<:Real, D<:AbstractDict{Int,T}}
+function add_selfloops(hg::HGNNDiHypergraph{T, D}; add_repeated_hyperedge::Bool = false) where {T<:Real, D<:AbstractDict{Int,T}}
 
     @assert isempty(hg.hedata)
 
@@ -102,11 +102,11 @@ function add_self_loops(hg::HGNNDiHypergraph{T, D}; add_repeated_hyperedge::Bool
 end
 
 """
-    remove_self_loops(hg::HGNNHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
+    remove_selfloops(hg::HGNNHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
 
     Remove self-loops (hyperedges containing only one vertex) from an undirected hypergraph `hg`.
 """
-function remove_self_loops(hg::HGNNHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
+function remove_selfloops(hg::HGNNHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
     @assert isempty(hg.hedata)
     
     v2he = deepcopy(hg.v2he)    
@@ -137,12 +137,12 @@ function remove_self_loops(hg::HGNNHypergraph{T, D}) where {T<:Real, D<:Abstract
 end
 
 """
-    remove_self_loops(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
+    remove_selfloops(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
 
     Remove self-loops (hyperedges where the tail and head both contain only a single, shared vertex `v`) from a
     directed hypergraph `hg`.
 """
-function remove_self_loops(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
+function remove_selfloops(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int,T}}
     @assert isempty(hg.hedata)
 
     v2he_tail = deepcopy(hg.hg_tail.v2he)
@@ -178,11 +178,11 @@ function remove_self_loops(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:Abstra
 end
 
 """
-    remove_multi_hyperedges(hg::HGNNHypergraph)
+    remove_multihyperedges(hg::HGNNHypergraph)
 
     Remove duplicate hyperedges (hyperedges containing identical vertices) from an undirected hypergraph `hg`.
 """
-function remove_multi_hyperedges(hg::HGNNHypergraph)
+function remove_multihyperedges(hg::HGNNHypergraph)
     unique_vs = Set{Set{Int}}()
 
     v2he = deepcopy(hg.v2he)
@@ -219,12 +219,12 @@ function remove_multi_hyperedges(hg::HGNNHypergraph)
 end
 
 """
-    remove_multi_hyperedges(hg::HGNNHypergraph)
+    remove_multihyperedges(hg::HGNNHypergraph)
 
     Remove duplicate hyperedges, i.e., hyperedges ei = (ti, hi), ej = (tj, hj), where t represents a hyperedge tail, h
     represents a hyperedge head, and ti = tj and hi = hj, from a directed hypergraph `hg`.
 """
-function remove_multi_hyperedges(hg::HGNNDiHypergraph)
+function remove_multihyperedges(hg::HGNNDiHypergraph)
     unique_vs = Set{Tuple{Set{Int}, Set{Int}}}()
 
     v2he_tail = deepcopy(hg.hg_tail.v2he)
@@ -356,11 +356,11 @@ function combine_hypergraphs(
     if isnothing(hg1.hypergraph_ids) && isnothing(hg2.hypergraph_ids)
         hypergraph_ids = ones(num_vertices)
     elseif isnothing(hg1.hypergraph_ids)
-        hypergraph_ids = cat(ones(hg1.num_vertices), (hg2.hypergraph_ids .+ hgid_increment))
+        hypergraph_ids = vcat(ones(hg1.num_vertices), (hg2.hypergraph_ids .+ hgid_increment))
     elseif isnothing(hg2.hypergraph_ids)
-        hypergraph_ids = cat(hg1.hypergraph_ids, (ones(hg2.num_vertices) .+ hgid_increment))
+        hypergraph_ids = vcat(hg1.hypergraph_ids, (ones(hg2.num_vertices) .+ hgid_increment))
     else
-        hypergraph_ids = cat(hg1.hypergraph_ids, (hg2.hypergraph_ids .+ hgid_increment))
+        hypergraph_ids = vcat(hg1.hypergraph_ids, (hg2.hypergraph_ids .+ hgid_increment))
     end
 
     HGNNHypergraph(
@@ -396,9 +396,9 @@ function combine_hypergraphs(
     num_hes = [hg.num_hyperedges for hg in hgs]
     num_hgs = [hg.num_hypergraphs for hg in hgs]
     
-    vsum = cumsum([0; num_vs])[1:(end - 1)]
-    hesum = cumsum([0; num_hes])[1:(end - 1)]
-    hgsum = cumsum([0; num_hgs])[1:(end - 1)]
+    vsum = cumsum([0; num_vs])
+    hesum = cumsum([0; num_hes])
+    hgsum = cumsum([0; num_hgs])
 
     v2hes = [hg.v2he for hg in hgs]
     he2vs = [hg.he2v for hg in hgs]

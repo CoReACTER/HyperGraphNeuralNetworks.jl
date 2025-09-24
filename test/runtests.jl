@@ -4,6 +4,7 @@ using LinearAlgebra
 using Test
 using Graphs
 using GNNGraphs
+import GNNGraphs: getn, getdata, normalize_graphdata, cat_features, shortsummary
 using MLUtils
 using SimpleHypergraphs
 using SimpleDirectedHypergraphs
@@ -660,8 +661,6 @@ end
 end
 
 @testset "HyperGraphNeuralNetworks query" begin
-    # TODO: do this for directed hypergraphs
-
     hgnn = HGNNHypergraph(uh1.v2he, uh1.he2v, 11, 5, 2, uid1, DataStore(), DataStore(), DataStore())
     dhgnn = HGNNDiHypergraph(
         dh1;
@@ -996,7 +995,79 @@ end
 end
 
 @testset "HyperGraphNeuralNetworks transforms" begin
+    # TODO: directed hyperedges
 
+    hgnn = HGNNHypergraph(uh1.v2he, uh1.he2v, 11, 5, 2, uid1, DataStore(), DataStore(), DataStore())
+    
+    # add_selfloops
+    hgnn0 = add_selfloops(hgnn)
+    @test hgnn0.num_hyperedges == 16
+    for i in 1:hgnn0.num_vertices
+        @test Dict{Int, Float64}(i => 1.0) in hgnn0.he2v
+    end
+
+    hgnn1 = add_hyperedge(hgnn, DataStore(); vertices=Dict{Int, Float64}(1 => 1.0))
+    hgnn2 = add_selfloops(hgnn1)
+    @test hgnn2.num_hyperedges == 16
+    hgnn2 = add_selfloops(hgnn1; add_repeated_hyperedge=true)
+    @test hgnn2.num_hyperedges == 17
+
+    # remove_selfloops
+    hgnn1 = remove_selfloops(hgnn2)
+    @test hgnn1.num_hyperedges == 5
+
+    # remove_multihyperedges
+    hgnn2 = add_hyperedge(hgnn, DataStore(); vertices=Dict{Int, Float64}(1 => 1.0, 2 => 2.0, 4 => 4.0))
+    @test remove_multihyperedges(hgnn2).num_hyperedges == 5
+
+    # to_undirected
+    #TODO: need undirected example
+
+    # combine_hypergraphs / MLUtils.batch
+    hg1 = HGNNHypergraph(
+        [
+            1.0     nothing
+            nothing 2.0
+            nothing 3.0
+        ];
+        hypergraph_ids=[1,2,2],
+        vdata = rand(Float64, 5, 3),
+        hedata = rand(Float64, 5, 2),
+        hgdata = rand(Float64, 5, 2)
+    )
+    hg2 = HGNNHypergraph(
+        [
+            1.0     nothing     1.0
+            nothing 2.0         3.0
+        ];
+        hypergraph_ids=[1,1],
+        vdata = rand(Float64, 5, 2),
+        hedata = rand(Float64, 5, 3),
+        hgdata = rand(Float64, 5, 1)
+    )
+
+    hg_comb1 = combine_hypergraphs(hg1, hg2)
+    @test hg_comb1.num_vertices == 5
+    @test hg_comb1.num_hyperedges == 5
+    @test hg_comb1.num_hypergraphs == 3
+    @test hg_comb1.hypergraph_ids == [1, 2, 2, 3, 3]
+    @test hg_comb1.vdata == cat_features(hg1.vdata, hg2.vdata)
+    @test hg_comb1.hedata == cat_features(hg1.hedata, hg2.hedata)
+    @test hg_comb1.hgdata == cat_features(hg1.hgdata, hg2.hgdata)
+
+    # @test combine_hypergraphs([hg1, hg2]) == batch([hg1, hg2])
+
+    # get_hypergraph / MLUtils.unbatch
+
+    # uniform_negative_sample
+
+    # sized_negative_sample
+
+    # motif_negative_sample
+
+    # clique_negative_sample
+
+    # negative_sample_hyperedge
 end
 
 @testset "HyperGraphNeuralNetworks split vertices" begin    
