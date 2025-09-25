@@ -656,9 +656,20 @@ end
     Extract one or more hypergraphs (based on `hypergraph_ids`) from an `HGNNHypergraph` containing multiple
     hypergraphs. This is used for unbatching (`MLUtils.unbatch`).
 """
-get_hypergraph(hg::HGNNDiHypergraph, i::Int; kws...) = get_hypergraph(hg, [i]; kws...)
+function get_hypergraph(
+    hg::HGNNDiHypergraph{T, D},
+    i::Int;
+    kws...
+) where {T <: Real, D <: AbstractDict{Int, T}}
+    
+    get_hypergraph(hg, [i]; kws...)
+end
 
-function get_hypergraph(hg::HGNNDiHypergraph, i::AbstractVector{Int}; map_vertices::Bool = false)
+function get_hypergraph(
+    hg::HGNNDiHypergraph{T, D},
+    i::AbstractVector{Int};
+    map_vertices::Bool = false
+) where {T <: Real, D <: AbstractDict{Int, T}}
     if hg.hypergraph_ids === nothing
         @assert i == [1]
 
@@ -670,14 +681,18 @@ function get_hypergraph(hg::HGNNDiHypergraph, i::AbstractVector{Int}; map_vertic
     end
 
     vertex_mask = hg.hypergraph_ids .∈ Ref(i)
-    vertices = (1:(hg.num_vertices))[vertex_mask]
+    vertices = collect(1:(hg.num_vertices))[vertex_mask]
     vertex_map = Dict(v => vnew for (vnew, v) in enumerate(vertices))
 
     hgmap = Dict(i => inew for (inew, i) in enumerate(i))
     hypergraph_ids = [hgmap[i] for i in hg.hypergraph_ids[vertex_mask]]
 
-    he_mask = all.(keys.(hg.hg_tail.he2v) .∈ Ref(vertices)) .* all.(keys.(hg.hg_head.he2v) .∈ Ref(vertices))
-    hyperedges = (1:(hg.num_hyperedges))[he_mask]
+    vset = Set(vertices)
+    he_mask = [
+        issubset(Set(keys(he_tail)), vset) && issubset(Set(keys(he_head)), vset)
+        for (he_tail, he_head) in zip(hg.hg_tail.he2v, hg.hg_head.he2v)
+    ]
+    hyperedges = collect(1:(hg.num_hyperedges))[he_mask]
     hyperedge_map = Dict(he => henew for (henew, he) in enumerate(hyperedges))
 
     he2v_tail = hg.hg_tail.he2v[he_mask]
@@ -728,9 +743,18 @@ function get_hypergraph(hg::HGNNDiHypergraph, i::AbstractVector{Int}; map_vertic
     num_hyperedges = length(hyperedges)
     num_hypergraphs = length(i)
 
-    HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(undef, num_vertices), Vector{Nothing}(undef, num_hyperedges)),
-        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(undef, num_vertices), Vector{Nothing}(undef, num_hyperedges)),
+    # Construct tail and head hypergraphs
+    hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, Nothing, Nothing, D}(length(v2he_head), length(he2v_head))
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
+    hg_new = HGNNDiHypergraph(
+        hg_tail,
+        hg_head,
         num_vertices, num_hyperedges, num_hypergraphs,
         hypergraph_ids,
         vdata, hedata, hgdata
@@ -743,7 +767,7 @@ function get_hypergraph(hg::HGNNDiHypergraph, i::AbstractVector{Int}; map_vertic
     end
 end
 
-function MLUtils.unbatch(hg::HGNNDiHypergraph)
+function MLUtils.unbatch(hg::HGNNDiHypergraph{T, D}) where {T <: Real, D <: AbstractDict{Int, T}}
     return [get_hypergraph(hg, i) for i in 1:(hg.num_hypergraphs)]
 end
 
@@ -1123,6 +1147,8 @@ function motif_negative_sample(
     sources = [src(e) for e in edges(g)]
     destinations = [dst(e) for e in edges(g)]
 
+    he2v = collect(zip(he2v_tail, he2v_head))
+
     choices = Tuple{Set{Int}, Set{Int}}[]
 
     for _ in 1:max_trials
@@ -1133,7 +1159,7 @@ function motif_negative_sample(
             he_tail = Set{Int}(sources[i])
             he_head = Set{Int}(destinations[i])
 
-            while length(he) < total_size
+            while length(he_tail) + length(he_head) < total_size
                 e_options = [
                     i for i in 1:ne(g) if 
                     (sources[i] ∈ he_tail && destinations[i] ∉ he_head) || (destinations[i] ∈ he_head&& sources[i] ∉ he_tail)
@@ -1148,8 +1174,10 @@ function motif_negative_sample(
                 push!(he_head, destinations[e])
             end
 
-            if length(he_tail) + length(he_head) >= total_size
-                push!(choices, (he_tail, he_head))
+            he = (he_tail, he_head)
+            
+            if length(he_tail) + length(he_head) >= total_size && !((he in he2v) || (he in choices))
+                push!(choices, he)
             end
 
         end

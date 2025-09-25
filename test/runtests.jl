@@ -1172,6 +1172,15 @@ end
     @test get_hypergraph(hg1, 2; map_vertices=true)[2] == [2, 3]
     @test unbatch(hg1) == [get_hypergraph(hg1, 1), get_hypergraph(hg1, 2)]
 
+    dhg1_1 = get_hypergraph(dhg1, 1)
+    @test dhg1_1 == get_hypergraph(dhg1, [1])
+    @test get_hypergraph(dhg1, [1,2]) == dhg1
+    @test dhg1_1.num_vertices == 1
+    @test dhg1_1.num_hyperedges == 0
+    @test dhg1_1.num_hypergraphs == 1
+    @test get_hypergraph(dhg1, 2; map_vertices=true)[2] == [2, 3]
+    @test unbatch(dhg1) == [get_hypergraph(dhg1, 1), get_hypergraph(dhg1, 2)]
+
     start_he_keys = Set.(keys.(hgnn.he2v))
 
     # uniform_negative_sample
@@ -1185,6 +1194,28 @@ end
     # All hyperedges should be unique
     @test length(Set(Set.(keys.(hgnn_u.he2v)))) == 3
 
+    start_he_keys = collect(
+        zip(
+            Set.(keys.(dhgnn.hg_tail.he2v)),
+            Set.(keys.(dhgnn.hg_head.he2v))
+        )
+    )
+
+    dhgnn_u = negative_sample_hyperedge(dhgnn, 3, Xoshiro(42), UniformSample(); max_trials=100)
+    @test dhgnn_u.num_vertices == 11
+    @test dhgnn_u.num_hyperedges == 3
+    # No hyperedge should be in the original hypergraph
+    
+    all_he_inds = Set{Tuple{Set{Int}, Set{Int}}}()
+
+    for (he_tail, he_head) in zip(dhgnn_u.hg_tail.he2v, dhgnn_u.hg_head.he2v)
+        he_inds = (Set(keys(he_tail)), Set(keys(he_head)))
+        @test he_inds ∉ start_he_keys
+        push!(all_he_inds, he_inds)
+    end
+    # All hyperedges should be unique
+    @test length(all_he_inds) == 3
+
 
     # sized_negative_sample
     hgnn_s = negative_sample_hyperedge(hgnn, 3, Xoshiro(42), SizedSample(); max_trials=100)
@@ -1194,6 +1225,21 @@ end
         @test Set(keys(he)) ∉ start_he_keys
     end
     @test length(Set(Set.(keys.(hgnn_s.he2v)))) == 3
+
+    dhgnn_s = negative_sample_hyperedge(dhgnn, 3, Xoshiro(42), SizedSample(); max_trials=100)
+    @test dhgnn_s.num_vertices == 11
+    @test dhgnn_s.num_hyperedges == 3
+    # No hyperedge should be in the original hypergraph
+
+    all_he_inds = Set{Tuple{Set{Int}, Set{Int}}}()
+
+    for (he_tail, he_head) in zip(dhgnn_s.hg_tail.he2v, dhgnn_s.hg_head.he2v)
+        he_inds = (Set(keys(he_tail)), Set(keys(he_head)))
+        @test he_inds ∉ start_he_keys
+        push!(all_he_inds, he_inds)
+    end
+    # All hyperedges should be unique
+    @test length(all_he_inds) == 3
 
 
     # motif_negative_sample
@@ -1205,6 +1251,20 @@ end
     end
     @test length(Set(Set.(keys.(hgnn_m.he2v)))) == 3
 
+    dhgnn_m = negative_sample_hyperedge(dhgnn, 3, Xoshiro(42), MotifSample(); max_trials=100)
+    @test dhgnn_m.num_vertices == 11
+    @test dhgnn_m.num_hyperedges == 3
+    # No hyperedge should be in the original hypergraph
+
+    all_he_inds = Set{Tuple{Set{Int}, Set{Int}}}()
+
+    for (he_tail, he_head) in zip(dhgnn_m.hg_tail.he2v, dhgnn_m.hg_head.he2v)
+        he_inds = (Set(keys(he_tail)), Set(keys(he_head)))
+        @test he_inds ∉ start_he_keys
+        push!(all_he_inds, he_inds)
+    end
+    # All hyperedges should be unique
+    @test length(all_he_inds) == 3
 
     # clique_negative_sample
     hgnn_c = negative_sample_hyperedge(hgnn, 3, Xoshiro(42), CliqueSample(); max_trials=100)
@@ -1215,11 +1275,24 @@ end
     end
     @test length(Set(Set.(keys.(hgnn_c.he2v)))) == 3
 
+    @test_throws "negative_sample not implemented for strategy of type CliqueSample" negative_sample_hyperedge(
+        dhgnn,
+        1,
+        Xoshiro(42),
+        CliqueSample()
+    )
 
     # negative_sample_hyperedge
     struct NewSample <: AbstractNegativeSamplingStrategy end
     @test_throws "negative_sample not implemented for strategy of type NewSample" negative_sample_hyperedge(
         hgnn,
+        1,
+        Xoshiro(42),
+        NewSample()
+    )
+
+    @test_throws "negative_sample not implemented for strategy of type NewSample" negative_sample_hyperedge(
+        dhgnn,
         1,
         Xoshiro(42),
         NewSample()
