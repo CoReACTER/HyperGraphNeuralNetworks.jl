@@ -592,28 +592,39 @@ end
     hypergraphs. This is used for unbatching (`MLUtils.unbatch`).
 
 """
-get_hypergraph(hg::HGNNHypergraph, i::Int; kws...) = get_hypergraph(hg, [i]; kws...)
+function get_hypergraph(
+    hg::HGNNHypergraph{T,D}, i::Int; kws...
+    ) where {T <: Real, D <: AbstractDict{Int, T}}
+    
+    get_hypergraph(hg, [i]; kws...)
+end
 
-function get_hypergraph(hg::HGNNHypergraph, i::AbstractVector{Int}; map_vertices::Bool = false)
+function get_hypergraph(
+    hg::HGNNHypergraph{T,D},
+    i::AbstractVector{Int};
+    map_vertices::Bool = false
+) where {T <: Real, D <: AbstractDict{Int, T}}
+
     if hg.hypergraph_ids === nothing
         @assert i == [1]
 
         if map_vertices
-            return hg, 1:(hg.num_vertices)
+            return hg, collect(1:(hg.num_vertices))
         else
             return hg
         end
     end
 
     vertex_mask = hg.hypergraph_ids .∈ Ref(i)
-    vertices = (1:(hg.num_vertices))[vertex_mask]
+    vertices = collect(1:(hg.num_vertices))[vertex_mask]
     vertex_map = Dict(v => vnew for (vnew, v) in enumerate(vertices))
 
     hgmap = Dict(i => inew for (inew, i) in enumerate(i))
     hypergraph_ids = [hgmap[i] for i in hg.hypergraph_ids[vertex_mask]]
 
-    he_mask = all.(keys.(hg.he2v) .∈ Ref(vertices))
-    hyperedges = (1:(hg.num_hyperedges))[he_mask]
+    vset = Set(vertices)
+    he_mask = [issubset(Set(keys(he)), vset) for he in hg.he2v]
+    hyperedges = collect(1:(hg.num_hyperedges))[he_mask]
     hyperedge_map = Dict(he => henew for (henew, he) in enumerate(hyperedges))
 
     he2v = hg.he2v[he_mask]
@@ -644,7 +655,7 @@ function get_hypergraph(hg::HGNNHypergraph, i::AbstractVector{Int}; map_vertices
     num_hyperedges = length(hyperedges)
     num_hypergraphs = length(i)
 
-    HGNNHypergraph(
+    hg_new = HGNNHypergraph{T,D}(
         v2he, he2v,
         num_vertices, num_hyperedges, num_hypergraphs,
         hypergraph_ids,
@@ -1052,9 +1063,15 @@ function motif_negative_sample(
 
     choices = Set{Set{Int}}()
 
-    adjmat = get_twosection_adjacency_mx(hg)
-    g = SimpleGraph(adjmat)
-    edges = [Set([src(e), dst(e)]) for e in edges(g)]
+    # Necessary because of issues that could arise when a weight is 0
+    mx = Matrix(hg)
+    mx[mx .!== nothing] .= 1.0
+    hg_ = Hypergraph{T, D}(mx)
+
+    adj = get_twosection_adjacency_mx(hg_)
+    
+    g = SimpleGraph(adj)
+    edges = [Set([src(e), dst(e)]) for e in Graphs.edges(g)]
 
     for _ in 1:max_trials
         for _ in 1:(n - length(choices))
@@ -1070,7 +1087,8 @@ function motif_negative_sample(
                 e = rand(rng, e_options)
                 union!(he, e)
             end
-            if length(he) >= size
+            
+            if length(he) >= size && !((he in he2v) || (he in choices))
                 push!(choices, he)
             end
         end

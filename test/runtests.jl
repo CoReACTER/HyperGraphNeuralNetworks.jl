@@ -1071,16 +1071,68 @@ end
     @test combine_hypergraphs([hg1, hg2]) == batch([hg1, hg2])
 
     # get_hypergraph / MLUtils.unbatch
+    hg1_1 = get_hypergraph(hg1, 1)
+    @test hg1_1 == get_hypergraph(hg1, [1])
+    @test get_hypergraph(hg1, [1,2]) == hg1
+    @test hg1_1.num_vertices == 1
+    @test hg1_1.num_hyperedges == 1
+    @test hg1_1.num_hypergraphs == 1
+    @test get_hypergraph(hg1, 2; map_vertices=true)[2] == [2, 3]
+    @test unbatch(hg1) == [get_hypergraph(hg1, 1), get_hypergraph(hg1, 2)]
+
+    start_he_keys = Set.(keys.(hgnn.he2v))
 
     # uniform_negative_sample
+    hgnn_u = negative_sample_hyperedge(hgnn, 3, Xoshiro(42), UniformSample(); max_trials=100)
+    @test hgnn_u.num_vertices == 11
+    @test hgnn_u.num_hyperedges == 3
+    # No hyperedge should be in the original hypergraph
+    for he in hgnn_u.he2v
+        @test Set(keys(he)) ∉ start_he_keys
+    end
+    # All hyperedges should be unique
+    @test length(Set(Set.(keys.(hgnn_u.he2v)))) == 3
+
 
     # sized_negative_sample
+    hgnn_s = negative_sample_hyperedge(hgnn, 3, Xoshiro(42), SizedSample(); max_trials=100)
+    @test hgnn_s.num_vertices == 11
+    @test hgnn_s.num_hyperedges == 3
+    for he in hgnn_s.he2v
+        @test Set(keys(he)) ∉ start_he_keys
+    end
+    @test length(Set(Set.(keys.(hgnn_s.he2v)))) == 3
+
 
     # motif_negative_sample
+    hgnn_m = negative_sample_hyperedge(hgnn, 3, Xoshiro(42), MotifSample(); max_trials=100)
+    @test hgnn_m.num_vertices == 11
+    @test hgnn_m.num_hyperedges == 3
+    for he in hgnn_m.he2v
+        @test Set(keys(he)) ∉ start_he_keys
+    end
+    @test length(Set(Set.(keys.(hgnn_m.he2v)))) == 3
+
 
     # clique_negative_sample
+    hgnn_c = negative_sample_hyperedge(hgnn, 3, Xoshiro(42), CliqueSample(); max_trials=100)
+    @test hgnn_c.num_vertices == 11
+    @test hgnn_c.num_hyperedges == 3
+    for he in hgnn_c.he2v
+        @test Set(keys(he)) ∉ start_he_keys
+    end
+    @test length(Set(Set.(keys.(hgnn_c.he2v)))) == 3
+
 
     # negative_sample_hyperedge
+    struct NewSample <: AbstractNegativeSamplingStrategy end
+    @test_throws "negative_sample not implemented for strategy of type NewSample" negative_sample_hyperedge(
+        hgnn,
+        1,
+        Xoshiro(42),
+        NewSample()
+    )
+
 end
 
 @testset "HyperGraphNeuralNetworks split vertices" begin    
