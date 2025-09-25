@@ -496,16 +496,25 @@ function combine_hypergraphs(
     if isnothing(hg1.hypergraph_ids) && isnothing(hg1.hypergraph_ids)
         hypergraph_ids = ones(num_vertices)
     elseif isnothing(hg1.hypergraph_ids)
-        hypergraph_ids = cat(ones(hg1.num_vertices), (hg2.hypergraph_ids .+ hgid_increment))
+        hypergraph_ids = vcat(ones(hg1.num_vertices), (hg2.hypergraph_ids .+ hgid_increment))
     elseif isnothing(hg2.hypergraph_ids)
-        hypergraph_ids = cat(hg1.hypergraph_ids, (ones(hg2.num_vertices) .+ hgid_increment))
+        hypergraph_ids = vcat(hg1.hypergraph_ids, (ones(hg2.num_vertices) .+ hgid_increment))
     else
-        hypergraph_ids = cat(hg1.hypergraph_ids, (hg2.hypergraph_ids .+ hgid_increment))
+        hypergraph_ids = vcat(hg1.hypergraph_ids, (hg2.hypergraph_ids .+ hgid_increment))
     end
 
+    # Construct tail and head hypergraphs
+    hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, Nothing, Nothing, D}(length(v2he_head), length(he2v_head))
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
     HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(undef, num_vertices), Vector{Nothing}(undef, num_hyperedges)),
-        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(undef, num_vertices), Vector{Nothing}(undef, num_hyperedges)),
+        hg_tail,
+        hg_head,
         num_vertices,
         num_hyperedges,
         num_hypergraphs,
@@ -532,74 +541,13 @@ end
 function combine_hypergraphs(
     hgs::AbstractVector{HGNNDiHypergraph{T,D}}
 ) where {T <: Real, D <: AbstractDict{Int, T}}
-    num_vs = [hg.num_vertices for hg in hgs]
-    num_hes = [hg.num_hyperedges for hg in hgs]
-    num_hgs = [hg.num_hypergraphs for hg in hgs]
-    
-    vsum = cumsum([0; num_vs])[1:(end - 1)]
-    hesum = cumsum([0; num_hes])[1:(end - 1)]
-    hgsum = cumsum([0; num_hgs])[1:(end - 1)]
-
-    v2he_tails = [hg.hg_tail.v2he for hg in hgs]
-    v2he_heads = [hg.hg_head.v2he for hg in hgs]
-    he2v_tails = [hg.hg_tail.he2v for hg in hgs]
-    he2v_heads = [hg.hg_tail.he2v for hg in hgs]
-
-    v2he_tail = D[]
-    v2he_head = D[]
-    he2v_tail = D[]
-    he2v_head = D[]
-
-    for (i, v) in enumerate(v2he_tails)
-        new_v = D()
-        for (he, val) in v
-            new_v[he + hesum[i]] = val
-        end
-        push!(v2he_tail, new_v)
+    if length(hgs) == 0
+        return nothing
+    elseif length(hgs) == 1
+        return hgs[1]
     end
 
-    for (i, v) in enumerate(v2he_heads)
-        new_v = D()
-        for (he, val) in v
-            new_v[he + hesum[i]] = val
-        end
-        push!(v2he_head, new_v)
-    end
-
-    for (i, he) in enumerate(he2v_tails)
-        new_he = D()
-        for (v, val) in he
-            new_he[v + vsum[i]] = val
-        end
-        push!(he2v_tail, new_he)
-    end
-
-    for (i, he) in enumerate(he2v_heads)
-        new_he = D()
-        for (v, val) in he
-            new_he[v + vsum[i]] = val
-        end
-        push!(he2v_head, new_he)
-    end
-
-    function obtain_hg_inds(hg)
-        hg.hypergraph_ids === nothing ? ones(hg.num_vertices) : hg.hypergraph_ids
-    end
-    
-    hypergraph_id_vecs = obtain_hg_inds.(hgs)
-    hypergraph_ids = cat_features([nhg .+ inc for (nhg, inc) in zip(hgsum, hypergraph_id_vecs)])
-
-    HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(undef, num_vertices), Vector{Nothing}(undef, num_hyperedges)),
-        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(undef, num_vertices), Vector{Nothing}(undef, num_hyperedges)),
-        sum(num_vs),
-        sum(num_hes),
-        sum(num_hgs),
-        hypergraph_ids,
-        cat_features([hg.vdata for hg in hgs]),
-        cat_features([hg.hedata for hg in hgs]),
-        cat_features([hg.hgdata for hg in hgs])
-    )
+    combine_hypergraphs(hgs...)
 end
 
 function MLUtils.batch(hgs::AbstractVector{HGNNHypergraph{T,D}}) where {T <: Real, D <: AbstractDict{Int, T}}

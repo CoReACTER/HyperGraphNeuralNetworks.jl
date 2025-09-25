@@ -1107,6 +1107,61 @@ end
 
     @test combine_hypergraphs([hg1, hg2]) == batch([hg1, hg2])
 
+    dhg1 = HGNNDiHypergraph(
+        [
+            1.0     nothing
+            nothing 2.0
+            nothing 3.0
+        ],
+        [
+            nothing nothing
+            2.0     nothing
+            nothing 6.0
+        ];
+        hypergraph_ids=[1,2,2],
+        vdata = rand(Float64, 5, 3),
+        hedata = rand(Float64, 5, 2),
+        hgdata = rand(Float64, 5, 2)
+    )
+    dhg2 = HGNNDiHypergraph(
+        [
+            1.0     nothing     nothing
+            nothing 2.0         3.0
+        ],
+        [
+            nothing nothing 1.0
+            2.0     4.0     nothing
+        ];
+        hypergraph_ids=[1,1],
+        vdata = rand(Float64, 5, 2),
+        hedata = rand(Float64, 5, 3),
+        hgdata = rand(Float64, 5, 1)
+    )
+
+    dhg_comb1 = combine_hypergraphs(dhg1, dhg2)
+    @test dhg_comb1.num_vertices == 5
+    @test dhg_comb1.num_hyperedges == 5
+    @test dhg_comb1.num_hypergraphs == 3
+    @test dhg_comb1.hypergraph_ids == [1, 2, 2, 3, 3]
+    @test dhg_comb1.vdata == cat_features(dhg1.vdata, dhg2.vdata)
+    @test dhg_comb1.hedata == cat_features(dhg1.hedata, dhg2.hedata)
+    @test dhg_comb1.hgdata == cat_features(dhg1.hgdata, dhg2.hgdata)
+
+    dhg_comb2 = combine_hypergraphs(dhg1, dhg1, dhg2, dhg2)
+    @test dhg_comb2.num_vertices == 10
+    @test dhg_comb2.num_hyperedges == 10
+    @test dhg_comb2.num_hypergraphs == 6
+    @test dhg_comb2.hypergraph_ids == [1, 2, 2, 3, 4, 4, 5, 5, 6, 6]
+    @test dhg_comb2.vdata == cat_features([dhg1.vdata, dhg1.vdata, dhg2.vdata, dhg2.vdata])
+    @test dhg_comb2.hedata == cat_features([dhg1.hedata, dhg1.hedata, dhg2.hedata, dhg2.hedata])
+    @test dhg_comb2.hgdata == cat_features([dhg1.hgdata, dhg1.hgdata, dhg2.hgdata, dhg2.hgdata])
+
+    @test isnothing(combine_hypergraphs(HGNNDiHypergraph{Float64, Dict{Int,Float64}}[]))
+    @test combine_hypergraphs([dhg1]) == dhg1
+    @test combine_hypergraphs([dhg1, dhg1, dhg2, dhg2]) == dhg_comb2
+
+    @test combine_hypergraphs([dhg1, dhg2]) == batch([dhg1, dhg2])
+
     # get_hypergraph / MLUtils.unbatch
     hg1_1 = get_hypergraph(hg1, 1)
     @test hg1_1 == get_hypergraph(hg1, [1])
