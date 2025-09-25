@@ -35,7 +35,7 @@ export hypergraph_ids, has_multi_hyperedges
 
 include("core/transform.jl")
 
-export add_self_loops, remove_self_loops, remove_multi_hyperedges
+export add_selfloops, remove_selfloops, remove_multihyperedges
 export rewire_hyperedges, to_undirected
 export combine_hypergraphs, get_hypergraph
 export AbstractNegativeSamplingStrategy, UniformSample, SizedSample, MotifSample, CliqueSample, negative_sample_hyperedge
