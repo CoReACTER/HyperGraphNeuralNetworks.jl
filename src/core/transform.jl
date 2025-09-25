@@ -61,11 +61,11 @@ function add_selfloops(hg::HGNNDiHypergraph{T, D}; add_repeated_hyperedge::Bool 
 
     @assert isempty(hg.hedata)
 
-    vertices = [1:hg.num_vertices]
+    vertices = collect(1:hg.num_vertices)
     v2he_tail = deepcopy(hg.hg_tail.v2he)
     v2he_head = deepcopy(hg.hg_head.v2he)
     he2v_tail = deepcopy(hg.hg_tail.he2v)
-    he2v_head = deepcoyp(hg.hg_head.he2v)
+    he2v_head = deepcopy(hg.hg_head.he2v)
 
     all_he_keys = collect(zip(collect.(keys.(he2v_tail)), collect.(keys.(he2v_head))))
     if add_repeated_hyperedge
@@ -88,9 +88,18 @@ function add_selfloops(hg::HGNNDiHypergraph{T, D}; add_repeated_hyperedge::Bool 
         end
     end
 
+    # Construct tail and head hypergraphs
+    hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, Nothing, Nothing, D}(length(v2he_head), length(he2v_head))
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
     return HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(nothing, length(v2he_tail)), Vector{Nothing}(nothing, length(he2v_tail))),
-        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(nothing, length(v2he_head)), Vector{Nothing}(nothing, length(he2v_head))),
+        hg_tail,
+        hg_head,
         hg.num_vertices,
         length(he2v_tail),
         hg.num_hypergraphs,
@@ -148,7 +157,7 @@ function remove_selfloops(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:Abstrac
     v2he_tail = deepcopy(hg.hg_tail.v2he)
     v2he_head = deepcopy(hg.hg_head.v2he)
     he2v_tail = deepcopy(hg.hg_tail.he2v)
-    he2v_head = deepcoyp(hg.hg_head.he2v)
+    he2v_head = deepcopy(hg.hg_head.he2v)
 
     to_remove = Int[]
     for (i, (he_tail, he_head)) in enumerate(zip(he2v_tail, he2v_head))
@@ -164,9 +173,18 @@ function remove_selfloops(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:Abstrac
     he2v_tail = he2v_tail[Not(to_remove)]
     he2v_head = he2v_head[Not(to_remove)]
 
+    # Construct tail and head hypergraphs
+    hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, Nothing, Nothing, D}(length(v2he_head), length(he2v_head))
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
     return HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(nothing, length(v2he_tail)), Vector{Nothing}(nothing, length(he2v_tail))),
-        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(nothing, length(v2he_head)), Vector{Nothing}(nothing, length(he2v_head))),
+        hg_tail,
+        hg_head,
         hg.num_vertices,
         length(he2v_tail),
         hg.num_hypergraphs,
@@ -224,7 +242,7 @@ end
     Remove duplicate hyperedges, i.e., hyperedges ei = (ti, hi), ej = (tj, hj), where t represents a hyperedge tail, h
     represents a hyperedge head, and ti = tj and hi = hj, from a directed hypergraph `hg`.
 """
-function remove_multihyperedges(hg::HGNNDiHypergraph)
+function remove_multihyperedges(hg::HGNNDiHypergraph{T, D}) where {T<:Real, D<:AbstractDict{Int, T}}
     unique_vs = Set{Tuple{Set{Int}, Set{Int}}}()
 
     v2he_tail = deepcopy(hg.hg_tail.v2he)
@@ -250,11 +268,20 @@ function remove_multihyperedges(hg::HGNNDiHypergraph)
     he2v_tail = hg.hg_tail.he2v[mask_to_keep]
     he2v_head = hg.hg_head.he2v[mask_to_keep]
 
+    # Construct tail and head hypergraphs
+    hg_tail = Hypergraph{T, Nothing, Nothing, D}(length(v2he_tail), length(he2v_tail))
+    hg_tail.v2he .= v2he_tail
+    hg_tail.he2v .= he2v_tail
+
+    hg_head = Hypergraph{T, Nothing, Nothing, D}(length(v2he_head), length(he2v_head))
+    hg_head.v2he .= v2he_head
+    hg_head.he2v .= he2v_head
+
     hedata = getobs(hg.hedata, mask_to_keep)
 
     HGNNDiHypergraph(
-        Hypergraph(v2he_tail, he2v_tail, Vector{Nothing}(nothing, length(v2he_tail)), Vector{Nothing}(nothing, length(he2v_tail))),
-        Hypergraph(v2he_head, he2v_head, Vector{Nothing}(nothing, length(v2he_head)), Vector{Nothing}(nothing, length(he2v_head))),
+        hg_tail,
+        hg_head,
         hg.num_vertices,
         length(he2v_tail),
         hg.num_hypergraphs,
@@ -280,7 +307,7 @@ end
     is in a given hyperedge 
 
 """
-function to_undirected(hg::HGNNDiHypergraph{T,D}) where {T <: Real, D <: AbstractDict{Int, T}}
+function SimpleDirectedHypergraphs.to_undirected(hg::HGNNDiHypergraph{T,D}) where {T <: Real, D <: AbstractDict{Int, T}}
 
     incidence = Matrix{Union{T, Nothing}}(nothing, nhv(hg), nhe(hg))
 
@@ -288,7 +315,7 @@ function to_undirected(hg::HGNNDiHypergraph{T,D}) where {T <: Real, D <: Abstrac
 
     for row in 1:nhv(hg)
         for column in 1:this_nhe
-            tail_val, head_val = h[row, column]
+            tail_val, head_val = hg[row, column]
             if tail_val === nothing && head_val === nothing
                 incidence[row, column] = nothing
             else
@@ -1087,7 +1114,7 @@ function motif_negative_sample(
                 e = rand(rng, e_options)
                 union!(he, e)
             end
-            
+
             if length(he) >= size && !((he in he2v) || (he in choices))
                 push!(choices, he)
             end

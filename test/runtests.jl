@@ -999,6 +999,14 @@ end
 
     hgnn = HGNNHypergraph(uh1.v2he, uh1.he2v, 11, 5, 2, uid1, DataStore(), DataStore(), DataStore())
     
+    dhgnn = HGNNDiHypergraph(
+        dh1;
+        hypergraph_ids = did1,
+        vdata = nothing,
+        hedata = nothing,
+        hgdata = nothing
+    )
+
     # add_selfloops
     hgnn0 = add_selfloops(hgnn)
     @test hgnn0.num_hyperedges == 16
@@ -1012,16 +1020,45 @@ end
     hgnn2 = add_selfloops(hgnn1; add_repeated_hyperedge=true)
     @test hgnn2.num_hyperedges == 17
 
+    dhgnn0 = add_selfloops(dhgnn)
+    @test dhgnn0.num_hyperedges == 16
+    he_verts = collect(zip(Set.(keys.(dhgnn0.hg_tail.he2v)), Set.(keys.(dhgnn0.hg_head.he2v))))
+    for i in 1:dhgnn0.num_vertices
+        @test (Set(i), Set(i)) in he_verts
+    end
+
+    dhgnn1 = add_hyperedge(
+        dhgnn,
+        DataStore();
+        vertices_tail=Dict{Int, Float64}(1 => 1.0),
+        vertices_head=Dict{Int, Float64}(1 => 1.0)
+    )
+    dhgnn2 = add_selfloops(dhgnn1)
+    @test dhgnn2.num_hyperedges == 16
+    dhgnn2 = add_selfloops(dhgnn1; add_repeated_hyperedge=true)
+    @test dhgnn2.num_hyperedges == 17
+
     # remove_selfloops
     hgnn1 = remove_selfloops(hgnn2)
     @test hgnn1.num_hyperedges == 5
+
+    dhgnn1 = remove_selfloops(dhgnn2)
+    @test dhgnn1.num_hyperedges == 5
 
     # remove_multihyperedges
     hgnn2 = add_hyperedge(hgnn, DataStore(); vertices=Dict{Int, Float64}(1 => 1.0, 2 => 2.0, 4 => 4.0))
     @test remove_multihyperedges(hgnn2).num_hyperedges == 5
 
+    dhgnn2 = add_hyperedge(
+        dhgnn,
+        DataStore();
+        vertices_tail=Dict{Int, Float64}(1 => 1.0, 2 => 2.0),
+        vertices_head=Dict{Int, Float64}(4 => 4.0)
+    )
+    @test remove_multihyperedges(dhgnn2).num_hyperedges == 5
+
     # to_undirected
-    #TODO: need undirected example
+    @test Set.(keys.(to_undirected(dhgnn).he2v)) == Set.(keys.(hgnn.he2v))
 
     # combine_hypergraphs / MLUtils.batch
     hg1 = HGNNHypergraph(
