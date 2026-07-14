@@ -9,6 +9,7 @@ using MLUtils
 using SimpleHypergraphs
 using SimpleDirectedHypergraphs
 using HyperGraphNeuralNetworks
+include("layers/DirectedHypergraphLayer.jl")
 
 # Necessary for MLDatasets
 ENV["DATADEPS_ALWAYS_ACCEPT"] = true
