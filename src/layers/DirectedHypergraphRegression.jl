@@ -3,6 +3,7 @@
 #combines a DirectedHypergraphLayer with a Lux Dense regression head.
 #the model produces one continuous prediction for every reaction/hyperedge.
 
+
 struct DirectedHypergraphRegression{H, R} <:
        Lux.AbstractLuxContainerLayer{(:hypergraph_layer, :regression_head)}
 
@@ -18,12 +19,22 @@ end
         activation = tanh
     )
 
+Construct a regression model that combines a
+`DirectedHypergraphLayer` with a Lux `Dense` regression head.
+
+The model performs:
 
 species features
 → directed hypergraph message passing
 → reaction embeddings
 → dense regression head
 → one scalar prediction per reaction
+
+# Arguments
+
+- `species_in_dim`: Number of input features for each species.
+- `hidden_dim`: Size of the hidden embeddings.
+- `activation`: Activation function used in the hypergraph layer.
 """
 function DirectedHypergraphRegression(
     species_in_dim::Int,
@@ -46,6 +57,31 @@ end
 
 
 # forward pass
+"""
+    (model::DirectedHypergraphRegression)(input, ps, st)
+
+Run a forward pass through the regression model.
+
+The model first computes reaction embeddings using the
+`DirectedHypergraphLayer` and then applies a Dense regression head to
+produce one scalar prediction for each reaction.
+
+# Arguments
+
+- `input`: Tuple `(X_species, source_matrix, target_matrix)`
+- `ps`: Lux parameters
+- `st`: Lux state
+
+# Returns
+
+A tuple containing:
+
+- `output`, a named tuple with:
+    - `predictions`
+    - `reaction_embeddings`
+    - `updated_species`
+- `new_state`, the updated Lux state.
+"""
 
 function (model::DirectedHypergraphRegression)(input, ps, st)
     X_species, source_matrix, target_matrix = input

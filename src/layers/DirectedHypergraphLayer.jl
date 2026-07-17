@@ -1,6 +1,14 @@
 using Lux
 using Random
 
+"""
+    safe_column_normalise(M)
+
+Normalise each column of `M` by its column sum.
+
+Columns with a sum of zero use a denominator of one, preventing division by
+zero while leaving those columns unchanged.
+"""
 
 function safe_column_normalise(M::AbstractMatrix)
     col_sums = sum(M, dims = 1)
@@ -12,6 +20,15 @@ function safe_column_normalise(M::AbstractMatrix)
 
     return M ./ safe_sums
 end
+"""
+    safe_row_normalise(M)
+
+Normalise each row of `M` by its row sum.
+
+Rows with a sum of zero use a denominator of one, preventing division by
+zero while leaving those rows unchanged.
+"""
+
 
 function safe_row_normalise(M::AbstractMatrix)
     row_sums = sum(M, dims = 2)
@@ -23,6 +40,42 @@ function safe_row_normalise(M::AbstractMatrix)
 
     return M ./ safe_sums
 end
+
+"""
+    DirectedHypergraphLayer(species_in_dim, hidden_dim, activation)
+
+A Lux-compatible message-passing layer for directed hypergraphs.
+
+The layer accepts a species-feature matrix together with source and target
+incidence matrices. It performs:
+
+1. A learnable transformation of species features.
+2. Separate aggregation of source and target species into reaction embeddings.
+3. A learnable transformation of reaction embeddings.
+4. Propagation of reaction messages back to participating species.
+5. A learnable update of the species embeddings.
+
+# Arguments
+
+- `species_in_dim`: Number of input features associated with each species.
+- `hidden_dim`: Size of the hidden species and reaction embeddings.
+- `activation`: Element-wise activation function.
+
+# Input
+
+A tuple `(X_species, source_matrix, target_matrix)` where:
+
+- `X_species` has shape `number_of_species × species_in_dim`.
+- `source_matrix` has shape `number_of_species × number_of_reactions`.
+- `target_matrix` has shape `number_of_species × number_of_reactions`.
+
+# Output
+
+A named tuple containing:
+
+- `updated_species`: Updated species embeddings.
+- `reaction_embeddings`: Learned reaction embeddings.
+"""
 
 struct DirectedHypergraphLayer{F} <: Lux.AbstractLuxLayer
     species_in_dim::Int
@@ -80,6 +133,16 @@ Lux.initialstates(
     ::AbstractRNG,
     ::DirectedHypergraphLayer
 ) = NamedTuple()
+
+"""
+    (layer::DirectedHypergraphLayer)(input, ps, st)
+
+Apply one directed-hypergraph message-passing step.
+
+`ps` contains the learnable Lux parameters and `st` contains the layer state.
+The returned state is unchanged because this layer currently has no mutable
+state.
+"""
 
 function (layer::DirectedHypergraphLayer)(input, ps, st)
     X_species, source_matrix, target_matrix = input
