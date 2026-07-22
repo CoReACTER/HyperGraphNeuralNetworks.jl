@@ -4,14 +4,19 @@ using Random
 using HyperGraphNeuralNetworks
 
 @testset "DirectedHypergraphLayer" begin
-
     rng = Random.default_rng()
 
-    layer = DirectedHypergraphLayer(3, 8, tanh)
+    layer = DirectedHypergraphLayer(
+        3,
+        0,
+        8;
+        activation = tanh,
+        normalize = true,
+    )
 
     ps, st = Lux.setup(rng, layer)
 
-    X_species = Float32[
+    X_vertex = Float32[
         1.0 0.0 2.0;
         0.0 1.0 1.0;
         1.0 1.0 0.0;
@@ -32,16 +37,21 @@ using HyperGraphNeuralNetworks
         0 0 1
     ]
 
-    output, st = layer(
-        (X_species, source_matrix, target_matrix),
+    output, new_st = layer(
+        (
+            X_vertex,
+            source_matrix,
+            target_matrix,
+        ),
         ps,
-        st
+        st,
     )
 
-    @test size(output.updated_species) == (4, 8)
-    @test size(output.reaction_embeddings) == (3, 8)
+    @test size(output.updated_vertices) == (4, 8)
+    @test size(output.updated_hyperedges) == (3, 8)
 
-    @test all(isfinite, output.updated_species)
-    @test all(isfinite, output.reaction_embeddings)
+    @test all(isfinite, output.updated_vertices)
+    @test all(isfinite, output.updated_hyperedges)
 
+    @test new_st == st
 end

@@ -2,187 +2,418 @@ using Lux
 using Random
 
 """
-    safe_column_normalise(M)
+    safe_normalise(M; dims)
 
-Normalise each column of `M` by its column sum.
+Normalise `M` along dimension `dims`.
 
-Columns with a sum of zero use a denominator of one, preventing division by
-zero while leaving those columns unchanged.
+Use `dims = 1` for column-wise normalisation and `dims = 2` for row-wise
+normalisation. Zero-sum rows or columns use a denominator of one to avoid
+division by zero.
 """
+function safe_normalise(M::AbstractMatrix; dims::Int)
+    dims in (1, 2) ||
+        throw(ArgumentError("`dims` must be either 1 or 2."))
 
-function safe_column_normalise(M::AbstractMatrix)
-    col_sums = sum(M, dims = 1)
-    safe_sums = similar(col_sums)
-
-    for i in eachindex(col_sums)
-        safe_sums[i] = col_sums[i] == 0 ? one(eltype(col_sums)) : col_sums[i]
-    end
-
-    return M ./ safe_sums
-end
-"""
-    safe_row_normalise(M)
-
-Normalise each row of `M` by its row sum.
-
-Rows with a sum of zero use a denominator of one, preventing division by
-zero while leaving those rows unchanged.
-"""
-
-
-function safe_row_normalise(M::AbstractMatrix)
-    row_sums = sum(M, dims = 2)
-    safe_sums = similar(row_sums)
-
-    for i in eachindex(row_sums)
-        safe_sums[i] = row_sums[i] == 0 ? one(eltype(row_sums)) : row_sums[i]
-    end
+    matrix_sums = sum(M; dims = dims)
+    safe_sums = ifelse.(
+        iszero.(matrix_sums),
+        one(eltype(matrix_sums)),
+        matrix_sums,
+    )
 
     return M ./ safe_sums
 end
 
+
 """
-    DirectedHypergraphLayer(species_in_dim, hidden_dim, activation)
+    DirectedHypergraphLayer(
+        vertex_in_dim,
+        hyperedge_in_dim,
+        hidden_dim;
+        activation = tanh,
+        normalize = true,
+        init_weight = Lux.glorot_uniform,
+        init_bias = Lux.zeros32,
+    )
 
-A Lux-compatible message-passing layer for directed hypergraphs.
+A general-purpose Lux-compatible message-passing layer for directed
+hypergraphs.
 
-The layer accepts a species-feature matrix together with source and target
-incidence matrices. It performs:
-
-1. A learnable transformation of species features.
-2. Separate aggregation of source and target species into reaction embeddings.
-3. A learnable transformation of reaction embeddings.
-4. Propagation of reaction messages back to participating species.
-5. A learnable update of the species embeddings.
+The layer accepts vertex features, optional hyperedge features, and separate
+source and target incidence matrices. Source-side and target-side vertex
+representations are aggregated separately to preserve hyperedge direction.
 
 # Arguments
 
-- `species_in_dim`: Number of input features associated with each species.
-- `hidden_dim`: Size of the hidden species and reaction embeddings.
+- `vertex_in_dim`: Number of input features for each vertex.
+- `hyperedge_in_dim`: Number of input features for each hyperedge. Use `0`
+  when no initial hyperedge features are available.
+- `hidden_dim`: Size of the updated vertex and hyperedge representations.
 - `activation`: Element-wise activation function.
+- `normalize`: Whether incidence matrices are normalised before aggregation.
+- `init_weight`: Initialiser used for weight matrices.
+- `init_bias`: Initialiser used for bias parameters.
 
 # Input
 
-A tuple `(X_species, source_matrix, target_matrix)` where:
+When `hyperedge_in_dim == 0`:
 
-- `X_species` has shape `number_of_species × species_in_dim`.
-- `source_matrix` has shape `number_of_species × number_of_reactions`.
-- `target_matrix` has shape `number_of_species × number_of_reactions`.
+    (X_vertex, source_matrix, target_matrix)
+
+When `hyperedge_in_dim > 0`:
+
+    (X_vertex, X_hyperedge, source_matrix, target_matrix)
+
+Expected shapes:
+
+- `X_vertex`: `number_of_vertices × vertex_in_dim`
+- `X_hyperedge`: `number_of_hyperedges × hyperedge_in_dim`
+- `source_matrix`: `number_of_vertices × number_of_hyperedges`
+- `target_matrix`: `number_of_vertices × number_of_hyperedges`
 
 # Output
 
 A named tuple containing:
 
-- `updated_species`: Updated species embeddings.
-- `reaction_embeddings`: Learned reaction embeddings.
+- `updated_vertices`
+- `updated_hyperedges`
 """
-
-struct DirectedHypergraphLayer{F} <: Lux.AbstractLuxLayer
-    species_in_dim::Int
+struct DirectedHypergraphLayer{F, IW, IB} <: Lux.AbstractLuxLayer
+    vertex_in_dim::Int
+    hyperedge_in_dim::Int
     hidden_dim::Int
     activation::F
+    normalize::Bool
+    init_weight::IW
+    init_bias::IB
 end
 
-function Lux.initialparameters(
-    rng::AbstractRNG,
-    layer::DirectedHypergraphLayer
+
+function DirectedHypergraphLayer(
+    vertex_in_dim::Int,
+    hyperedge_in_dim::Int,
+    hidden_dim::Int;
+    activation = tanh,
+    normalize::Bool = true,
+    init_weight = Lux.glorot_uniform,
+    init_bias = Lux.zeros32,
 )
-    return (
-        W_species = randn(
-            rng,
-            Float32,
-            layer.species_in_dim,
-            layer.hidden_dim
-        ) .* 0.1f0,
+    vertex_in_dim > 0 ||
+        throw(ArgumentError("`vertex_in_dim` must be positive."))
 
-        b_species = zeros(
-            Float32,
-            1,
-            layer.hidden_dim
-        ),
+    hyperedge_in_dim >= 0 ||
+        throw(ArgumentError("`hyperedge_in_dim` cannot be negative."))
 
-        W_reaction = randn(
-            rng,
-            Float32,
-            2 * layer.hidden_dim,
-            layer.hidden_dim
-        ) .* 0.1f0,
+    hidden_dim > 0 ||
+        throw(ArgumentError("`hidden_dim` must be positive."))
 
-        b_reaction = zeros(
-            Float32,
-            1,
-            layer.hidden_dim
-        ),
-
-        W_update = randn(
-            rng,
-            Float32,
-            2 * layer.hidden_dim,
-            layer.hidden_dim
-        ) .* 0.1f0,
-
-        b_update = zeros(
-            Float32,
-            1,
-            layer.hidden_dim
-        )
+    return DirectedHypergraphLayer(
+        vertex_in_dim,
+        hyperedge_in_dim,
+        hidden_dim,
+        activation,
+        normalize,
+        init_weight,
+        init_bias,
     )
 end
 
+
+"""
+Initialise a weight matrix for the row-major feature convention used by this
+layer.
+
+Lux initialisers produce matrices with shape
+`output_dimension × input_dimension`. This layer stores features as
+`entities × features`, so the result is transposed to
+`input_dimension × output_dimension`.
+"""
+function _initialise_weight(
+    initializer,
+    rng::AbstractRNG,
+    input_dimension::Int,
+    output_dimension::Int,
+)
+    return permutedims(
+        initializer(rng, output_dimension, input_dimension),
+    )
+end
+
+
+"""
+Initialise a bias with shape `1 × output_dimension`.
+"""
+function _initialise_bias(
+    initializer,
+    rng::AbstractRNG,
+    output_dimension::Int,
+)
+    return permutedims(
+        initializer(rng, output_dimension, 1),
+    )
+end
+
+
+function Lux.initialparameters(
+    rng::AbstractRNG,
+    layer::DirectedHypergraphLayer,
+)
+    hyperedge_update_in_dim =
+        2 * layer.hidden_dim + layer.hyperedge_in_dim
+
+    return (
+        W_vertex = _initialise_weight(
+            layer.init_weight,
+            rng,
+            layer.vertex_in_dim,
+            layer.hidden_dim,
+        ),
+
+        b_vertex = _initialise_bias(
+            layer.init_bias,
+            rng,
+            layer.hidden_dim,
+        ),
+
+        W_hyperedge = _initialise_weight(
+            layer.init_weight,
+            rng,
+            hyperedge_update_in_dim,
+            layer.hidden_dim,
+        ),
+
+        b_hyperedge = _initialise_bias(
+            layer.init_bias,
+            rng,
+            layer.hidden_dim,
+        ),
+
+        W_vertex_update = _initialise_weight(
+            layer.init_weight,
+            rng,
+            2 * layer.hidden_dim,
+            layer.hidden_dim,
+        ),
+
+        b_vertex_update = _initialise_bias(
+            layer.init_bias,
+            rng,
+            layer.hidden_dim,
+        ),
+    )
+end
+
+
+function Lux.parameterlength(layer::DirectedHypergraphLayer)
+    hyperedge_update_in_dim =
+        2 * layer.hidden_dim + layer.hyperedge_in_dim
+
+    vertex_parameters =
+        layer.vertex_in_dim * layer.hidden_dim +
+        layer.hidden_dim
+
+    hyperedge_parameters =
+        hyperedge_update_in_dim * layer.hidden_dim +
+        layer.hidden_dim
+
+    vertex_update_parameters =
+        2 * layer.hidden_dim * layer.hidden_dim +
+        layer.hidden_dim
+
+    return (
+        vertex_parameters +
+        hyperedge_parameters +
+        vertex_update_parameters
+    )
+end
+
+
+# The layer has no running statistics or other mutable non-trainable values.
 Lux.initialstates(
     ::AbstractRNG,
-    ::DirectedHypergraphLayer
+    ::DirectedHypergraphLayer,
 ) = NamedTuple()
+
+Lux.statelength(::DirectedHypergraphLayer) = 0
+
+
+function _unpack_input(
+    layer::DirectedHypergraphLayer,
+    input::Tuple{Any, Any, Any},
+)
+    layer.hyperedge_in_dim == 0 ||
+        throw(
+            ArgumentError(
+                "Hyperedge features are required because " *
+                "`hyperedge_in_dim` is $(layer.hyperedge_in_dim).",
+            ),
+        )
+
+    X_vertex, source_matrix, target_matrix = input
+
+    X_hyperedge = similar(
+        X_vertex,
+        size(source_matrix, 2),
+        0,
+    )
+
+    return (
+        X_vertex,
+        X_hyperedge,
+        source_matrix,
+        target_matrix,
+    )
+end
+
+
+function _unpack_input(
+    ::DirectedHypergraphLayer,
+    input::Tuple{Any, Any, Any, Any},
+)
+    return input
+end
+
+
+function _validate_inputs(
+    layer::DirectedHypergraphLayer,
+    X_vertex::AbstractMatrix,
+    X_hyperedge::AbstractMatrix,
+    source_matrix::AbstractMatrix,
+    target_matrix::AbstractMatrix,
+)
+    size(source_matrix) == size(target_matrix) ||
+        throw(
+            DimensionMismatch(
+                "`source_matrix` and `target_matrix` must have the same shape.",
+            ),
+        )
+
+    number_of_vertices, number_of_hyperedges =
+        size(source_matrix)
+
+    size(X_vertex, 1) == number_of_vertices ||
+        throw(
+            DimensionMismatch(
+                "The number of rows in `X_vertex` must match the number " *
+                "of vertices in the incidence matrices.",
+            ),
+        )
+
+    size(X_vertex, 2) == layer.vertex_in_dim ||
+        throw(
+            DimensionMismatch(
+                "`X_vertex` has $(size(X_vertex, 2)) features, but the " *
+                "layer expects $(layer.vertex_in_dim).",
+            ),
+        )
+
+    size(X_hyperedge, 1) == number_of_hyperedges ||
+        throw(
+            DimensionMismatch(
+                "The number of rows in `X_hyperedge` must match the number " *
+                "of hyperedges in the incidence matrices.",
+            ),
+        )
+
+    size(X_hyperedge, 2) == layer.hyperedge_in_dim ||
+        throw(
+            DimensionMismatch(
+                "`X_hyperedge` has $(size(X_hyperedge, 2)) features, but " *
+                "the layer expects $(layer.hyperedge_in_dim).",
+            ),
+        )
+
+    return nothing
+end
+
 
 """
     (layer::DirectedHypergraphLayer)(input, ps, st)
 
 Apply one directed-hypergraph message-passing step.
 
-`ps` contains the learnable Lux parameters and `st` contains the layer state.
-The returned state is unchanged because this layer currently has no mutable
-state.
+The layer first updates hyperedge representations using separate source-side
+and target-side vertex aggregations. It then propagates the updated hyperedge
+representations back to the vertices.
+
+The state is returned unchanged because the layer contains no stateful
+operations.
 """
-
 function (layer::DirectedHypergraphLayer)(input, ps, st)
-    X_species, source_matrix, target_matrix = input
+    (
+        X_vertex,
+        X_hyperedge,
+        source_matrix,
+        target_matrix,
+    ) = _unpack_input(layer, input)
 
-    membership_matrix = source_matrix .+ target_matrix
-
-    source_norm = safe_column_normalise(source_matrix)
-    target_norm = safe_column_normalise(target_matrix)
-    membership_norm = safe_row_normalise(membership_matrix)
-
-    H_species = layer.activation.(
-        X_species * ps.W_species .+ ps.b_species
+    _validate_inputs(
+        layer,
+        X_vertex,
+        X_hyperedge,
+        source_matrix,
+        target_matrix,
     )
 
-    reactant_messages =
-        transpose(source_norm) * H_species
+    membership_matrix =
+        source_matrix .+ target_matrix
 
-    product_messages =
-        transpose(target_norm) * H_species
+    if layer.normalize
+        source_used =
+            safe_normalise(source_matrix; dims = 1)
 
-    directed_reaction_input =
-        hcat(reactant_messages, product_messages)
+        target_used =
+            safe_normalise(target_matrix; dims = 1)
 
-    H_reaction = layer.activation.(
-        directed_reaction_input * ps.W_reaction .+ ps.b_reaction
+        membership_used =
+            safe_normalise(membership_matrix; dims = 2)
+    else
+        source_used = source_matrix
+        target_used = target_matrix
+        membership_used = membership_matrix
+    end
+
+    # Transform input vertex features.
+    H_vertex = layer.activation.(
+        X_vertex * ps.W_vertex .+ ps.b_vertex
     )
 
-    species_messages =
-        membership_norm * H_reaction
+    # Aggregate source-side and target-side vertex information separately.
+    source_messages =
+        transpose(source_used) * H_vertex
 
-    species_update_input =
-        hcat(H_species, species_messages)
+    target_messages =
+        transpose(target_used) * H_vertex
 
-    updated_species = layer.activation.(
-        species_update_input * ps.W_update .+ ps.b_update
+    # Combine directional messages with initial hyperedge features.
+    hyperedge_update_input = hcat(
+        source_messages,
+        target_messages,
+        X_hyperedge,
+    )
+
+    updated_hyperedges = layer.activation.(
+        hyperedge_update_input * ps.W_hyperedge .+
+        ps.b_hyperedge
+    )
+
+    # Propagate hyperedge information back to participating vertices.
+    vertex_messages =
+        membership_used * updated_hyperedges
+
+    vertex_update_input = hcat(
+        H_vertex,
+        vertex_messages,
+    )
+
+    updated_vertices = layer.activation.(
+        vertex_update_input * ps.W_vertex_update .+
+        ps.b_vertex_update
     )
 
     output = (
-        updated_species = updated_species,
-        reaction_embeddings = H_reaction
+        updated_vertices = updated_vertices,
+        updated_hyperedges = updated_hyperedges,
     )
 
     return output, st
