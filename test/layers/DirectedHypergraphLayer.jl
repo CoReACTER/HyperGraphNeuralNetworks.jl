@@ -1,6 +1,7 @@
 using Test
 using Lux
 using Random
+using Enzyme
 using HyperGraphNeuralNetworks
 
 
@@ -27,6 +28,27 @@ const TARGET_MATRIX = Float32[
 
 
 @testset "DirectedHypergraphLayer" begin
+
+    @testset "Constructor validation" begin
+        @test_throws ArgumentError DirectedHypergraphLayer(
+            0,
+            0,
+            8,
+        )
+
+        @test_throws ArgumentError DirectedHypergraphLayer(
+            3,
+            -1,
+            8,
+        )
+
+        @test_throws ArgumentError DirectedHypergraphLayer(
+            3,
+            0,
+            0,
+        )
+    end
+
 
     @testset "Basic forward pass" begin
         rng = Random.default_rng()
@@ -58,6 +80,32 @@ const TARGET_MATRIX = Float32[
         @test all(isfinite, output.updated_hyperedges)
 
         @test new_st == st
+    end
+
+
+    @testset "Parameter and state initialisation" begin
+        rng = Random.default_rng()
+
+        layer = DirectedHypergraphLayer(
+            3,
+            2,
+            8,
+        )
+
+        ps, st = Lux.setup(rng, layer)
+
+        @test size(ps.W_vertex) == (3, 8)
+        @test size(ps.b_vertex) == (1, 8)
+
+        @test size(ps.W_hyperedge) == (18, 8)
+        @test size(ps.b_hyperedge) == (1, 8)
+
+        @test size(ps.W_vertex_update) == (16, 8)
+        @test size(ps.b_vertex_update) == (1, 8)
+
+        @test isempty(st)
+        @test Lux.statelength(layer) == 0
+        @test Lux.parameterlength(layer) == 320
     end
 
 
@@ -114,6 +162,9 @@ const TARGET_MATRIX = Float32[
 
         @test all(isfinite, output_normalised.updated_vertices)
         @test all(isfinite, output_unnormalised.updated_vertices)
+
+        @test all(isfinite, output_normalised.updated_hyperedges)
+        @test all(isfinite, output_unnormalised.updated_hyperedges)
     end
 
 
@@ -179,12 +230,20 @@ const TARGET_MATRIX = Float32[
         @test all(isfinite, column_normalised)
         @test all(isfinite, row_normalised)
 
-        @test column_normalised[:, 1] == zeros(Float32, 3)
-        @test column_normalised[:, 3] == zeros(Float32, 3)
+        @test column_normalised[:, 1] ==
+              zeros(Float32, 3)
 
-        @test row_normalised[1, :] == Float32[0, 1, 0]
-        @test row_normalised[2, :] == Float32[0, 1, 0]
-        @test row_normalised[3, :] == Float32[0, 1, 0]
+        @test column_normalised[:, 3] ==
+              zeros(Float32, 3)
+
+        @test row_normalised[1, :] ==
+              Float32[0, 1, 0]
+
+        @test row_normalised[2, :] ==
+              Float32[0, 1, 0]
+
+        @test row_normalised[3, :] ==
+              Float32[0, 1, 0]
     end
 
 
@@ -211,7 +270,8 @@ const TARGET_MATRIX = Float32[
 
         ps, st = Lux.setup(rng, layer)
 
-        wrong_target_matrix = zeros(Float32, 4, 2)
+        wrong_target_matrix =
+            zeros(Float32, 4, 2)
 
         @test_throws DimensionMismatch begin
             layer(
@@ -238,7 +298,8 @@ const TARGET_MATRIX = Float32[
 
         ps, st = Lux.setup(rng, layer)
 
-        wrong_X_vertex = rand(Float32, 5, 3)
+        wrong_X_vertex =
+            rand(Float32, 5, 3)
 
         @test_throws DimensionMismatch begin
             layer(
@@ -265,7 +326,8 @@ const TARGET_MATRIX = Float32[
 
         ps, st = Lux.setup(rng, layer)
 
-        wrong_X_vertex = rand(Float32, 4, 2)
+        wrong_X_vertex =
+            rand(Float32, 4, 2)
 
         @test_throws DimensionMismatch begin
             layer(
@@ -306,7 +368,7 @@ const TARGET_MATRIX = Float32[
     end
 
 
-    @testset "Incorrect hyperedge feature dimensions" begin
+    @testset "Incorrect number of hyperedge rows" begin
         rng = Random.default_rng()
 
         layer = DirectedHypergraphLayer(
@@ -317,7 +379,37 @@ const TARGET_MATRIX = Float32[
 
         ps, st = Lux.setup(rng, layer)
 
-        wrong_X_hyperedge = rand(Float32, 2, 2)
+        wrong_X_hyperedge =
+            rand(Float32, 2, 2)
+
+        @test_throws DimensionMismatch begin
+            layer(
+                (
+                    X_VERTEX,
+                    wrong_X_hyperedge,
+                    SOURCE_MATRIX,
+                    TARGET_MATRIX,
+                ),
+                ps,
+                st,
+            )
+        end
+    end
+
+
+    @testset "Incorrect hyperedge feature dimension" begin
+        rng = Random.default_rng()
+
+        layer = DirectedHypergraphLayer(
+            3,
+            2,
+            8,
+        )
+
+        ps, st = Lux.setup(rng, layer)
+
+        wrong_X_hyperedge =
+            rand(Float32, 3, 3)
 
         @test_throws DimensionMismatch begin
             layer(
