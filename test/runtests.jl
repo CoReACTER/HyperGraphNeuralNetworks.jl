@@ -10,6 +10,7 @@ using SimpleHypergraphs
 using SimpleDirectedHypergraphs
 using HyperGraphNeuralNetworks
 include("layers/DirectedHypergraphLayer.jl")
+include("layers/DirectedHypergraphAttentionLayer.jl")
 
 # Necessary for MLDatasets
 ENV["DATADEPS_ALWAYS_ACCEPT"] = true

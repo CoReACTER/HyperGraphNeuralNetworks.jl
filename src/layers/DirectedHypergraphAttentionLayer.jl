@@ -45,10 +45,10 @@ When `hyperedge_in_dim > 0`, the layer accepts:
 
 Expected shapes:
 
-- `X_vertex`: `number_of_vertices × vertex_in_dim`
-- `X_hyperedge`: `number_of_hyperedges × hyperedge_in_dim`
-- `source_matrix`: `number_of_vertices × number_of_hyperedges`
-- `target_matrix`: `number_of_vertices × number_of_hyperedges`
+- `X_vertex`: `number_of_vertices √ó vertex_in_dim`
+- `X_hyperedge`: `number_of_hyperedges √ó hyperedge_in_dim`
+- `source_matrix`: `number_of_vertices √ó number_of_hyperedges`
+- `target_matrix`: `number_of_vertices √ó number_of_hyperedges`
 
 # Output
 
@@ -220,10 +220,43 @@ function Lux.initialparameters(
 end
 
 
+function Lux.parameterlength(
+    layer::DirectedHypergraphAttentionLayer,
+)
+    hyperedge_update_in_dim =
+        2 * layer.hidden_dim + layer.hyperedge_in_dim
+
+    vertex_transform_parameters =
+        layer.vertex_in_dim * layer.hidden_dim +
+        layer.hidden_dim
+
+    attention_parameters =
+        2 * layer.hidden_dim
+
+    hyperedge_update_parameters =
+        hyperedge_update_in_dim * layer.hidden_dim +
+        layer.hidden_dim
+
+    vertex_update_parameters =
+        2 * layer.hidden_dim * layer.hidden_dim +
+        layer.hidden_dim
+
+    return (
+        vertex_transform_parameters +
+        attention_parameters +
+        hyperedge_update_parameters +
+        vertex_update_parameters
+    )
+end
+
+
+# The layer has no mutable non-trainable state.
 Lux.initialstates(
     ::AbstractRNG,
     ::DirectedHypergraphAttentionLayer,
 ) = NamedTuple()
+
+Lux.statelength(::DirectedHypergraphAttentionLayer) = 0
 
 
 """
@@ -376,6 +409,20 @@ function _unpack_attention_input(
 end
 
 
+function _unpack_attention_input(
+    ::DirectedHypergraphAttentionLayer,
+    input::Tuple,
+)
+    throw(
+        ArgumentError(
+            "The layer expects either a 3-tuple " *
+            "(X_vertex, source_matrix, target_matrix) or a 4-tuple " *
+            "(X_vertex, X_hyperedge, source_matrix, target_matrix).",
+        ),
+    )
+end
+
+
 function _validate_attention_inputs(
     layer::DirectedHypergraphAttentionLayer,
     X_vertex::AbstractMatrix,
@@ -440,13 +487,7 @@ Source-side and target-side attention coefficients are calculated separately.
 The updated hyperedge representations are then propagated back to the
 participating vertices.
 """
-function (
-    layer::DirectedHypergraphAttentionLayer
-)(
-    input,
-    ps,
-    st,
-)
+function (layer::DirectedHypergraphAttentionLayer)(input, ps, st)
     (
         X_vertex,
         X_hyperedge,
@@ -524,9 +565,18 @@ function (
         )
 
     # Propagate updated hyperedge information back to vertices.
+    # A vertex participates in a hyperedge if it occurs on either side.
+    # Using a logical union avoids double-counting a vertex that is present
+    # in both the source and target incidence matrices.
     membership_matrix =
-        source_matrix .+
-        target_matrix
+        convert.(
+            promote_type(
+                eltype(source_matrix),
+                eltype(target_matrix),
+            ),
+            (.!iszero.(source_matrix)) .|
+            (.!iszero.(target_matrix)),
+        )
 
     membership_weights =
         _safe_attention_row_normalise(
