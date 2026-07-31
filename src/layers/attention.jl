@@ -45,10 +45,10 @@ When `hyperedge_in_dim > 0`, the layer accepts:
 
 Expected shapes:
 
-- `X_vertex`: `number_of_vertices √ó vertex_in_dim`
-- `X_hyperedge`: `number_of_hyperedges √ó hyperedge_in_dim`
-- `source_matrix`: `number_of_vertices √ó number_of_hyperedges`
-- `target_matrix`: `number_of_vertices √ó number_of_hyperedges`
+- `X_vertex`: `number_of_vertices × vertex_in_dim`
+- `X_hyperedge`: `number_of_hyperedges × hyperedge_in_dim`
+- `source_matrix`: `number_of_vertices × number_of_hyperedges`
+- `target_matrix`: `number_of_vertices × number_of_hyperedges`
 
 # Output
 
@@ -62,8 +62,7 @@ When `return_attention = true`, it additionally returns:
 - `source_attention`
 - `target_attention`
 """
-struct DirectedAttentionLayer{F, A, IW, IB} <:
-       Lux.AbstractLuxLayer
+struct DirectedAttentionLayer{F, A, IW, IB} <: Lux.AbstractLuxLayer
     vertex_in_dim::Int
     hyperedge_in_dim::Int
     hidden_dim::Int
