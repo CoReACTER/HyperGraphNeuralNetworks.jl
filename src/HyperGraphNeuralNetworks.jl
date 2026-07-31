@@ -12,13 +12,20 @@ using MLUtils
 using SimpleHypergraphs
 using SimpleDirectedHypergraphs
 
+
 include("core/abstracttypes.jl")
 include("core/hypergraphs.jl")
+include("layers/DirectedHypergraphLayer.jl")
+include("layers/DirectedHypergraphAttentionLayer.jl")
+
 
 export AbstractHGNNHypergraph, AbstractHGNNDiHypergraph
 export HGNNHypergraph, HGNNDiHypergraph
 export add_vertex, add_vertices, remove_vertex, remove_vertices
 export add_hyperedge, add_hyperedges, remove_hyperedge, remove_hyperedges
+export DirectedHypergraphLayer
+export DirectedHypergraphAttentionLayer
+
 
 include("core/generate.jl")
 
@@ -49,5 +56,6 @@ include("core/utils.jl")
 
 export check_num_vertices, check_num_hyperedges
 export normalize_graphdata
+
 
 end
