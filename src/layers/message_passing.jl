@@ -26,7 +26,7 @@ end
 
 
 """
-    DirectedHypergraphLayer(
+    DirectedConvLayer(
         vertex_in_dim,
         hyperedge_in_dim,
         hidden_dim;
@@ -78,7 +78,7 @@ A named tuple containing:
 - `updated_vertices`
 - `updated_hyperedges`
 """
-struct DirectedHypergraphLayer{F, IW, IB} <: Lux.AbstractLuxLayer
+struct DirectedConvLayer{F, IW, IB} <: Lux.AbstractLuxLayer
     vertex_in_dim::Int
     hyperedge_in_dim::Int
     hidden_dim::Int
@@ -89,7 +89,7 @@ struct DirectedHypergraphLayer{F, IW, IB} <: Lux.AbstractLuxLayer
 end
 
 
-function DirectedHypergraphLayer(
+function DirectedConvLayer(
     vertex_in_dim::Int,
     hyperedge_in_dim::Int,
     hidden_dim::Int;
@@ -107,7 +107,7 @@ function DirectedHypergraphLayer(
     hidden_dim > 0 ||
         throw(ArgumentError("`hidden_dim` must be positive."))
 
-    return DirectedHypergraphLayer(
+    return DirectedConvLayer(
         vertex_in_dim,
         hyperedge_in_dim,
         hidden_dim,
@@ -156,7 +156,7 @@ end
 
 function Lux.initialparameters(
     rng::AbstractRNG,
-    layer::DirectedHypergraphLayer,
+    layer::DirectedConvLayer,
 )
     hyperedge_update_in_dim =
         2 * layer.hidden_dim + layer.hyperedge_in_dim
@@ -204,7 +204,7 @@ function Lux.initialparameters(
 end
 
 
-function Lux.parameterlength(layer::DirectedHypergraphLayer)
+function Lux.parameterlength(layer::DirectedConvLayer)
     hyperedge_update_in_dim =
         2 * layer.hidden_dim + layer.hyperedge_in_dim
 
@@ -231,14 +231,14 @@ end
 # The layer has no running statistics or other mutable non-trainable values.
 Lux.initialstates(
     ::AbstractRNG,
-    ::DirectedHypergraphLayer,
+    ::DirectedConvLayer,
 ) = NamedTuple()
 
-Lux.statelength(::DirectedHypergraphLayer) = 0
+Lux.statelength(::DirectedConvLayer) = 0
 
 
 function _unpack_input(
-    layer::DirectedHypergraphLayer,
+    layer::DirectedConvLayer,
     input::Tuple{Any, Any, Any},
 )
     layer.hyperedge_in_dim == 0 ||
@@ -267,7 +267,7 @@ end
 
 
 function _unpack_input(
-    ::DirectedHypergraphLayer,
+    ::DirectedConvLayer,
     input::Tuple{Any, Any, Any, Any},
 )
     return input
@@ -275,7 +275,7 @@ end
 
 
 function _validate_inputs(
-    layer::DirectedHypergraphLayer,
+    layer::DirectedConvLayer,
     X_vertex::AbstractMatrix,
     X_hyperedge::AbstractMatrix,
     source_matrix::AbstractMatrix,
@@ -328,7 +328,7 @@ end
 
 
 """
-    (layer::DirectedHypergraphLayer)(input, ps, st)
+    (layer::DirectedConvLayer)(input, ps, st)
 
 Apply one directed-hypergraph message-passing step.
 
@@ -339,7 +339,7 @@ representations back to the vertices.
 The state is returned unchanged because the layer contains no stateful
 operations.
 """
-function (layer::DirectedHypergraphLayer)(input, ps, st)
+function (layer::DirectedConvLayer)(input, ps, st)
     (
         X_vertex,
         X_hyperedge,

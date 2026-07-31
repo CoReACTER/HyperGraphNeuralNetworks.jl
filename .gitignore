@@ -5,3 +5,4 @@
 /docs/Manifest.toml
 /docs/build/
 *.txt
+*.DS_Store
