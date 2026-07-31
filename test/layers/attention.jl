@@ -3,7 +3,7 @@ using Random
 using Lux
 using HyperGraphNeuralNetworks
 
-@testset "HyperGraphNeuralNetworks                       DirectedAttentionLayer" begin
+@testset "HyperGraphNeuralNetworks                        DirectedAttentionLayer" begin
 
     @testset "    Constructor validation" begin
         layer = DirectedAttentionLayer(3, 0, 4)

@@ -27,7 +27,7 @@ const TARGET_MATRIX = Float32[
 ]
 
 
-@testset "DirectedConvLayer" begin
+@testset "HyperGraphNeuralNetworks                             DirectedConvLayer" begin
 
     @testset "Constructor validation" begin
         @test_throws ArgumentError DirectedConvLayer(

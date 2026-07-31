@@ -27,7 +27,7 @@ dh1[1,10,5] = 7.0
 did1 = [1,1,1,1,1,1,2,2,2,2,2]
 dhedata1 = [10, 20, 30, 40, 50]
 
-@testset "HyperGraphNeuralNetworks                             HGNNDiHypergraph" begin
+@testset "HyperGraphNeuralNetworks                              HGNNDiHypergraph" begin
 
     @testset "    construction" begin
 	#construct using exsiting directedhypergraph
