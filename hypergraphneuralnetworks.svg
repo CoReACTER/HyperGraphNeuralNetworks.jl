@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="85mm"
+   height="70mm"
+   viewBox="0 0 85 70"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25)"
+   sodipodi:docname="hypergraphneuralnetworks.svg"
+   inkscape:export-filename="hypergraphneuralnetworks.png"
+   inkscape:export-xdpi="400"
+   inkscape:export-ydpi="400"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.77988068"
+     inkscape:cx="175.02677"
+     inkscape:cy="134.63598"
+     inkscape:window-width="1312"
+     inkscape:window-height="431"
+     inkscape:window-x="0"
+     inkscape:window-y="33"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <ellipse
+       style="fill:#4862d1;fill-opacity:0.34999999;stroke:#000000;stroke-width:0.83196;stroke-dasharray:none;stroke-opacity:1"
+       id="path15"
+       cx="61.198147"
+       cy="28.009249"
+       rx="19.135084"
+       ry="24.958805" />
+    <path
+       style="fill:#549639;fill-opacity:0.501961;stroke:#000000;stroke-width:0.83196;stroke-dasharray:none;stroke-opacity:1"
+       d="M 50.498073,8.1195699 C 57.229306,9.8644209 67.33295,23.097411 63.016521,33.715359 60.631508,38.833828 55.076889,50.81324 49.310052,49.627345 36.047697,46.90007 59.337761,29.394814 49.323347,22.506066 31.973992,10.571731 46.235353,7.0145999 50.498073,8.1195699 Z"
+       id="path11"
+       sodipodi:nodetypes="sssss" />
+    <ellipse
+       style="fill:#8c5bad;fill-opacity:0.501961;stroke:#000000;stroke-width:0.83196;stroke-dasharray:none;stroke-opacity:1"
+       id="path13"
+       cx="49.773643"
+       cy="54.266331"
+       rx="19.967045"
+       ry="6.6556811"
+       transform="rotate(-14.831647)" />
+    <ellipse
+       style="fill:#bc473b;fill-opacity:0.501961;stroke:#000000;stroke-width:0.83196;stroke-dasharray:none;stroke-opacity:1"
+       id="path14"
+       cx="63.832016"
+       cy="6.4255295"
+       rx="19.840416"
+       ry="6.6556811"
+       transform="rotate(8.2797792)" />
+    <text
+       xml:space="preserve"
+       style="font-size:12.7px;line-height:1;font-family:Monospace;-inkscape-font-specification:Monospace;fill:#d9d9d9;stroke-width:0.7"
+       x="1.9613578"
+       y="23.615164"
+       id="text1"><tspan
+         sodipodi:role="line"
+         id="tspan1"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:1;font-family:'Titillium Web';-inkscape-font-specification:'Titillium Web';fill:#000000;fill-opacity:1;stroke-width:0.7"
+         x="1.9613578"
+         y="23.615164"
+         dy="0">Hyper</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:1;font-family:'Titillium Web';-inkscape-font-specification:'Titillium Web';fill:#000000;fill-opacity:1;stroke-width:0.7"
+         x="1.9613578"
+         y="37.254585"
+         id="tspan5">Graph</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:1;font-family:'Titillium Web';-inkscape-font-specification:'Titillium Web';fill:#000000;fill-opacity:1;stroke-width:0.7"
+         x="1.9613578"
+         y="50.894012"
+         id="tspan6">Neural</tspan><tspan
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:1;font-family:'Titillium Web';-inkscape-font-specification:'Titillium Web';fill:#000000;fill-opacity:1;stroke-width:0.7"
+         x="1.9613578"
+         y="64.53344"
+         id="tspan7">Networks.jl</tspan></text>
+    <circle
+       style="fill:#fefefe;fill-opacity:1;stroke:#000000;stroke-width:0.83196;stroke-dasharray:none;stroke-opacity:1"
+       id="path7"
+       cx="50.254532"
+       cy="13.723399"
+       r="3.5521989" />
+    <circle
+       style="fill:#fefefe;fill-opacity:1;stroke:#000000;stroke-width:0.83196;stroke-dasharray:none;stroke-opacity:1"
+       id="circle7"
+       cx="57.600891"
+       cy="26.890738"
+       r="3.5521989" />
+    <circle
+       style="fill:#fefefe;fill-opacity:1;stroke:#000000;stroke-width:0.83196;stroke-dasharray:none;stroke-opacity:1"
+       id="circle8"
+       cx="73.857681"
+       cy="17.634062"
+       r="3.5521989" />
+    <circle
+       style="fill:#fefefe;fill-opacity:1;stroke:#000000;stroke-width:0.83196;stroke-dasharray:none;stroke-opacity:1"
+       id="circle9"
+       cx="51.208237"
+       cy="42.939423"
+       r="3.5521989" />
+    <circle
+       style="fill:#fefefe;fill-opacity:1;stroke:#000000;stroke-width:0.83196;stroke-dasharray:none;stroke-opacity:1"
+       id="circle10"
+       cx="51.208237"
+       cy="42.939423"
+       r="3.5521989" />
+    <circle
+       style="fill:#fefefe;fill-opacity:1;stroke:#000000;stroke-width:0.83196;stroke-dasharray:none;stroke-opacity:1"
+       id="circle11"
+       cx="73.681381"
+       cy="36.497608"
+       r="3.5521989" />
+  </g>
+</svg>

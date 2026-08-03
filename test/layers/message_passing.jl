@@ -27,22 +27,22 @@ const TARGET_MATRIX = Float32[
 ]
 
 
-@testset "DirectedHypergraphLayer" begin
+@testset "HyperGraphNeuralNetworks                             DirectedConvLayer" begin
 
     @testset "Constructor validation" begin
-        @test_throws ArgumentError DirectedHypergraphLayer(
+        @test_throws ArgumentError DirectedConvLayer(
             0,
             0,
             8,
         )
 
-        @test_throws ArgumentError DirectedHypergraphLayer(
+        @test_throws ArgumentError DirectedConvLayer(
             3,
             -1,
             8,
         )
 
-        @test_throws ArgumentError DirectedHypergraphLayer(
+        @test_throws ArgumentError DirectedConvLayer(
             3,
             0,
             0,
@@ -53,7 +53,7 @@ const TARGET_MATRIX = Float32[
     @testset "Basic forward pass" begin
         rng = Random.default_rng()
 
-        layer = DirectedHypergraphLayer(
+        layer = DirectedConvLayer(
             3,
             0,
             8;
@@ -86,7 +86,7 @@ const TARGET_MATRIX = Float32[
     @testset "Parameter and state initialisation" begin
         rng = Random.default_rng()
 
-        layer = DirectedHypergraphLayer(
+        layer = DirectedConvLayer(
             3,
             2,
             8,
@@ -112,7 +112,7 @@ const TARGET_MATRIX = Float32[
     @testset "Normalisation enabled and disabled" begin
         rng = Random.default_rng()
 
-        layer_normalised = DirectedHypergraphLayer(
+        layer_normalised = DirectedConvLayer(
             3,
             0,
             8;
@@ -120,7 +120,7 @@ const TARGET_MATRIX = Float32[
             normalize = true,
         )
 
-        layer_unnormalised = DirectedHypergraphLayer(
+        layer_unnormalised = DirectedConvLayer(
             3,
             0,
             8;
@@ -177,7 +177,7 @@ const TARGET_MATRIX = Float32[
             1.0 1.0
         ]
 
-        layer = DirectedHypergraphLayer(
+        layer = DirectedConvLayer(
             3,
             2,
             8;
@@ -262,7 +262,7 @@ const TARGET_MATRIX = Float32[
     @testset "Mismatched incidence matrices" begin
         rng = Random.default_rng()
 
-        layer = DirectedHypergraphLayer(
+        layer = DirectedConvLayer(
             3,
             0,
             8,
@@ -290,7 +290,7 @@ const TARGET_MATRIX = Float32[
     @testset "Incorrect number of vertex rows" begin
         rng = Random.default_rng()
 
-        layer = DirectedHypergraphLayer(
+        layer = DirectedConvLayer(
             3,
             0,
             8,
@@ -318,7 +318,7 @@ const TARGET_MATRIX = Float32[
     @testset "Incorrect vertex feature dimension" begin
         rng = Random.default_rng()
 
-        layer = DirectedHypergraphLayer(
+        layer = DirectedConvLayer(
             3,
             0,
             8,
@@ -346,7 +346,7 @@ const TARGET_MATRIX = Float32[
     @testset "Missing required hyperedge features" begin
         rng = Random.default_rng()
 
-        layer = DirectedHypergraphLayer(
+        layer = DirectedConvLayer(
             3,
             2,
             8,
@@ -371,7 +371,7 @@ const TARGET_MATRIX = Float32[
     @testset "Incorrect number of hyperedge rows" begin
         rng = Random.default_rng()
 
-        layer = DirectedHypergraphLayer(
+        layer = DirectedConvLayer(
             3,
             2,
             8,
@@ -400,7 +400,7 @@ const TARGET_MATRIX = Float32[
     @testset "Incorrect hyperedge feature dimension" begin
         rng = Random.default_rng()
 
-        layer = DirectedHypergraphLayer(
+        layer = DirectedConvLayer(
             3,
             2,
             8,

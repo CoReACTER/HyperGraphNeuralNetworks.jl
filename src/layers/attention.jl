@@ -3,7 +3,7 @@ using Random
 using NNlib: leakyrelu
 
 """
-    DirectedHypergraphAttentionLayer(
+    DirectedAttentionLayer(
         vertex_in_dim,
         hyperedge_in_dim,
         hidden_dim;
@@ -45,10 +45,10 @@ When `hyperedge_in_dim > 0`, the layer accepts:
 
 Expected shapes:
 
-- `X_vertex`: `number_of_vertices √ó vertex_in_dim`
-- `X_hyperedge`: `number_of_hyperedges √ó hyperedge_in_dim`
-- `source_matrix`: `number_of_vertices √ó number_of_hyperedges`
-- `target_matrix`: `number_of_vertices √ó number_of_hyperedges`
+- `X_vertex`: `number_of_vertices × vertex_in_dim`
+- `X_hyperedge`: `number_of_hyperedges × hyperedge_in_dim`
+- `source_matrix`: `number_of_vertices × number_of_hyperedges`
+- `target_matrix`: `number_of_vertices × number_of_hyperedges`
 
 # Output
 
@@ -62,8 +62,7 @@ When `return_attention = true`, it additionally returns:
 - `source_attention`
 - `target_attention`
 """
-struct DirectedHypergraphAttentionLayer{F, A, IW, IB} <:
-       Lux.AbstractLuxLayer
+struct DirectedAttentionLayer{F, A, IW, IB} <: Lux.AbstractLuxLayer
     vertex_in_dim::Int
     hyperedge_in_dim::Int
     hidden_dim::Int
@@ -75,7 +74,7 @@ struct DirectedHypergraphAttentionLayer{F, A, IW, IB} <:
 end
 
 
-function DirectedHypergraphAttentionLayer(
+function DirectedAttentionLayer(
     vertex_in_dim::Int,
     hyperedge_in_dim::Int,
     hidden_dim::Int;
@@ -106,7 +105,7 @@ function DirectedHypergraphAttentionLayer(
             ),
         )
 
-    return DirectedHypergraphAttentionLayer(
+    return DirectedAttentionLayer(
         vertex_in_dim,
         hyperedge_in_dim,
         hidden_dim,
@@ -152,7 +151,7 @@ end
 
 function Lux.initialparameters(
     rng::AbstractRNG,
-    layer::DirectedHypergraphAttentionLayer,
+    layer::DirectedAttentionLayer,
 )
     hyperedge_update_in_dim =
         2 * layer.hidden_dim + layer.hyperedge_in_dim
@@ -221,7 +220,7 @@ end
 
 
 function Lux.parameterlength(
-    layer::DirectedHypergraphAttentionLayer,
+    layer::DirectedAttentionLayer,
 )
     hyperedge_update_in_dim =
         2 * layer.hidden_dim + layer.hyperedge_in_dim
@@ -253,10 +252,10 @@ end
 # The layer has no mutable non-trainable state.
 Lux.initialstates(
     ::AbstractRNG,
-    ::DirectedHypergraphAttentionLayer,
+    ::DirectedAttentionLayer,
 ) = NamedTuple()
 
-Lux.statelength(::DirectedHypergraphAttentionLayer) = 0
+Lux.statelength(::DirectedAttentionLayer) = 0
 
 
 """
@@ -368,7 +367,7 @@ end
 
 
 function _unpack_attention_input(
-    layer::DirectedHypergraphAttentionLayer,
+    layer::DirectedAttentionLayer,
     input::Tuple{Any, Any, Any},
 )
     layer.hyperedge_in_dim == 0 ||
@@ -402,7 +401,7 @@ end
 
 
 function _unpack_attention_input(
-    ::DirectedHypergraphAttentionLayer,
+    ::DirectedAttentionLayer,
     input::Tuple{Any, Any, Any, Any},
 )
     return input
@@ -410,7 +409,7 @@ end
 
 
 function _unpack_attention_input(
-    ::DirectedHypergraphAttentionLayer,
+    ::DirectedAttentionLayer,
     input::Tuple,
 )
     throw(
@@ -424,7 +423,7 @@ end
 
 
 function _validate_attention_inputs(
-    layer::DirectedHypergraphAttentionLayer,
+    layer::DirectedAttentionLayer,
     X_vertex::AbstractMatrix,
     X_hyperedge::AbstractMatrix,
     source_matrix::AbstractMatrix,
@@ -478,7 +477,7 @@ end
 
 
 """
-    (layer::DirectedHypergraphAttentionLayer)(input, ps, st)
+    (layer::DirectedAttentionLayer)(input, ps, st)
 
 Apply one single-head attention-based directed-hypergraph message-passing
 step.
@@ -487,7 +486,7 @@ Source-side and target-side attention coefficients are calculated separately.
 The updated hyperedge representations are then propagated back to the
 participating vertices.
 """
-function (layer::DirectedHypergraphAttentionLayer)(input, ps, st)
+function (layer::DirectedAttentionLayer)(input, ps, st)
     (
         X_vertex,
         X_hyperedge,

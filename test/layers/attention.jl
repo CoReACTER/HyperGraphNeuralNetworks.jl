@@ -3,20 +3,18 @@ using Random
 using Lux
 using HyperGraphNeuralNetworks
 
-const HGNN = HyperGraphNeuralNetworks
+@testset "HyperGraphNeuralNetworks                        DirectedAttentionLayer" begin
 
-@testset "DirectedHypergraphAttentionLayer" begin
+    @testset "    Constructor validation" begin
+        layer = DirectedAttentionLayer(3, 0, 4)
 
-    @testset "Constructor validation" begin
-        layer = HGNN.DirectedHypergraphAttentionLayer(3, 0, 4)
-
-        @test layer isa HGNN.DirectedHypergraphAttentionLayer
+        @test layer isa DirectedAttentionLayer
         @test layer.vertex_in_dim == 3
         @test layer.hyperedge_in_dim == 0
         @test layer.hidden_dim == 4
         @test layer.return_attention == false
 
-        attention_layer = HGNN.DirectedHypergraphAttentionLayer(
+        attention_layer = DirectedAttentionLayer(
             3,
             2,
             4;
@@ -29,17 +27,17 @@ const HGNN = HyperGraphNeuralNetworks
         @test attention_layer.attention_activation === identity
         @test attention_layer.return_attention
 
-        @test_throws ArgumentError HGNN.DirectedHypergraphAttentionLayer(0, 0, 4)
-        @test_throws ArgumentError HGNN.DirectedHypergraphAttentionLayer(-1, 0, 4)
-        @test_throws ArgumentError HGNN.DirectedHypergraphAttentionLayer(3, -1, 4)
-        @test_throws ArgumentError HGNN.DirectedHypergraphAttentionLayer(3, 0, 0)
-        @test_throws ArgumentError HGNN.DirectedHypergraphAttentionLayer(3, 0, -1)
+        @test_throws ArgumentError DirectedAttentionLayer(0, 0, 4)
+        @test_throws ArgumentError DirectedAttentionLayer(-1, 0, 4)
+        @test_throws ArgumentError DirectedAttentionLayer(3, -1, 4)
+        @test_throws ArgumentError DirectedAttentionLayer(3, 0, 0)
+        @test_throws ArgumentError DirectedAttentionLayer(3, 0, -1)
     end
 
-    @testset "Parameter and state initialisation" begin
+    @testset "    Parameter and state initialisation" begin
         rng = Random.Xoshiro(1234)
 
-        layer = HGNN.DirectedHypergraphAttentionLayer(3, 2, 4)
+        layer = DirectedAttentionLayer(3, 2, 4)
         ps, st = Lux.setup(rng, layer)
 
         @test size(ps.W_vertex) == (3, 4)
@@ -56,14 +54,14 @@ const HGNN = HyperGraphNeuralNetworks
         @test Lux.parameterlength(layer) == 104
         @test Lux.parameterlength(layer) == Lux.parameterlength(ps)
 
-        layer2 = HGNN.DirectedHypergraphAttentionLayer(3, 0, 4)
+        layer2 = DirectedAttentionLayer(3, 0, 4)
         ps2, _ = Lux.setup(Random.Xoshiro(1234), layer2)
 
         @test size(ps2.W_hyperedge) == (8, 4)
         @test Lux.parameterlength(layer2) == 96
     end
 
-    @testset "masked_incidence_softmax" begin
+    @testset "    masked_incidence_softmax" begin
 
         raw_scores = Float32[0,0,0]
 
@@ -73,7 +71,7 @@ const HGNN = HyperGraphNeuralNetworks
             0 1 0
         ]
 
-        attention = HGNN.masked_incidence_softmax(
+        attention = HyperGraphNeuralNetworks.masked_incidence_softmax(
             raw_scores,
             incidence_matrix,
         )
@@ -97,7 +95,7 @@ const HGNN = HyperGraphNeuralNetworks
 
         unequal_scores = Float32[0,1,2]
 
-        unequal_attention = HGNN.masked_incidence_softmax(
+        unequal_attention = HyperGraphNeuralNetworks.masked_incidence_softmax(
             unequal_scores,
             incidence_matrix,
         )
@@ -114,7 +112,7 @@ const HGNN = HyperGraphNeuralNetworks
             3 5
         ]
 
-        weighted_attention = HGNN.masked_incidence_softmax(
+        weighted_attention = HyperGraphNeuralNetworks.masked_incidence_softmax(
             Float32[0,0,0],
             weighted_incidence,
         )
@@ -128,7 +126,7 @@ const HGNN = HyperGraphNeuralNetworks
             ]
         )
 
-        @test_throws DimensionMismatch HGNN.masked_incidence_softmax(
+        @test_throws DimensionMismatch HyperGraphNeuralNetworks.masked_incidence_softmax(
             Float32[1,2],
             incidence_matrix,
         )
@@ -142,7 +140,7 @@ const HGNN = HyperGraphNeuralNetworks
             1 3
         ]
 
-        normalised = HGNN._safe_attention_row_normalise(matrix)
+        normalised = HyperGraphNeuralNetworks._safe_attention_row_normalise(matrix)
 
         @test isapprox(
             normalised,
@@ -162,7 +160,7 @@ const HGNN = HyperGraphNeuralNetworks
         @testset "Forward pass without hyperedge features" begin
         rng = Random.Xoshiro(2026)
 
-        layer = HGNN.DirectedHypergraphAttentionLayer(3, 0, 4)
+        layer = DirectedAttentionLayer(3, 0, 4)
         ps, st = Lux.setup(rng, layer)
 
         X_vertex = Float32[
@@ -232,7 +230,7 @@ const HGNN = HyperGraphNeuralNetworks
     @testset "Forward pass with hyperedge features" begin
         rng = Random.Xoshiro(77)
 
-        layer = HGNN.DirectedHypergraphAttentionLayer(3, 2, 5)
+        layer = DirectedAttentionLayer(3, 2, 5)
         ps, st = Lux.setup(rng, layer)
 
         X_vertex = Float32[
@@ -281,7 +279,7 @@ const HGNN = HyperGraphNeuralNetworks
     @testset "Returned attention properties" begin
         rng = Random.Xoshiro(9)
 
-        layer = HGNN.DirectedHypergraphAttentionLayer(
+        layer = DirectedAttentionLayer(
             2,
             0,
             3;
@@ -338,7 +336,7 @@ const HGNN = HyperGraphNeuralNetworks
         @test all(isfinite, output.target_attention)
     end
         @testset "Deterministic zero-parameter behaviour" begin
-        layer = HGNN.DirectedHypergraphAttentionLayer(
+        layer = DirectedAttentionLayer(
             2,
             0,
             3;
@@ -397,7 +395,7 @@ const HGNN = HyperGraphNeuralNetworks
 
     @testset "Input validation" begin
         layer_without_hyperedge_features =
-            HGNN.DirectedHypergraphAttentionLayer(3, 0, 4)
+            DirectedAttentionLayer(3, 0, 4)
 
         ps0, st0 = Lux.setup(
             Random.Xoshiro(4),
@@ -491,7 +489,7 @@ const HGNN = HyperGraphNeuralNetworks
         )
 
         layer_with_hyperedge_features =
-            HGNN.DirectedHypergraphAttentionLayer(3, 2, 4)
+            DirectedAttentionLayer(3, 2, 4)
 
         ps2, st2 = Lux.setup(
             Random.Xoshiro(5),
