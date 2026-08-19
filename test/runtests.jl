@@ -11,6 +11,10 @@ using SimpleDirectedHypergraphs
 using HyperGraphNeuralNetworks
 include("layers/DirectedHypergraphLayer.jl")
 include("layers/DirectedHypergraphAttentionLayer.jl")
+include("layers/DirectedHypergraphConvolutionLayer.jl") 
+include("layers/AsymmetricDirectedHypergraphLayer.jl")
+include("layers/ResidualDirectedHypergraphLayer.jl")
+include("layers/GatedDirectedHypergraphLayer.jl")
 
 # Necessary for MLDatasets
 ENV["DATADEPS_ALWAYS_ACCEPT"] = true

@@ -17,7 +17,10 @@ include("core/abstracttypes.jl")
 include("core/hypergraphs.jl")
 include("layers/DirectedHypergraphLayer.jl")
 include("layers/DirectedHypergraphAttentionLayer.jl")
-
+include("layers/DirectedHypergraphConvolutionLayer.jl")
+include("layers/AsymmetricDirectedHypergraphLayer.jl")
+include("layers/ResidualDirectedHypergraphLayer.jl")
+include("layers/GatedDirectedHypergraphLayer.jl")
 
 export AbstractHGNNHypergraph, AbstractHGNNDiHypergraph
 export HGNNHypergraph, HGNNDiHypergraph
@@ -25,7 +28,10 @@ export add_vertex, add_vertices, remove_vertex, remove_vertices
 export add_hyperedge, add_hyperedges, remove_hyperedge, remove_hyperedges
 export DirectedHypergraphLayer
 export DirectedHypergraphAttentionLayer
-
+export DirectedHypergraphConvolutionLayer
+export AsymmetricDirectedHypergraphLayer
+export ResidualDirectedHypergraphLayer
+export GatedDirectedHypergraphLayer
 
 include("core/generate.jl")
 
