@@ -7,6 +7,161 @@ using NNlib
 using SimpleHypergraphs
 using HyperGraphNeuralNetworks
 using Enzyme
+using Downloads
+using Tar
+
+# ============================================================
+# Enzyme-friendly multi-head attention forward pass
+# ============================================================
+#
+# This replaces only the internal multi-head forward method from
+# HyperGraphNeuralNetworks.jl for this experiment. The architecture,
+# parameters, single-head path, and public layer interface are unchanged.
+#
+# The original implementation formed a tuple of NamedTuple head outputs
+# with ntuple, then used map + splatted hcat. The explicit buffers below
+# avoid that differentiated return/tuple pattern.
+
+@eval HyperGraphNeuralNetworks begin
+    function _multi_head_forward(
+        layer::DirectedHypergraphAttentionLayer,
+        X_vertex::AbstractMatrix,
+        X_hyperedge::AbstractMatrix,
+        source_matrix::AbstractMatrix,
+        target_matrix::AbstractMatrix,
+        ps,
+        st,
+    )
+        number_of_vertices = size(X_vertex, 1)
+        number_of_hyperedges = size(source_matrix, 2)
+        concatenated_dim = layer.num_heads * layer.hidden_dim
+
+        concatenated_vertex_heads =
+            similar(
+                X_vertex,
+                number_of_vertices,
+                concatenated_dim,
+            )
+
+        concatenated_hyperedge_heads =
+            similar(
+                X_vertex,
+                number_of_hyperedges,
+                concatenated_dim,
+            )
+
+        if layer.return_attention
+            source_attentions =
+                similar(
+                    X_vertex,
+                    number_of_vertices,
+                    number_of_hyperedges,
+                    layer.num_heads,
+                )
+
+            target_attentions =
+                similar(
+                    X_vertex,
+                    number_of_vertices,
+                    number_of_hyperedges,
+                    layer.num_heads,
+                )
+        end
+
+        for head in 1:layer.num_heads
+            head_output =
+                _single_attention_head(
+                    layer,
+                    X_vertex,
+                    X_hyperedge,
+                    source_matrix,
+                    target_matrix,
+                    ps.W_vertex[:, :, head],
+                    ps.b_vertex[:, :, head],
+                    ps.a_source[:, head:head],
+                    ps.a_target[:, head:head],
+                    ps.W_hyperedge[:, :, head],
+                    ps.b_hyperedge[:, :, head],
+                )
+
+            first_column =
+                (head - 1) * layer.hidden_dim + 1
+
+            last_column =
+                head * layer.hidden_dim
+
+            concatenated_vertex_heads[
+                :,
+                first_column:last_column,
+            ] .= head_output.H_vertex
+
+            concatenated_hyperedge_heads[
+                :,
+                first_column:last_column,
+            ] .= head_output.updated_hyperedges
+
+            if layer.return_attention
+                source_attentions[:, :, head] .=
+                    head_output.source_attention
+
+                target_attentions[:, :, head] .=
+                    head_output.target_attention
+            end
+        end
+
+        H_vertex =
+            layer.activation.(
+                concatenated_vertex_heads *
+                ps.W_head_vertex .+
+                ps.b_head_vertex
+            )
+
+        updated_hyperedges =
+            layer.activation.(
+                concatenated_hyperedge_heads *
+                ps.W_head_hyperedge .+
+                ps.b_head_hyperedge
+            )
+
+        membership_weights =
+            _membership_weights(
+                source_matrix,
+                target_matrix,
+            )
+
+        vertex_messages =
+            membership_weights *
+            updated_hyperedges
+
+        vertex_update_input =
+            hcat(
+                H_vertex,
+                vertex_messages,
+            )
+
+        updated_vertices =
+            layer.activation.(
+                vertex_update_input *
+                ps.W_vertex_update .+
+                ps.b_vertex_update
+            )
+
+        if layer.return_attention
+            return (
+                updated_vertices = updated_vertices,
+                updated_hyperedges = updated_hyperedges,
+                source_attention = source_attentions,
+                target_attention = target_attentions,
+            ), st
+        end
+
+        return (
+            updated_vertices = updated_vertices,
+            updated_hyperedges = updated_hyperedges,
+        ), st
+    end
+end
+
 
 const RANDOM_SEED = 1234
 const HIDDEN_DIM = 64
@@ -20,6 +175,64 @@ println("Cora Node Classification Proof of Concept")
 println("Random seed: ", RANDOM_SEED)
 
 Random.seed!(RANDOM_SEED)
+
+const CORA_URL =
+    "https://linqs-data.soe.ucsc.edu/public/lbc/cora.tgz"
+
+function download_cora_dataset()
+    println()
+    println("Preparing Cora dataset...")
+
+    cache_dir = joinpath(
+        tempdir(),
+        "HyperGraphNeuralNetworks",
+        "cora",
+    )
+
+    mkpath(cache_dir)
+
+    content_path = joinpath(cache_dir, "cora.content")
+    citations_path = joinpath(cache_dir, "cora.cites")
+
+    if isfile(content_path) && isfile(citations_path)
+        println("Using cached Cora dataset.")
+        return content_path, citations_path
+    end
+
+    archive_path = joinpath(cache_dir, "cora.tgz")
+    extraction_dir = joinpath(cache_dir, "extracted")
+
+    println("Downloading Cora dataset from LINQS...")
+    Downloads.download(CORA_URL, archive_path)
+    println("Download complete.")
+    println("Extracting Cora dataset...")
+
+    if isdir(extraction_dir)
+        rm(extraction_dir; recursive = true, force = true)
+    end
+    mkpath(extraction_dir)
+
+    run(`tar -xzf $archive_path -C $extraction_dir`)
+
+    extracted_content =
+        joinpath(extraction_dir, "cora", "cora.content")
+    extracted_citations =
+        joinpath(extraction_dir, "cora", "cora.cites")
+
+    isfile(extracted_content) ||
+        error("Cora was downloaded, but cora.content could not be found after extraction.")
+    isfile(extracted_citations) ||
+        error("Cora was downloaded, but cora.cites could not be found after extraction.")
+
+    cp(extracted_content, content_path; force = true)
+    cp(extracted_citations, citations_path; force = true)
+
+    rm(archive_path; force = true)
+    rm(extraction_dir; recursive = true, force = true)
+
+    println("Cora dataset successfully prepared.")
+    return content_path, citations_path
+end
 
 function load_cora_dataset(
     content_path::AbstractString,
@@ -645,21 +858,9 @@ function print_split_distribution(
 end
 
 function prepare_cora()
-    content_path = joinpath(
-        @__DIR__,
-        "..",
-        "data",
-        "cora",
-        "cora.content",
-    )
-
-    citations_path = joinpath(
-        @__DIR__,
-        "..",
-        "data",
-        "cora",
-        "cora.cites",
-    )
+    content_path,
+    citations_path =
+        download_cora_dataset()
 
     dataset = load_cora_dataset(
         content_path,
@@ -864,44 +1065,74 @@ struct CoraDirectedClassifier{L, IW, IB} <: Lux.AbstractLuxLayer
     init_bias::IB
 end
 
+function build_cora_layer(
+    architecture::Symbol,
+    input_dim::Int,
+    hidden_dim::Int,
+)
+    if architecture == :directed
+        return DirectedHypergraphLayer(
+            input_dim, 0, hidden_dim;
+            activation = tanh,
+            normalize = true,
+        )
+    elseif architecture == :attention1
+        return DirectedHypergraphAttentionLayer(
+            input_dim, 0, hidden_dim;
+            num_heads = 1,
+            activation = tanh,
+            return_attention = false,
+        )
+    elseif architecture == :attention4
+        return DirectedHypergraphAttentionLayer(
+            input_dim, 0, hidden_dim;
+            num_heads = 4,
+            activation = tanh,
+            return_attention = false,
+        )
+    elseif architecture == :convolution
+        return DirectedHypergraphConvolutionLayer(
+            input_dim, hidden_dim;
+            activation = tanh,
+        )
+    elseif architecture == :asymmetric
+        return AsymmetricDirectedHypergraphLayer(
+            input_dim, 0, hidden_dim;
+            activation = tanh,
+            normalize = true,
+        )
+    elseif architecture == :residual
+        return ResidualDirectedHypergraphLayer(
+            input_dim, 0, hidden_dim;
+            activation = tanh,
+            normalize = true,
+        )
+    elseif architecture == :gated
+        return GatedDirectedHypergraphLayer(
+            input_dim, 0, hidden_dim;
+            activation = tanh,
+            normalize = true,
+        )
+    end
+    error("Unknown architecture: $architecture")
+end
+
 function CoraDirectedClassifier(
     input_dim::Int,
     hidden_dim::Int,
     number_of_classes::Int;
-    activation = tanh,
-    normalize::Bool = true,
+    architecture::Symbol = :directed,
     init_weight = Lux.glorot_uniform,
     init_bias = Lux.zeros32,
 )
-    input_dim > 0 ||
-        throw(
-            ArgumentError(
-                "`input_dim` must be positive."
-            )
-        )
+    input_dim > 0 || throw(ArgumentError("`input_dim` must be positive."))
+    hidden_dim > 0 || throw(ArgumentError("`hidden_dim` must be positive."))
+    number_of_classes > 1 || throw(ArgumentError("`number_of_classes` must be greater than one."))
 
-    hidden_dim > 0 ||
-        throw(
-            ArgumentError(
-                "`hidden_dim` must be positive."
-            )
-        )
-
-    number_of_classes > 1 ||
-        throw(
-            ArgumentError(
-                "`number_of_classes` must be greater than one."
-            )
-        )
-
-    directed_layer = DirectedHypergraphLayer(
+    directed_layer = build_cora_layer(
+        architecture,
         input_dim,
-        0,
-        hidden_dim;
-        activation = activation,
-        normalize = normalize,
-        init_weight = init_weight,
-        init_bias = init_bias,
+        hidden_dim,
     )
 
     return CoraDirectedClassifier(
@@ -1408,109 +1639,44 @@ function print_prediction_examples(
     end
 end
 
+function print_parameter_shapes(x, prefix = "")
+    if x isa AbstractArray
+        println("  ", prefix, ": ", size(x))
+    elseif x isa NamedTuple
+        for name in keys(x)
+            child = getproperty(x, name)
+            child_prefix = isempty(prefix) ? String(name) : prefix * "." * String(name)
+            print_parameter_shapes(child, child_prefix)
+        end
+    elseif x isa Tuple
+        for (i, child) in enumerate(x)
+            print_parameter_shapes(child, prefix * "[$i]")
+        end
+    end
+end
+
 function model_summary(
     model,
     ps,
     st,
-    cora_data,
+    cora_data;
+    architecture_name = string(typeof(model.directed_layer)),
 )
     println()
-    println(
-        "Cora Directed Hypergraph Neural Network"
-    )
-
+    println("Cora Directed Hypergraph Neural Network")
     println()
     println("Model configuration")
-
-    println(
-        "Input dimension: ",
-        cora_data.number_of_features,
-    )
-
-    println(
-        "Hidden dimension: ",
-        model.hidden_dim,
-    )
-
-    println(
-        "Output classes: ",
-        model.number_of_classes,
-    )
-
-    println(
-        "Directed hypergraph layer: DirectedHypergraphLayer"
-    )
-
+    println("Input dimension: ", cora_data.number_of_features)
+    println("Hidden dimension: ", model.hidden_dim)
+    println("Output classes: ", model.number_of_classes)
+    println("Directed hypergraph layer: ", architecture_name)
     println()
-    println(
-        "Model parameter count: ",
-        Lux.parameterlength(model),
-    )
-
-    println(
-        "Model state count: ",
-        Lux.statelength(model),
-    )
-
+    println("Model parameter count: ", Lux.parameterlength(model))
+    println("Model state count: ", Lux.statelength(model))
     println()
     println("Parameter shapes")
-
-    println(
-        "  Directed W_vertex: ",
-        size(
-            ps.directed_layer.W_vertex
-        ),
-    )
-
-    println(
-        "  Directed b_vertex: ",
-        size(
-            ps.directed_layer.b_vertex
-        ),
-    )
-
-    println(
-        "  Directed W_hyperedge: ",
-        size(
-            ps.directed_layer.W_hyperedge
-        ),
-    )
-
-    println(
-        "  Directed b_hyperedge: ",
-        size(
-            ps.directed_layer.b_hyperedge
-        ),
-    )
-
-    println(
-        "  Directed W_vertex_update: ",
-        size(
-            ps.directed_layer.W_vertex_update
-        ),
-    )
-
-    println(
-        "  Directed b_vertex_update: ",
-        size(
-            ps.directed_layer.b_vertex_update
-        ),
-    )
-
-    println(
-        "  Output W_output: ",
-        size(ps.W_output),
-    )
-
-    println(
-        "  Output b_output: ",
-        size(ps.b_output),
-    )
-
-    println(
-        "  State keys: ",
-        keys(st),
-    )
+    print_parameter_shapes(ps)
+    println("  State keys: ", keys(st))
 end
 
 function evaluate_model(
@@ -1651,118 +1817,28 @@ function print_evaluation(
         "%",
     )
 end
-function copy_parameters(ps)
-    return (
-        directed_layer = (
-            W_vertex =
-                copy(ps.directed_layer.W_vertex),
+copy_parameter_tree(x::AbstractArray) = copy(x)
+copy_parameter_tree(x::NamedTuple) = NamedTuple{keys(x)}(map(copy_parameter_tree, values(x)))
+copy_parameter_tree(x::Tuple) = map(copy_parameter_tree, x)
+copy_parameter_tree(x) = x
 
-            b_vertex =
-                copy(ps.directed_layer.b_vertex),
+zero_parameter_tree(x::AbstractArray) = zeros(eltype(x), size(x))
+zero_parameter_tree(x::NamedTuple) = NamedTuple{keys(x)}(map(zero_parameter_tree, values(x)))
+zero_parameter_tree(x::Tuple) = map(zero_parameter_tree, x)
+zero_parameter_tree(x) = x
 
-            W_hyperedge =
-                copy(ps.directed_layer.W_hyperedge),
+parameter_squared_norm(x::AbstractArray) = sum(abs2, x)
+parameter_squared_norm(x::NamedTuple) = sum(parameter_squared_norm(v) for v in values(x))
+parameter_squared_norm(x::Tuple) = sum(parameter_squared_norm(v) for v in x)
+parameter_squared_norm(x) = 0.0
 
-            b_hyperedge =
-                copy(ps.directed_layer.b_hyperedge),
+parameter_tree_finite(x::AbstractArray) = all(isfinite, x)
+parameter_tree_finite(x::NamedTuple) = all(parameter_tree_finite(v) for v in values(x))
+parameter_tree_finite(x::Tuple) = all(parameter_tree_finite(v) for v in x)
+parameter_tree_finite(x) = true
 
-            W_vertex_update =
-                copy(
-                    ps.directed_layer.W_vertex_update
-                ),
-
-            b_vertex_update =
-                copy(
-                    ps.directed_layer.b_vertex_update
-                ),
-        ),
-
-        W_output =
-            copy(ps.W_output),
-
-        b_output =
-            copy(ps.b_output),
-    )
-end
-
-
-function zero_like_parameters(ps)
-    return (
-        directed_layer = (
-            W_vertex =
-                zeros(
-                    eltype(
-                        ps.directed_layer.W_vertex
-                    ),
-                    size(
-                        ps.directed_layer.W_vertex
-                    ),
-                ),
-
-            b_vertex =
-                zeros(
-                    eltype(
-                        ps.directed_layer.b_vertex
-                    ),
-                    size(
-                        ps.directed_layer.b_vertex
-                    ),
-                ),
-
-            W_hyperedge =
-                zeros(
-                    eltype(
-                        ps.directed_layer.W_hyperedge
-                    ),
-                    size(
-                        ps.directed_layer.W_hyperedge
-                    ),
-                ),
-
-            b_hyperedge =
-                zeros(
-                    eltype(
-                        ps.directed_layer.b_hyperedge
-                    ),
-                    size(
-                        ps.directed_layer.b_hyperedge
-                    ),
-                ),
-
-            W_vertex_update =
-                zeros(
-                    eltype(
-                        ps.directed_layer.W_vertex_update
-                    ),
-                    size(
-                        ps.directed_layer.W_vertex_update
-                    ),
-                ),
-
-            b_vertex_update =
-                zeros(
-                    eltype(
-                        ps.directed_layer.b_vertex_update
-                    ),
-                    size(
-                        ps.directed_layer.b_vertex_update
-                    ),
-                ),
-        ),
-
-        W_output =
-            zeros(
-                eltype(ps.W_output),
-                size(ps.W_output),
-            ),
-
-        b_output =
-            zeros(
-                eltype(ps.b_output),
-                size(ps.b_output),
-            ),
-    )
-end
+copy_parameters(ps) = copy_parameter_tree(ps)
+zero_like_parameters(ps) = zero_parameter_tree(ps)
 
 
 function training_objective(
@@ -1795,23 +1871,7 @@ function training_objective(
             train_indices,
         )
 
-    regularisation =
-        sum(
-            abs2,
-            ps.directed_layer.W_vertex,
-        ) +
-        sum(
-            abs2,
-            ps.directed_layer.W_hyperedge,
-        ) +
-        sum(
-            abs2,
-            ps.directed_layer.W_vertex_update,
-        ) +
-        sum(
-            abs2,
-            ps.W_output,
-        )
+    regularisation = sum(abs2, ps.W_output)
 
     return data_loss +
            weight_decay *
@@ -1856,65 +1916,12 @@ function compute_gradients(
 end
 
 
-function all_gradients_finite(
-    gradients,
-)
-    arrays = (
-        gradients.directed_layer.W_vertex,
-        gradients.directed_layer.b_vertex,
-        gradients.directed_layer.W_hyperedge,
-        gradients.directed_layer.b_hyperedge,
-        gradients.directed_layer.W_vertex_update,
-        gradients.directed_layer.b_vertex_update,
-        gradients.W_output,
-        gradients.b_output,
-    )
-
-    return all(
-        array -> all(isfinite, array),
-        arrays,
-    )
+function all_gradients_finite(gradients)
+    return parameter_tree_finite(gradients)
 end
 
-
-function gradient_norm(
-    gradients,
-)
-    squared_norm =
-        sum(
-            abs2,
-            gradients.directed_layer.W_vertex,
-        ) +
-        sum(
-            abs2,
-            gradients.directed_layer.b_vertex,
-        ) +
-        sum(
-            abs2,
-            gradients.directed_layer.W_hyperedge,
-        ) +
-        sum(
-            abs2,
-            gradients.directed_layer.b_hyperedge,
-        ) +
-        sum(
-            abs2,
-            gradients.directed_layer.W_vertex_update,
-        ) +
-        sum(
-            abs2,
-            gradients.directed_layer.b_vertex_update,
-        ) +
-        sum(
-            abs2,
-            gradients.W_output,
-        ) +
-        sum(
-            abs2,
-            gradients.b_output,
-        )
-
-    return sqrt(squared_norm)
+function gradient_norm(gradients)
+    return sqrt(parameter_squared_norm(gradients))
 end
 
 
@@ -2326,6 +2333,8 @@ function print_training_history_summary(
 end
 function run_cora_experiment(
     cora_data;
+    architecture::Symbol = :directed,
+    architecture_name::String = String(architecture),
     hidden_dim = HIDDEN_DIM,
     epochs = NUMBER_OF_EPOCHS,
     learning_rate = LEARNING_RATE,
@@ -2345,8 +2354,7 @@ function run_cora_experiment(
             cora_data.number_of_features,
             hidden_dim,
             cora_data.number_of_classes;
-            activation = tanh,
-            normalize = true,
+            architecture = architecture,
         )
 
     ps, st =
@@ -2359,7 +2367,8 @@ function run_cora_experiment(
         model,
         ps,
         st,
-        cora_data,
+        cora_data;
+        architecture_name = architecture_name,
     )
 
     input = (
@@ -2750,39 +2759,80 @@ function run_cora_experiment(
 end
 
 
+function print_architecture_comparison(results)
+    println()
+    println("============================================================")
+    println("FINAL ARCHITECTURE COMPARISON")
+    println("============================================================")
+    println(rpad("Architecture", 30), rpad("Params", 12), rpad("Best ep", 10), rpad("Val acc", 12), "Test acc")
+    println(repeat("-", 76))
+    for result in results
+        if result.status == :ok
+            exp = result.experiment
+            println(
+                rpad(result.name, 30),
+                rpad(string(Lux.parameterlength(exp.model)), 12),
+                rpad(string(exp.history.best_epoch), 10),
+                rpad(string(round(100 * exp.evaluation.validation_accuracy; digits = 2)) * "%", 12),
+                string(round(100 * exp.evaluation.test_accuracy; digits = 2)) * "%",
+            )
+        else
+            println(rpad(result.name, 30), "FAILED: ", result.error)
+        end
+    end
+end
+
 function main()
     println()
-    println(
-        "Cora Node Classification Proof of Concept"
-    )
+    println("Cora Node Classification Architecture Comparison")
+    println("Random seed: ", RANDOM_SEED)
 
-    println(
-        "Random seed: ",
-        RANDOM_SEED,
-    )
+    cora_data = prepare_cora()
 
-    cora_data =
-        prepare_cora()
+    architectures = [
+        (:directed, "DirectedHypergraphLayer"),
+        (:attention1, "Attention (1 head)"),
+        (:attention4, "Attention (4 heads)"),
+        (:convolution, "Directed Convolution"),
+        (:asymmetric, "Asymmetric Directed"),
+        (:residual, "Residual Directed"),
+        (:gated, "Gated Directed"),
+    ]
 
-    experiment =
-        run_cora_experiment(
-            cora_data;
-            hidden_dim = HIDDEN_DIM,
-            epochs = NUMBER_OF_EPOCHS,
-            learning_rate = LEARNING_RATE,
-            weight_decay = 1.0f-5,
-            seed = RANDOM_SEED,
-        )
+    results = Any[]
+
+    for (architecture, name) in architectures
+        println()
+        println("============================================================")
+        println("RUNNING: ", name)
+        println("============================================================")
+
+        try
+            experiment = run_cora_experiment(
+                cora_data;
+                architecture = architecture,
+                architecture_name = name,
+                hidden_dim = HIDDEN_DIM,
+                epochs = NUMBER_OF_EPOCHS,
+                learning_rate = LEARNING_RATE,
+                weight_decay = 1.0f-5,
+                seed = RANDOM_SEED,
+            )
+            push!(results, (status = :ok, architecture = architecture, name = name, experiment = experiment))
+        catch err
+            println()
+            println("ERROR while running ", name)
+            showerror(stdout, err, catch_backtrace())
+            println()
+            push!(results, (status = :failed, architecture = architecture, name = name, error = sprint(showerror, err)))
+        end
+    end
+
+    print_architecture_comparison(results)
 
     println()
-    println(
-        "Cora node classification experiment finished successfully."
-    )
-
-    return (
-        data = cora_data,
-        experiment = experiment,
-    )
+    println("Cora architecture comparison finished.")
+    return (data = cora_data, results = results)
 end
 
 
@@ -2790,3 +2840,4 @@ if abspath(PROGRAM_FILE) == @__FILE__
     CORA_RESULTS =
         main()
 end
+
