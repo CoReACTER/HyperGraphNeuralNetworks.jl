@@ -26,32 +26,38 @@ const LEARNING_CURVE_PERCENTAGES =
 """
     GlucoseHyperedgeRegressor
 
-Directed hypergraph neural network for reaction-level regression.
+Directed hypergraph neural network for reaction-level regression with a
+configurable number of message-passing layers.
 
-The directed layer learns representations for molecular vertices and
-reaction hyperedges. A linear regression head maps every learned
-hyperedge representation to one scalar reaction property.
+Each layer performs one directed message-passing step. The first layer maps
+the original molecular fingerprints to the hidden dimension. Later layers
+take the updated vertex representations from the previous layer and perform
+another directed message-passing step. The final hyperedge representations
+are passed to a scalar regression head.
 """
 struct GlucoseHyperedgeRegressor{L,IW,IB} <: Lux.AbstractLuxLayer
-    directed_layer::L
+    directed_layers::L
     hidden_dim::Int
+    num_layers::Int
     init_weight::IW
     init_bias::IB
 end
 
 
 """
-    GlucoseHyperedgeRegressor(input_dim, hidden_dim)
+    GlucoseHyperedgeRegressor(input_dim, hidden_dim; num_layers=1)
 
-Construct a directed hypergraph regression model.
+Construct a directed hypergraph regression model with 1, 2, or more
+message-passing layers.
 
-The model does not require initial hyperedge features. Reaction
-representations are learned from molecular vertex features together with
-the source and target incidence matrices.
+The first layer receives the original vertex features. Every later layer
+receives the updated vertex features from the previous layer. No explicit
+initial hyperedge features are required.
 """
 function GlucoseHyperedgeRegressor(
     input_dim::Int,
     hidden_dim::Int;
+    num_layers::Int = 1,
     init_weight = Lux.glorot_uniform,
     init_bias = Lux.zeros32,
 )
@@ -69,18 +75,32 @@ function GlucoseHyperedgeRegressor(
             )
         )
 
-    directed_layer =
-        DirectedHypergraphLayer(
-            input_dim,
-            0,
-            hidden_dim;
-            activation = tanh,
-            normalize = true,
+    num_layers > 0 ||
+        throw(
+            ArgumentError(
+                "`num_layers` must be positive."
+            )
+        )
+
+    directed_layers =
+        ntuple(
+            layer_index ->
+                DirectedHypergraphLayer(
+                    layer_index == 1 ?
+                        input_dim :
+                        hidden_dim,
+                    0,
+                    hidden_dim;
+                    activation = tanh,
+                    normalize = true,
+                ),
+            num_layers,
         )
 
     return GlucoseHyperedgeRegressor(
-        directed_layer,
+        directed_layers,
         hidden_dim,
+        num_layers,
         init_weight,
         init_bias,
     )
@@ -90,16 +110,20 @@ end
 """
     Lux.initialparameters(rng, model)
 
-Initialise the directed layer parameters and the scalar regression head.
+Initialise all directed message-passing layers and the scalar regression head.
 """
 function Lux.initialparameters(
     rng::AbstractRNG,
     model::GlucoseHyperedgeRegressor,
 )
     directed_parameters =
-        Lux.initialparameters(
-            rng,
-            model.directed_layer,
+        ntuple(
+            layer_index ->
+                Lux.initialparameters(
+                    rng,
+                    model.directed_layers[layer_index],
+                ),
+            model.num_layers,
         )
 
     W_output =
@@ -121,7 +145,7 @@ function Lux.initialparameters(
         )
 
     return (
-        directed_layer = directed_parameters,
+        directed_layers = directed_parameters,
         W_output = W_output,
         b_output = b_output,
     )
@@ -131,20 +155,24 @@ end
 """
     Lux.initialstates(rng, model)
 
-Initialise state for the directed hypergraph layer.
+Initialise state for every directed message-passing layer.
 """
 function Lux.initialstates(
     rng::AbstractRNG,
     model::GlucoseHyperedgeRegressor,
 )
-    directed_state =
-        Lux.initialstates(
-            rng,
-            model.directed_layer,
+    directed_states =
+        ntuple(
+            layer_index ->
+                Lux.initialstates(
+                    rng,
+                    model.directed_layers[layer_index],
+                ),
+            model.num_layers,
         )
 
     return (
-        directed_layer = directed_state,
+        directed_layers = directed_states,
     )
 end
 
@@ -153,8 +181,9 @@ function Lux.parameterlength(
     model::GlucoseHyperedgeRegressor,
 )
     directed_parameters =
-        Lux.parameterlength(
-            model.directed_layer,
+        sum(
+            Lux.parameterlength(layer)
+            for layer in model.directed_layers
         )
 
     output_parameters =
@@ -168,8 +197,9 @@ end
 function Lux.statelength(
     model::GlucoseHyperedgeRegressor,
 )
-    return Lux.statelength(
-        model.directed_layer,
+    return sum(
+        Lux.statelength(layer)
+        for layer in model.directed_layers
     )
 end
 
@@ -177,8 +207,8 @@ end
 """
     regression_forward(model, input, ps, st)
 
-Run directed message passing and predict one scalar property for every
-reaction hyperedge.
+Run the configured number of directed message-passing layers and predict one
+scalar property for every reaction hyperedge.
 """
 function regression_forward(
     model::GlucoseHyperedgeRegressor,
@@ -190,20 +220,40 @@ function regression_forward(
     incidence_tail,
     incidence_head = input
 
-    directed_output,
-    new_directed_state =
-        model.directed_layer(
-            (
-                X,
-                incidence_tail,
-                incidence_head,
-            ),
-            ps.directed_layer,
-            st.directed_layer,
-        )
+    current_vertices =
+        X
 
     hidden_hyperedges =
-        directed_output.updated_hyperedges
+        nothing
+
+    new_layer_states =
+        Vector{Any}(
+            undef,
+            model.num_layers,
+        )
+
+    for layer_index in 1:model.num_layers
+        directed_output,
+        new_layer_state =
+            model.directed_layers[layer_index](
+                (
+                    current_vertices,
+                    incidence_tail,
+                    incidence_head,
+                ),
+                ps.directed_layers[layer_index],
+                st.directed_layers[layer_index],
+            )
+
+        current_vertices =
+            directed_output.updated_vertices
+
+        hidden_hyperedges =
+            directed_output.updated_hyperedges
+
+        new_layer_states[layer_index] =
+            new_layer_state
+    end
 
     predictions =
         hidden_hyperedges *
@@ -213,10 +263,12 @@ function regression_forward(
     output = (
         predictions = vec(predictions),
         hidden_hyperedges = hidden_hyperedges,
+        hidden_vertices = current_vertices,
     )
 
     new_state = (
-        directed_layer = new_directed_state,
+        directed_layers =
+            Tuple(new_layer_states),
     )
 
     return output, new_state
@@ -1022,6 +1074,7 @@ function run_regression_experiment(
     test_indices;
     seed = RANDOM_SEED,
     epochs = NUMBER_OF_EPOCHS,
+    num_layers::Int = 1,
 )
     target_scaling =
         standardise_target(
@@ -1035,7 +1088,8 @@ function run_regression_experiment(
     model =
         GlucoseHyperedgeRegressor(
             size(X, 2),
-            HIDDEN_DIM,
+            HIDDEN_DIM;
+            num_layers = num_layers,
         )
 
     ps, st =
@@ -1045,6 +1099,11 @@ function run_regression_experiment(
         )
 
     println()
+    println(
+        "Message-passing layers: ",
+        num_layers,
+    )
+
     println(
         "Model parameter count: ",
         Lux.parameterlength(model),
@@ -1507,7 +1566,8 @@ end
 """
     main()
 
-Run the glucose directed-hypergraph reaction regression proof of concept.
+Compare one, two, and three directed message-passing layers on exactly the
+same glucose CRN split and training configuration.
 """
 function main()
     Random.seed!(
@@ -1543,38 +1603,6 @@ function main()
     number_of_reactions =
         length(targets)
 
-    size(
-        incidence_tail
-    ) == (
-        number_of_vertices,
-        number_of_reactions,
-    ) || error(
-        "Source incidence matrix has an unexpected size."
-    )
-
-    size(
-        incidence_head
-    ) == (
-        number_of_vertices,
-        number_of_reactions,
-    ) || error(
-        "Target incidence matrix has an unexpected size."
-    )
-
-    all(
-        isfinite,
-        X,
-    ) || error(
-        "Vertex features contain non-finite values."
-    )
-
-    all(
-        isfinite,
-        targets,
-    ) || error(
-        "DG target contains non-finite values."
-    )
-
     split =
         random_regression_split(
             number_of_reactions;
@@ -1583,10 +1611,10 @@ function main()
 
     println()
     println(
-        "Glucose CRN Hyperedge Regression"
+        "Glucose CRN Message-Passing Depth Experiment"
     )
     println(
-        "--------------------------------"
+        "--------------------------------------------"
     )
     println(
         "Target property: DG"
@@ -1604,14 +1632,6 @@ function main()
         number_of_reactions,
     )
     println(
-        "Source incidence matrix: ",
-        size(incidence_tail),
-    )
-    println(
-        "Target incidence matrix: ",
-        size(incidence_head),
-    )
-    println(
         "Training reactions: ",
         length(split.train),
     )
@@ -1623,131 +1643,152 @@ function main()
         "Test reactions: ",
         length(split.test),
     )
-
-    println()
     println(
-        "Full training-set experiment"
+        "Hidden dimension: ",
+        HIDDEN_DIM,
     )
     println(
-        "----------------------------"
-    )
-
-    experiment =
-        run_regression_experiment(
-            X,
-            incidence_tail,
-            incidence_head,
-            targets,
-            split.train,
-            split.validation,
-            split.test,
-        )
-
-    println()
-    println(
-        "Final test performance"
+        "Epochs per model: ",
+        NUMBER_OF_EPOCHS,
     )
     println(
-        "----------------------"
-    )
-    println(
-        "Best epoch: ",
-        experiment.best_epoch,
-    )
-    println(
-        "MSE: ",
-        round(
-            experiment.test_metrics.mse;
-            digits = 4,
-        ),
-    )
-    println(
-        "MAE: ",
-        round(
-            experiment.test_metrics.mae;
-            digits = 4,
-        ),
-    )
-    println(
-        "RMSE: ",
-        round(
-            experiment.test_metrics.rmse;
-            digits = 4,
-        ),
-    )
-    println(
-        "R¬¨‚â§: ",
-        round(
-            experiment.test_metrics.r2;
-            digits = 4,
-        ),
+        "Same random seed and same split are used for all depths."
     )
 
-    learning_curve =
-        run_learning_curve(
-            X,
-            incidence_tail,
-            incidence_head,
-            targets,
-            split,
-        )
+    depth_results =
+        NamedTuple[]
 
-    learning_curve_plot =
-        plot_learning_curve(
-            learning_curve
-        )
-
-    println()
-    println(
-        "Learning curve summary"
-    )
-    println(
-        "----------------------"
-    )
-
-    for result in learning_curve
+    for num_layers in (1, 2, 3)
+        println()
         println(
-            lpad(
-                string(
-                    result.percentage
-                ) * "%",
-                4,
-            ),
-            " | n = ",
-            lpad(
-                string(
-                    result.training_reactions
-                ),
-                4,
-            ),
-            " | train MSE = ",
-            round(
-                result.train_mse;
-                digits = 4,
-            ),
-            " | val MSE = ",
-            round(
-                result.validation_mse;
-                digits = 4,
-            ),
-            " | train MAE = ",
-            round(
-                result.train_mae;
-                digits = 4,
-            ),
-            " | val MAE = ",
-            round(
-                result.validation_mae;
-                digits = 4,
+            repeat(
+                "=",
+                60,
+            )
+        )
+        println(
+            num_layers,
+            num_layers == 1 ?
+                " MESSAGE-PASSING LAYER" :
+                " MESSAGE-PASSING LAYERS",
+        )
+        println(
+            repeat(
+                "=",
+                60,
+            )
+        )
+
+        experiment =
+            run_regression_experiment(
+                X,
+                incidence_tail,
+                incidence_head,
+                targets,
+                split.train,
+                split.validation,
+                split.test;
+                seed = RANDOM_SEED,
+                epochs = NUMBER_OF_EPOCHS,
+                num_layers = num_layers,
+            )
+
+        push!(
+            depth_results,
+            (
+                layers = num_layers,
+                parameters =
+                    Lux.parameterlength(
+                        experiment.model
+                    ),
+                best_epoch =
+                    experiment.best_epoch,
+                validation_loss =
+                    experiment.best_validation_loss,
+                mse =
+                    experiment.test_metrics.mse,
+                mae =
+                    experiment.test_metrics.mae,
+                rmse =
+                    experiment.test_metrics.rmse,
+                r2 =
+                    experiment.test_metrics.r2,
             ),
         )
     end
 
-    return (
-        experiment = experiment,
-        learning_curve = learning_curve,
-        learning_curve_plot = learning_curve_plot,
+    println()
+    println(
+        "Message-passing depth comparison"
     )
+    println(
+        "--------------------------------"
+    )
+
+    println(
+        "Layers | Parameters | Best epoch | Test MSE | Test MAE | Test RMSE | Test R¬≤"
+    )
+
+    for result in depth_results
+        println(
+            lpad(
+                string(result.layers),
+                6,
+            ),
+            " | ",
+            lpad(
+                string(result.parameters),
+                10,
+            ),
+            " | ",
+            lpad(
+                string(result.best_epoch),
+                10,
+            ),
+            " | ",
+            lpad(
+                string(
+                    round(
+                        result.mse;
+                        digits = 4,
+                    )
+                ),
+                8,
+            ),
+            " | ",
+            lpad(
+                string(
+                    round(
+                        result.mae;
+                        digits = 4,
+                    )
+                ),
+                8,
+            ),
+            " | ",
+            lpad(
+                string(
+                    round(
+                        result.rmse;
+                        digits = 4,
+                    )
+                ),
+                9,
+            ),
+            " | ",
+            lpad(
+                string(
+                    round(
+                        result.r2;
+                        digits = 4,
+                    )
+                ),
+                7,
+            ),
+        )
+    end
+
+    return depth_results
 end
 
 

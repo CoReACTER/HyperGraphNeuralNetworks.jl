@@ -22,6 +22,43 @@ using Tar
 # with ntuple, then used map + splatted hcat. The explicit buffers below
 # avoid that differentiated return/tuple pattern.
 
+"""
+    stratified_split(
+        y;
+        train_fraction = TRAIN_FRACTION,
+        validation_fraction = VALIDATION_FRACTION,
+        seed = RANDOM_SEED,
+    )
+
+Split labelled observations into training, validation, and test sets while
+approximately preserving the class distribution in each subset.
+
+The split is performed independently within each class. Samples belonging to
+each class are shuffled using a seeded random number generator and then
+assigned to the training, validation, and test sets according to the requested
+fractions.
+
+# Arguments
+
+- `y`: Vector of class labels.
+- `train_fraction`: Fraction of each class assigned to the training set.
+- `validation_fraction`: Fraction of each class assigned to the validation set.
+- `seed`: Random seed used when shuffling observations.
+
+# Returns
+
+A named tuple containing:
+
+- `train`: Indices assigned to the training set.
+- `validation`: Indices assigned to the validation set.
+- `test`: Indices assigned to the test set.
+
+# Throws
+
+An `ArgumentError` if either fraction is non-positive or if the training and
+validation fractions sum to one or more.
+"""
+
 @eval HyperGraphNeuralNetworks begin
     function _multi_head_forward(
         layer::DirectedHypergraphAttentionLayer,
