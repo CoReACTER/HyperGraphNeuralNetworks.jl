@@ -1,7 +1,7 @@
 name = "HyperGraphNeuralNetworks"
 uuid = "1aebdcae-dc77-44ee-b348-f058d326ae63"
-authors = ["Evan Walter Clark Spotte-Smith", "Punna Amornvivat"]
 version = "0.0.1-DEV"
+authors = ["Evan Walter Clark Spotte-Smith", "Punna Amornvivat"]
 
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
@@ -26,5 +26,5 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 LinearAlgebra = ">= 1.10.0"
 Reactant = ">= 0.2.0"
 SimpleDirectedHypergraphs = "0.1.0"
-SimpleHypergraphs = "0.3.0"
+SimpleHypergraphs = "0.3.0, 0.4"
 julia = ">= 1.10.0"
